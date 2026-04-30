@@ -96,7 +96,6 @@ export default async function ProblemDetailPage({ params, searchParams }: Props)
 			sortBy: "executionTime",
 			page: 1,
 			limit: 20,
-			useFullJudge: problem.useFullJudge,
 		}),
 		currentUserId ? getUserProblemStatuses([problemId], currentUserId) : Promise.resolve(new Map()),
 		getProblemVotesData(problemId),

@@ -133,7 +133,6 @@ export default async function ContestProblemPage({
 					page: 1,
 					limit: 20,
 					contestId,
-					useFullJudge: problem.useFullJudge,
 				}),
 		currentUserId
 			? getUserProblemStatuses([problem.id], currentUserId, contestId)

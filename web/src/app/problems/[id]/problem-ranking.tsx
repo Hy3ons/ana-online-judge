@@ -58,7 +58,6 @@ export function ProblemRanking({
 				page: newPage,
 				limit,
 				contestId,
-				useFullJudge,
 			});
 			setRankings(result.rankings);
 			setTotal(result.total);
