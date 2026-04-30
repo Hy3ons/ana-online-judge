@@ -137,22 +137,33 @@ async function validateFullJudgeInputs(opts: {
 		throw new Error("통과 기준(M)은 1 이상이어야 합니다.");
 	}
 
-	if (opts.problemId !== undefined) {
-		const [{ count: tcCount }] = await db
-			.select({ count: sql<number>`COUNT(*)::int` })
-			.from(testcases)
-			.where(eq(testcases.problemId, opts.problemId));
-
-		if (tcCount > 0) {
-			if (opts.passThreshold === null) {
-				throw new Error("테스트케이스가 존재하면 통과 기준(M)을 지정해야 합니다.");
-			}
-			if (opts.passThreshold > tcCount) {
-				throw new Error(
-					`통과 기준(${opts.passThreshold})이 테스트케이스 수(${tcCount})보다 큽니다.`
-				);
-			}
+	if (opts.problemId === undefined) {
+		// 신규 생성: TC=0 implied, passThreshold 설정 불가
+		if (opts.passThreshold !== null) {
+			throw new Error(
+				"문제 생성 시점에는 통과 기준을 설정할 수 없습니다. 테스트케이스 업로드 후 설정해주세요."
+			);
 		}
+		return;
+	}
+
+	const [{ count: tcCount }] = await db
+		.select({ count: sql<number>`COUNT(*)::int` })
+		.from(testcases)
+		.where(eq(testcases.problemId, opts.problemId));
+
+	if (tcCount === 0) {
+		if (opts.passThreshold !== null) {
+			throw new Error("테스트케이스가 없으면 통과 기준을 설정할 수 없습니다.");
+		}
+		return;
+	}
+	// tcCount > 0
+	if (opts.passThreshold === null) {
+		throw new Error("테스트케이스가 존재하면 통과 기준(M)을 지정해야 합니다.");
+	}
+	if (opts.passThreshold > tcCount) {
+		throw new Error(`통과 기준(${opts.passThreshold})이 테스트케이스 수(${tcCount})보다 큽니다.`);
 	}
 }
 

@@ -5,6 +5,29 @@ import { generateTestcasePath, uploadFile } from "@/lib/storage";
 import { recomputeProblemSubtaskMeta } from "./problem-subtask-meta";
 
 /**
+ * Reject mutations that would assign a non-zero `subtaskGroup` to a
+ * testcase belonging to a full-judge problem.
+ *
+ * `recomputeProblemSubtaskMeta` flips `problems.hasSubtasks` to true
+ * whenever any testcase has `subtaskGroup > 0`, which would coexist with
+ * `useFullJudge=true` and silently get ignored by the judger (the
+ * subtask branch takes priority). Block this conflict at the source.
+ */
+async function assertCompatibleSubtaskGroup(problemId: number, subtaskGroup: number | undefined) {
+	if (subtaskGroup === undefined || subtaskGroup === 0) return;
+	const [problem] = await db
+		.select({ useFullJudge: problems.useFullJudge })
+		.from(problems)
+		.where(eq(problems.id, problemId))
+		.limit(1);
+	if (problem?.useFullJudge) {
+		throw new Error(
+			"전체 채점 문제는 서브테스크 그룹(0이 아닌 subtaskGroup)을 가질 수 없습니다. 먼저 전체 채점을 해제해주세요."
+		);
+	}
+}
+
+/**
  * Keep `problems.passThreshold` consistent after a testcase mutation on
  * a full-judge problem.
  *
@@ -71,6 +94,7 @@ export async function createTestcase(data: {
 	isHidden?: boolean;
 	score?: number;
 }) {
+	await assertCompatibleSubtaskGroup(data.problemId, data.subtaskGroup);
 	const [newTestcase] = await db.insert(testcases).values(data).returning();
 	await recomputeProblemSubtaskMeta(data.problemId);
 	await reconcileFullJudgeAfterTestcaseChange(data.problemId);
@@ -127,6 +151,8 @@ export async function uploadTestcase(
 	outputBuffer: Buffer,
 	options?: { score?: number; isHidden?: boolean; subtaskGroup?: number }
 ) {
+	await assertCompatibleSubtaskGroup(problemId, options?.subtaskGroup);
+
 	const [countResult] = await db
 		.select({ count: count() })
 		.from(testcases)
@@ -170,6 +196,11 @@ export async function uploadTestcasesBulk(
 	}>
 ) {
 	if (pairs.length === 0) return [];
+
+	if (pairs.some((p) => p.subtaskGroup !== undefined && p.subtaskGroup > 0)) {
+		// One DB lookup is enough — same problemId for the whole batch.
+		await assertCompatibleSubtaskGroup(problemId, 1);
+	}
 
 	const [countResult] = await db
 		.select({ count: count() })
@@ -233,6 +264,8 @@ export async function updateTestcase(
 		.from(testcases)
 		.where(eq(testcases.id, id));
 	if (!row) return null;
+
+	await assertCompatibleSubtaskGroup(row.problemId, data.subtaskGroup);
 
 	const [updated] = await db
 		.update(testcases)
