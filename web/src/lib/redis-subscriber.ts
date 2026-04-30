@@ -15,6 +15,7 @@ interface JudgeResult {
 	error_message?: string | null;
 	score?: number;
 	edit_distance?: number | null;
+	passed_testcases?: number | null;
 	testcase_results: {
 		testcase_id: number;
 		verdict: string;
@@ -123,17 +124,21 @@ class RedisSubscriber {
 			console.log(`Received ${channel} result for submission ${submissionId}: ${result.verdict}`);
 
 			// Update database
-			await db
-				.update(submissions)
-				.set({
-					verdict: result.verdict as Verdict,
-					executionTime: result.execution_time,
-					memoryUsed: result.memory_used,
-					errorMessage: result.error_message ?? null,
-					score: result.score ?? null,
-					editDistance: result.edit_distance ?? null,
-				})
-				.where(eq(submissions.id, submissionId));
+			const updateValues: Record<string, unknown> = {
+				verdict: result.verdict as Verdict,
+				executionTime: result.execution_time,
+				memoryUsed: result.memory_used,
+				errorMessage: result.error_message ?? null,
+				score: result.score ?? null,
+				editDistance: result.edit_distance ?? null,
+			};
+			// 전체 채점 결과면 passed_testcases가 설정되어 있고, 총 개수는 testcase_results.length로 계산.
+			if (result.passed_testcases !== undefined && result.passed_testcases !== null) {
+				updateValues.passedTestcases = result.passed_testcases;
+				updateValues.totalTestcases = result.testcase_results?.length ?? 0;
+			}
+
+			await db.update(submissions).set(updateValues).where(eq(submissions.id, submissionId));
 
 			// Insert testcase results
 			if (result.testcase_results && result.testcase_results.length > 0) {
