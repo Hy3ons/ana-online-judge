@@ -109,6 +109,29 @@ pub struct TestcaseResult {
     pub checker_message: Option<String>,
 }
 
+/// Pick the first non-accepted verdict from a list of testcase results.
+///
+/// Used by the full-judge path to surface a representative failure when the
+/// pass threshold is not met. Returns `WrongAnswer` as a fallback if every
+/// result is accepted (which should not happen on the failure branch).
+fn first_failure_verdict(results: &[TestcaseResult]) -> Verdict {
+    let accepted = Verdict::Accepted.to_string();
+    for r in results {
+        if r.verdict != accepted {
+            return match r.verdict.as_str() {
+                "wrong_answer" => Verdict::WrongAnswer,
+                "time_limit_exceeded" => Verdict::TimeLimitExceeded,
+                "memory_limit_exceeded" => Verdict::MemoryLimitExceeded,
+                "runtime_error" => Verdict::RuntimeError,
+                "presentation_error" => Verdict::PresentationError,
+                "system_error" => Verdict::SystemError,
+                _ => Verdict::WrongAnswer,
+            };
+        }
+    }
+    Verdict::WrongAnswer
+}
+
 /// Process a judge job
 pub async fn process_judge_job(
     job: &JudgeJob,
@@ -310,6 +333,7 @@ pub async fn process_judge_job(
 
     let overall_verdict: Verdict;
     let final_score: i64;
+    let mut full_judge_passed: Option<i32> = None;
 
     if job.has_subtasks {
         // IOI-style: group by subtask_group, fail-fast within group, continue across groups.
@@ -387,6 +411,54 @@ pub async fn process_judge_job(
         let agg = aggregate_subtasks(&outcomes, job.max_score);
         overall_verdict = agg.overall_verdict;
         final_score = agg.final_score;
+    } else if job.use_full_judge {
+        // Full-judge path: no fail-fast. Run every testcase, then decide AC
+        // iff `passed >= pass_threshold` (defaults to all testcases).
+        let accepted_str = Verdict::Accepted.to_string();
+        let mut passed: i32 = 0;
+        for (idx, tc) in job.testcases.iter().enumerate() {
+            let r = run_single_testcase(
+                job,
+                tc,
+                temp_dir.path(),
+                &lang_config,
+                storage,
+                checker_info.as_ref(),
+                &storage_env,
+            )
+            .await?;
+
+            // Only AC testcases contribute to max_time/max_memory. Failed
+            // testcases (WA/TLE/MLE/RE) have unreliable timing measurements
+            // due to partial execution or timeouts, and must not pollute the
+            // aggregates reported back to the user.
+            if r.verdict == accepted_str {
+                if let Some(t) = r.execution_time {
+                    max_time = max_time.max(t);
+                }
+                if let Some(m) = r.memory_used {
+                    max_memory = max_memory.max(m);
+                }
+                passed += 1;
+            }
+            testcase_results.push(r);
+
+            let _ = redis
+                .publish_progress(job.submission_id, idx + 1, total_testcases)
+                .await;
+        }
+
+        let total = job.testcases.len() as i32;
+        let threshold = job.pass_threshold.unwrap_or(total);
+
+        if passed >= threshold {
+            overall_verdict = Verdict::Accepted;
+            final_score = job.max_score;
+        } else {
+            overall_verdict = first_failure_verdict(&testcase_results);
+            final_score = 0;
+        }
+        full_judge_passed = Some(passed);
     } else {
         // Legacy non-subtask path: fail-fast on first non-accepted; score is all-or-nothing.
         let mut legacy_verdict = Verdict::Accepted;
@@ -500,7 +572,7 @@ pub async fn process_judge_job(
         memory_used,
         testcase_results,
         error_message: None,
-        passed_testcases: None,
+        passed_testcases: full_judge_passed,
     })
 }
 
@@ -879,5 +951,51 @@ mod tests {
         let job: JudgeJob = serde_json::from_str(json).unwrap();
         assert!(!job.use_full_judge);
         assert_eq!(job.pass_threshold, None);
+    }
+
+    #[test]
+    fn test_first_failure_verdict_picks_first_non_accepted() {
+        let results = vec![
+            TestcaseResult {
+                testcase_id: 1,
+                verdict: "accepted".to_string(),
+                execution_time: Some(10),
+                memory_used: Some(1024),
+                output: None,
+                checker_message: None,
+            },
+            TestcaseResult {
+                testcase_id: 2,
+                verdict: "time_limit_exceeded".to_string(),
+                execution_time: None,
+                memory_used: None,
+                output: None,
+                checker_message: None,
+            },
+            TestcaseResult {
+                testcase_id: 3,
+                verdict: "wrong_answer".to_string(),
+                execution_time: None,
+                memory_used: None,
+                output: None,
+                checker_message: None,
+            },
+        ];
+        let v = first_failure_verdict(&results);
+        assert_eq!(v, Verdict::TimeLimitExceeded);
+    }
+
+    #[test]
+    fn test_first_failure_verdict_all_accepted_returns_wrong_answer_default() {
+        let results = vec![TestcaseResult {
+            testcase_id: 1,
+            verdict: "accepted".to_string(),
+            execution_time: Some(10),
+            memory_used: Some(1024),
+            output: None,
+            checker_message: None,
+        }];
+        let v = first_failure_verdict(&results);
+        assert_eq!(v, Verdict::WrongAnswer);
     }
 }
