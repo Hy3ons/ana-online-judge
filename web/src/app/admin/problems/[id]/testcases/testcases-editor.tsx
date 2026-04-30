@@ -1,12 +1,16 @@
 "use client";
 
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Editor } from "@monaco-editor/react";
+import { Eye, Loader2, Plus, Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { updateTestcase } from "@/actions/admin/testcases";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DeleteTestcaseButton } from "./delete-button";
 
 type Testcase = {
@@ -22,6 +26,18 @@ interface Props {
 	problemId: number;
 	initialTestcases: Testcase[];
 }
+
+function formatBytes(n: number): string {
+	if (n < 1024) return `${n}B`;
+	if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)}KB`;
+	return `${(n / (1024 * 1024)).toFixed(1)}MB`;
+}
+
+type PreviewState = {
+	index: number;
+	input: { text: string; size: number; truncated: boolean };
+	output: { text: string; size: number; truncated: boolean } | null;
+};
 
 /**
  * Divider UX: the editor holds an ordered list of `{ type: "tc" | "divider" }`
@@ -87,6 +103,8 @@ export function TestcasesEditor({ problemId, initialTestcases }: Props) {
 	);
 	const [pending, startTransition] = useTransition();
 	const [error, setError] = useState<string | null>(null);
+	const [preview, setPreview] = useState<PreviewState | null>(null);
+	const [previewLoadingId, setPreviewLoadingId] = useState<number | null>(null);
 
 	const grouped = computeGroups(entries);
 	const hasSubtasks = grouped.length > 1;
@@ -101,6 +119,49 @@ export function TestcasesEditor({ problemId, initialTestcases }: Props) {
 
 	function removeDivider(atIdx: number) {
 		setEntries((prev) => prev.filter((_, i) => i !== atIdx));
+	}
+
+	async function openPreview(tc: Testcase, index: number) {
+		setPreviewLoadingId(tc.id);
+		try {
+			const TRUNCATE_BYTES = 200 * 1024; // 200KB
+			const [inputRes, outputRes] = await Promise.all([
+				fetch(`/api/admin/get-file-content?path=${encodeURIComponent(tc.inputPath)}`),
+				fetch(`/api/admin/get-file-content?path=${encodeURIComponent(tc.outputPath)}`),
+			]);
+			if (!inputRes.ok) throw new Error("입력 파일 로드 실패");
+			if (!outputRes.ok) throw new Error("출력 파일 로드 실패");
+			const inputData = await inputRes.json();
+			const outputData = await outputRes.json();
+
+			const inputText: string = inputData.content ?? "";
+			const outputText: string = outputData.content ?? "";
+			const inputBytes = new TextEncoder().encode(inputText).byteLength;
+			const outputBytes = new TextEncoder().encode(outputText).byteLength;
+
+			setPreview({
+				index,
+				input: {
+					text: inputText.length > TRUNCATE_BYTES ? inputText.slice(0, TRUNCATE_BYTES) : inputText,
+					size: inputBytes,
+					truncated: inputBytes > TRUNCATE_BYTES,
+				},
+				output: outputText
+					? {
+							text:
+								outputText.length > TRUNCATE_BYTES
+									? outputText.slice(0, TRUNCATE_BYTES)
+									: outputText,
+							size: outputBytes,
+							truncated: outputBytes > TRUNCATE_BYTES,
+						}
+					: null,
+			});
+		} catch (err) {
+			toast.error(err instanceof Error ? err.message : "미리보기 실패");
+		} finally {
+			setPreviewLoadingId(null);
+		}
 	}
 
 	async function save() {
@@ -203,6 +264,19 @@ export function TestcasesEditor({ problemId, initialTestcases }: Props) {
 													disabled={!hasSubtasks}
 												/>
 											</label>
+											<Button
+												variant="ghost"
+												size="sm"
+												onClick={() => openPreview(e.tc, e.tc.id)}
+												disabled={previewLoadingId === e.tc.id}
+												title="미리보기"
+											>
+												{previewLoadingId === e.tc.id ? (
+													<Loader2 className="h-4 w-4 animate-spin" />
+												) : (
+													<Eye className="h-4 w-4" />
+												)}
+											</Button>
 											<DeleteTestcaseButton testcaseId={e.tc.id} problemId={problemId} />
 											<Button
 												variant="ghost"
@@ -242,6 +316,64 @@ export function TestcasesEditor({ problemId, initialTestcases }: Props) {
 						) : null
 					)}
 				</div>
+
+				<Dialog open={preview !== null} onOpenChange={(o) => !o && setPreview(null)}>
+					<DialogContent className="max-w-4xl">
+						<DialogHeader>
+							<DialogTitle>테스트 #{preview?.index} 미리보기</DialogTitle>
+						</DialogHeader>
+						{preview && (
+							<Tabs defaultValue="input">
+								<TabsList>
+									<TabsTrigger value="input">입력 ({formatBytes(preview.input.size)})</TabsTrigger>
+									<TabsTrigger value="output" disabled={!preview.output}>
+										출력{preview.output ? ` (${formatBytes(preview.output.size)})` : " (없음)"}
+									</TabsTrigger>
+								</TabsList>
+								<TabsContent value="input">
+									{preview.input.truncated && (
+										<p className="text-xs text-muted-foreground mb-2">
+											파일이 200KB를 초과하여 일부만 표시됩니다 (전체{" "}
+											{formatBytes(preview.input.size)}).
+										</p>
+									)}
+									<Editor
+										height="60vh"
+										value={preview.input.text}
+										options={{
+											readOnly: true,
+											minimap: { enabled: false },
+											wordWrap: "on",
+											fontSize: 13,
+										}}
+									/>
+								</TabsContent>
+								<TabsContent value="output">
+									{preview.output && (
+										<>
+											{preview.output.truncated && (
+												<p className="text-xs text-muted-foreground mb-2">
+													파일이 200KB를 초과하여 일부만 표시됩니다 (전체{" "}
+													{formatBytes(preview.output.size)}).
+												</p>
+											)}
+											<Editor
+												height="60vh"
+												value={preview.output.text}
+												options={{
+													readOnly: true,
+													minimap: { enabled: false },
+													wordWrap: "on",
+													fontSize: 13,
+												}}
+											/>
+										</>
+									)}
+								</TabsContent>
+							</Tabs>
+						)}
+					</DialogContent>
+				</Dialog>
 			</CardContent>
 		</Card>
 	);
