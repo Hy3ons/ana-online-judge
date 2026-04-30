@@ -179,6 +179,8 @@ export function SubmissionStatus({
 
 	const typedVerdict = verdict as Verdict;
 	const acceptedLabel = VERDICT_LABELS.accepted.label;
+	const partialLabel = VERDICT_LABELS.partial.label;
+	const wrongAnswerLabel = VERDICT_LABELS.wrong_answer.label;
 	const baseLabel = VERDICT_LABELS[typedVerdict]?.label ?? verdict;
 
 	// 채점 중일 때 진행률 표시
@@ -205,7 +207,32 @@ export function SubmissionStatus({
 
 	// 완료된 경우 기존 UI
 	let label = baseLabel;
-	if (verdict === "partial" && currentScore !== undefined) {
+	let displayVerdict = typedVerdict;
+
+	const isFullJudgeOverride =
+		useFullJudge &&
+		totalTestcases !== null &&
+		totalTestcases > 0 &&
+		verdict !== "compile_error" &&
+		verdict !== "system_error";
+
+	if (isFullJudgeOverride) {
+		// 전체 채점: 통과 개수에 따라 verdict/라벨 재해석
+		// - passed >= M (서버가 accepted로 판정): 맞았습니다
+		// - 0 < passed < M (서버가 wrong_answer 등으로 판정): 부분 점수
+		// - passed === 0: 틀렸습니다
+		const passed = passedTestcases ?? 0;
+		const progress = `(${passed}/${totalTestcases})`;
+		if (verdict === "accepted") {
+			label = `${acceptedLabel} ${progress}`;
+		} else if (passed > 0) {
+			displayVerdict = "partial" as Verdict;
+			label = `${partialLabel} ${progress}`;
+		} else {
+			displayVerdict = "wrong_answer" as Verdict;
+			label = `${wrongAnswerLabel} ${progress}`;
+		}
+	} else if (verdict === "partial" && currentScore !== undefined) {
 		label = `${acceptedLabel} (${currentScore}점)`;
 	} else if (verdict === "accepted" && currentScore !== undefined) {
 		if (maxScore !== undefined && currentScore !== maxScore) {
@@ -213,19 +240,11 @@ export function SubmissionStatus({
 		}
 	}
 
-	const showFullJudgeProgress =
-		useFullJudge && totalTestcases !== null && totalTestcases > 0 && verdict !== "compile_error";
-
 	return (
 		<div className="inline-flex items-center gap-2">
-			<Badge variant="verdict" verdict={typedVerdict}>
+			<Badge variant="verdict" verdict={displayVerdict}>
 				{label}
 			</Badge>
-			{showFullJudgeProgress && (
-				<span className="text-sm text-muted-foreground">
-					({passedTestcases ?? 0}/{totalTestcases})
-				</span>
-			)}
 		</div>
 	);
 }
