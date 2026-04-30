@@ -90,6 +90,7 @@ export async function getPracticeScoreboard(practiceId: number): Promise<{
 			username: participant.username,
 			name: participant.name,
 			totalScore: 0,
+			bestPassedSum: 0,
 			penalty: 0,
 			maxSubmissionTime: 0,
 			problems: {},

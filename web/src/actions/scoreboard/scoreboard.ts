@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, gte, lte } from "drizzle-orm";
+import { and, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
 	contestParticipants,
@@ -8,6 +8,7 @@ import {
 	contests,
 	problems,
 	submissions,
+	testcases,
 	users,
 } from "@/db/schema";
 import { getSessionInfo, requireAdmin } from "@/lib/auth-utils";
@@ -18,18 +19,23 @@ export interface ScoreboardEntry {
 	username: string;
 	name: string;
 	totalScore: number;
+	bestPassedSum: number; // Sum of best passed testcase counts across full-judge problems (tiebreaker)
 	penalty: number; // in minutes
 	maxSubmissionTime: number; // 최대 제출 시간 (minutes from contest start, 늦을수록 불리)
 	problems: {
 		[label: string]: {
 			problemType: "icpc" | "special_judge" | "anigma" | "interactive";
 			hasSubtasks?: boolean;
+			useFullJudge?: boolean;
 			// ICPC fields
 			solved?: boolean;
 			attempts?: number;
 			solvedTime?: number; // minutes from contest start
 			// Subtask (IOI) fields
 			bestScore?: number; // max(submission.score) across non-frozen attempts
+			// Full-judge fields
+			bestPassed?: number; // max(submission.passedTestcases) across non-frozen attempts
+			totalTestcases?: number; // total testcase count for full-judge problems
 			// ANIGMA fields
 			score?: number;
 			anigmaDetails?: {
@@ -94,12 +100,30 @@ export async function getScoreboard(contestId: number) {
 			problemId: contestProblems.problemId,
 			problemType: problems.problemType,
 			hasSubtasks: problems.hasSubtasks,
+			useFullJudge: problems.useFullJudge,
 			order: contestProblems.order,
 		})
 		.from(contestProblems)
 		.innerJoin(problems, eq(contestProblems.problemId, problems.id))
 		.where(eq(contestProblems.contestId, contestId))
 		.orderBy(contestProblems.order);
+
+	// Build totalTestcases map for full-judge problems (used for cell display "(bestPassed/N)")
+	const fullJudgeProblemIds = contestProblemsList
+		.filter((p) => p.useFullJudge)
+		.map((p) => p.problemId);
+	let totalsByProblemId = new Map<number, number>();
+	if (fullJudgeProblemIds.length > 0) {
+		const totals = await db
+			.select({
+				problemId: testcases.problemId,
+				count: sql<number>`COUNT(*)::int`,
+			})
+			.from(testcases)
+			.where(inArray(testcases.problemId, fullJudgeProblemIds))
+			.groupBy(testcases.problemId);
+		totalsByProblemId = new Map(totals.map((t) => [t.problemId, t.count]));
+	}
 
 	// Get participants
 	const participantsList = await db
@@ -120,6 +144,7 @@ export async function getScoreboard(contestId: number) {
 			problemId: submissions.problemId,
 			verdict: submissions.verdict,
 			score: submissions.score,
+			passedTestcases: submissions.passedTestcases,
 			anigmaTaskType: submissions.anigmaTaskType,
 			editDistance: submissions.editDistance,
 			createdAt: submissions.createdAt,
@@ -144,6 +169,7 @@ export async function getScoreboard(contestId: number) {
 			username: participant.username,
 			name: participant.name,
 			totalScore: 0,
+			bestPassedSum: 0,
 			penalty: 0,
 			maxSubmissionTime: 0, // 최대 제출 시간 (minutes from contest start)
 			problems: {},
@@ -154,6 +180,8 @@ export async function getScoreboard(contestId: number) {
 			entry.problems[cp.label] = {
 				problemType: cp.problemType,
 				hasSubtasks: cp.hasSubtasks,
+				useFullJudge: cp.useFullJudge,
+				...(cp.useFullJudge ? { totalTestcases: totalsByProblemId.get(cp.problemId) ?? 0 } : {}),
 			};
 		}
 
@@ -291,6 +319,25 @@ export async function getScoreboard(contestId: number) {
 						}
 					}
 				}
+			} else if (problemEntry.useFullJudge) {
+				// Full-judge ICPC: scoring is ICPC-style, but track best passedTestcases as tiebreaker
+				if (isFrozen) {
+					problemEntry.isFrozen = true;
+				} else {
+					const passed = submission.passedTestcases ?? 0;
+					problemEntry.bestPassed = Math.max(problemEntry.bestPassed ?? 0, passed);
+
+					if (!problemEntry.solved) {
+						problemEntry.attempts = (problemEntry.attempts || 0) + 1;
+						if (submission.verdict === "accepted") {
+							problemEntry.solved = true;
+							const solveTime = Math.floor(
+								(submissionTime.getTime() - new Date(contest.startTime).getTime()) / 60000
+							);
+							problemEntry.solvedTime = solveTime;
+						}
+					}
+				}
 			} else {
 				// ICPC: track attempts and solve time
 				if (isFrozen) {
@@ -321,6 +368,13 @@ export async function getScoreboard(contestId: number) {
 			} else if (p.hasSubtasks) {
 				// IOI subtask: award bestScore, no penalty
 				entry.totalScore += p.bestScore || 0;
+			} else if (p.useFullJudge) {
+				// Full-judge ICPC: same scoring as ICPC; bestPassed contributes to tiebreaker
+				if (p.solved) {
+					entry.totalScore += 100;
+					entry.penalty += (p.solvedTime || 0) + (p.attempts! - 1) * contest.penaltyMinutes;
+				}
+				entry.bestPassedSum += p.bestPassed ?? 0;
 			} else {
 				// ICPC: add 100 points for solved, calculate penalty
 				if (p.solved) {
@@ -333,10 +387,17 @@ export async function getScoreboard(contestId: number) {
 		scoreboard.push(entry);
 	}
 
-	// Sort scoreboard: total score desc, then penalty asc, then max submission time asc (늦을수록 불리)
+	// Sort scoreboard:
+	//   1) total score desc
+	//   2) bestPassedSum desc (full-judge tiebreaker)
+	//   3) penalty asc
+	//   4) max submission time asc (늦을수록 불리)
 	scoreboard.sort((a, b) => {
 		if (a.totalScore !== b.totalScore) {
 			return b.totalScore - a.totalScore;
+		}
+		if (a.bestPassedSum !== b.bestPassedSum) {
+			return b.bestPassedSum - a.bestPassedSum;
 		}
 		if (a.penalty !== b.penalty) {
 			return a.penalty - b.penalty;
@@ -351,6 +412,7 @@ export async function getScoreboard(contestId: number) {
 			scoreboard[i].rank = 1;
 		} else if (
 			scoreboard[i].totalScore === scoreboard[i - 1].totalScore &&
+			scoreboard[i].bestPassedSum === scoreboard[i - 1].bestPassedSum &&
 			scoreboard[i].penalty === scoreboard[i - 1].penalty &&
 			scoreboard[i].maxSubmissionTime === scoreboard[i - 1].maxSubmissionTime
 		) {
