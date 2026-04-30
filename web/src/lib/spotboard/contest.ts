@@ -326,8 +326,10 @@ export class ContestLogic {
 				const penB = prev.status.getTotalPenalty();
 				const passedA = item.status.getBestPassedSum();
 				const passedB = prev.status.getBestPassedSum();
+				const lastA = item.status.getLastSolvedTime();
+				const lastB = prev.status.getLastSolvedTime();
 
-				if (solvedA === solvedB && penA === penB && passedA === passedB) {
+				if (solvedA === solvedB && penA === penB && passedA === passedB && lastA === lastB) {
 					item.status.rank = prev.status.rank;
 				} else {
 					item.status.rank = i + 1;
