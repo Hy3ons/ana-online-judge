@@ -153,6 +153,7 @@ export default async function ContestProblemPage({
 							judgeAvailable={problem.judgeAvailable}
 							languageRestricted={problem.allowedLanguages !== null}
 							hasSubtasks={problem.hasSubtasks}
+							useFullJudge={problem.useFullJudge}
 						/>
 						{isSolved && (
 							<div className="flex items-center gap-1">

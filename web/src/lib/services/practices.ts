@@ -341,6 +341,7 @@ export async function getPracticeById(id: number) {
 				judgeAvailable: problems.judgeAvailable,
 				languageRestricted: sql<boolean>`${problems.allowedLanguages} IS NOT NULL`,
 				hasSubtasks: problems.hasSubtasks,
+				useFullJudge: problems.useFullJudge,
 				tier: problems.tier,
 			},
 		})

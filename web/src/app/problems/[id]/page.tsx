@@ -116,6 +116,7 @@ export default async function ProblemDetailPage({ params, searchParams }: Props)
 							judgeAvailable={problem.judgeAvailable}
 							languageRestricted={problem.allowedLanguages !== null}
 							hasSubtasks={problem.hasSubtasks}
+							useFullJudge={problem.useFullJudge}
 						/>
 						{isAdmin && !problem.isPublic && (
 							<Badge variant="secondary" className="text-xs">

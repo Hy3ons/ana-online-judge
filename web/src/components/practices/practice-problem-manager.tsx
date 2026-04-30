@@ -30,6 +30,7 @@ interface PracticeProblemRow {
 		judgeAvailable: boolean;
 		languageRestricted: boolean;
 		hasSubtasks: boolean;
+		useFullJudge?: boolean;
 		tier?: number;
 	};
 }
@@ -98,6 +99,7 @@ export function PracticeProblemManager({
 											judgeAvailable={p.problem.judgeAvailable}
 											languageRestricted={p.problem.languageRestricted}
 											hasSubtasks={p.problem.hasSubtasks}
+											useFullJudge={p.problem.useFullJudge}
 											tier={p.problem.tier}
 										/>
 									</TableCell>

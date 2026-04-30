@@ -191,6 +191,7 @@ export default async function ContestDetailPage({ params }: { params: Promise<{ 
 																judgeAvailable={cp.problem.judgeAvailable}
 																languageRestricted={cp.problem.languageRestricted}
 																hasSubtasks={cp.problem.hasSubtasks}
+																useFullJudge={cp.problem.useFullJudge}
 																isSolved={isSolved}
 																score={score}
 																tier={cp.problem.tier}

@@ -528,6 +528,7 @@ export async function getProblems(
 			judgeAvailable: problems.judgeAvailable,
 			languageRestricted: sql<boolean>`${problems.allowedLanguages} IS NOT NULL`,
 			hasSubtasks: problems.hasSubtasks,
+			useFullJudge: problems.useFullJudge,
 			tier: problems.tier,
 			authorNames: sql<
 				string[]
@@ -573,6 +574,7 @@ export async function getProblemById(
 			judgeAvailable: problems.judgeAvailable,
 			allowedLanguages: problems.allowedLanguages,
 			hasSubtasks: problems.hasSubtasks,
+			useFullJudge: problems.useFullJudge,
 			tier: problems.tier,
 			tierUpdatedAt: problems.tierUpdatedAt,
 			authors: sql<
