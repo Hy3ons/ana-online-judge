@@ -373,6 +373,8 @@ export async function rejudgeSubmission(id: number) {
 			memoryUsed: null,
 			score: null,
 			errorMessage: null,
+			passedTestcases: 0,
+			totalTestcases: 0,
 		})
 		.where(eq(submissions.id, id));
 
