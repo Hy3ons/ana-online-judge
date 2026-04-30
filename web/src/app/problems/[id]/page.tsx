@@ -1,3 +1,4 @@
+import { eq, sql } from "drizzle-orm";
 import { CheckCircle2, Download, Pencil } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -15,7 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import type { LanguageCode } from "@/db/schema";
+import { db } from "@/db";
+import { type LanguageCode, testcases } from "@/db/schema";
 import { resolveDisplay } from "@/lib/utils/translations";
 import { ProblemDetailClient } from "./problem-detail-client";
 
@@ -72,6 +74,7 @@ export default async function ProblemDetailPage({ params, searchParams }: Props)
 		rankingsResult,
 		userStatus,
 		votePanelData,
+		testcaseCountResult,
 	] = await Promise.all([
 		getProblemStats(problemId),
 		currentUserId
@@ -92,7 +95,15 @@ export default async function ProblemDetailPage({ params, searchParams }: Props)
 		getProblemRanking(problemId, { sortBy: "executionTime", page: 1, limit: 20 }),
 		currentUserId ? getUserProblemStatuses([problemId], currentUserId) : Promise.resolve(new Map()),
 		getProblemVotesData(problemId),
+		problem.useFullJudge
+			? db
+					.select({ count: sql<number>`COUNT(*)::int` })
+					.from(testcases)
+					.where(eq(testcases.problemId, problem.id))
+			: Promise.resolve([{ count: 0 }]),
 	]);
+
+	const totalTestcases = testcaseCountResult[0]?.count ?? 0;
 
 	const status = userStatus.get(problemId);
 	const isSolved = status?.solved ?? false;
@@ -163,6 +174,14 @@ export default async function ProblemDetailPage({ params, searchParams }: Props)
 						</Button>
 					</div>
 				</>
+			)}
+			{problem.useFullJudge && problem.passThreshold !== null && (
+				<div className="mt-4 rounded-md border border-border bg-secondary/50 p-3 text-sm text-foreground">
+					<strong>
+						{totalTestcases}개의 테스트케이스 중 {problem.passThreshold}개 이상
+					</strong>
+					을 맞히면 정답으로 인정된다.
+				</div>
 			)}
 		</div>
 	);

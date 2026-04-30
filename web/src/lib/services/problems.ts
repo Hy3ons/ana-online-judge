@@ -575,6 +575,7 @@ export async function getProblemById(
 			allowedLanguages: problems.allowedLanguages,
 			hasSubtasks: problems.hasSubtasks,
 			useFullJudge: problems.useFullJudge,
+			passThreshold: problems.passThreshold,
 			tier: problems.tier,
 			tierUpdatedAt: problems.tierUpdatedAt,
 			authors: sql<
