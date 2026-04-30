@@ -150,8 +150,9 @@ export async function getSpotboardData(contestId: number): Promise<SpotboardConf
 		const problemInfo = contestProblemsList.find((p) => p.problemId === sub.problemId);
 		const problemType = problemInfo?.problemType;
 
+		const isFrozen = !!(shouldMask && freezeTime && subTime >= freezeTime);
 		let result = "Pending";
-		if (shouldMask && freezeTime && subTime >= freezeTime) {
+		if (isFrozen) {
 			result = "Pending";
 		} else {
 			// Map verdict to Spotboard result
@@ -200,7 +201,7 @@ export async function getSpotboardData(contestId: number): Promise<SpotboardConf
 			score: sub.score ?? undefined,
 			problemType: problemType,
 			anigmaDetails: anigmaDetails,
-			passedTestcases: sub.passedTestcases ?? undefined,
+			passedTestcases: isFrozen ? undefined : (sub.passedTestcases ?? undefined),
 		});
 	}
 
