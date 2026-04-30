@@ -72,6 +72,7 @@ export async function getSpotboardData(contestId: number): Promise<SpotboardConf
 			problemId: contestProblems.problemId,
 			title: problems.displayTitle,
 			problemType: problems.problemType,
+			useFullJudge: problems.useFullJudge,
 			color: problems.displayTitle, // Use title as color placeholder or add color to schema later
 			order: contestProblems.order,
 		})
@@ -85,6 +86,7 @@ export async function getSpotboardData(contestId: number): Promise<SpotboardConf
 		title: p.label, // Spotboard uses short name (A, B, C) as title/name usually
 		color: "", // TODO: Add color support
 		problemType: p.problemType,
+		useFullJudge: p.useFullJudge,
 	}));
 
 	// Get participants (Teams)
@@ -112,6 +114,7 @@ export async function getSpotboardData(contestId: number): Promise<SpotboardConf
 			problemId: submissions.problemId,
 			verdict: submissions.verdict,
 			score: submissions.score,
+			passedTestcases: submissions.passedTestcases,
 			anigmaTaskType: submissions.anigmaTaskType,
 			editDistance: submissions.editDistance,
 			createdAt: submissions.createdAt,
@@ -197,6 +200,7 @@ export async function getSpotboardData(contestId: number): Promise<SpotboardConf
 			score: sub.score ?? undefined,
 			problemType: problemType,
 			anigmaDetails: anigmaDetails,
+			passedTestcases: sub.passedTestcases ?? undefined,
 		});
 	}
 
