@@ -117,6 +117,9 @@ export function SubmissionRow({
 					initialVerdict={submission.verdict}
 					score={submission.score ?? undefined}
 					maxScore={submission.maxScore}
+					useFullJudge={submission.problemUseFullJudge && submission.problemType !== "anigma"}
+					passedTestcases={submission.passedTestcases}
+					totalTestcases={submission.totalTestcases}
 				/>
 			</TableCell>
 			<TableCell className="text-muted-foreground">

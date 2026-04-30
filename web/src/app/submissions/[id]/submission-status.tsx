@@ -12,6 +12,9 @@ interface SubmissionStatusProps {
 	initialVerdict: string;
 	score?: number;
 	maxScore?: number;
+	useFullJudge?: boolean;
+	passedTestcases?: number | null;
+	totalTestcases?: number | null;
 }
 
 export function SubmissionStatus({
@@ -19,10 +22,15 @@ export function SubmissionStatus({
 	initialVerdict,
 	score,
 	maxScore,
+	useFullJudge = false,
+	passedTestcases: initialPassed = null,
+	totalTestcases: initialTotal = null,
 }: SubmissionStatusProps) {
 	const router = useRouter();
 	const [verdict, setVerdict] = useState(initialVerdict);
 	const [currentScore, setScore] = useState(score);
+	const [passedTestcases, setPassedTestcases] = useState<number | null>(initialPassed);
+	const [totalTestcases, setTotalTestcases] = useState<number | null>(initialTotal);
 	const [isJudging, setIsJudging] = useState(
 		initialVerdict === "pending" || initialVerdict === "judging"
 	);
@@ -107,6 +115,12 @@ export function SubmissionStatus({
 						setVerdict(data.verdict);
 						if (data.score !== undefined) {
 							setScore(data.score);
+						}
+						if (data.passedTestcases !== undefined) {
+							setPassedTestcases(data.passedTestcases);
+						}
+						if (data.totalTestcases !== undefined) {
+							setTotalTestcases(data.totalTestcases);
 						}
 						setIsJudging(false);
 
@@ -199,9 +213,19 @@ export function SubmissionStatus({
 		}
 	}
 
+	const showFullJudgeProgress =
+		useFullJudge && totalTestcases !== null && totalTestcases > 0 && verdict !== "compile_error";
+
 	return (
-		<Badge variant="verdict" verdict={typedVerdict}>
-			{label}
-		</Badge>
+		<div className="inline-flex items-center gap-2">
+			<Badge variant="verdict" verdict={typedVerdict}>
+				{label}
+			</Badge>
+			{showFullJudgeProgress && (
+				<span className="text-sm text-muted-foreground">
+					({passedTestcases ?? 0}/{totalTestcases})
+				</span>
+			)}
+		</div>
 	);
 }
