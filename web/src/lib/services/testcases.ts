@@ -1,8 +1,59 @@
 import { count, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { testcases } from "@/db/schema";
+import { problems, testcases } from "@/db/schema";
 import { generateTestcasePath, uploadFile } from "@/lib/storage";
 import { recomputeProblemSubtaskMeta } from "./problem-subtask-meta";
+
+/**
+ * Keep `problems.passThreshold` consistent after a testcase mutation on
+ * a full-judge problem.
+ *
+ * - If all testcases were removed, clear `passThreshold` back to null.
+ * - If this is the first testcase upload (passThreshold still null on a
+ *   full-judge problem), seed `passThreshold = N` as a safe default.
+ * - If the resulting count drops below the existing `passThreshold`, throw
+ *   so the caller (and surrounding transactionless flow) refuses the change.
+ *   Pre-flight checks in destructive mutators avoid uploading/deleting files
+ *   that would later be rejected here.
+ *
+ * No-op for problems where `useFullJudge` is false.
+ */
+async function reconcileFullJudgeAfterTestcaseChange(problemId: number) {
+	const [tcCountRow] = await db
+		.select({ count: count() })
+		.from(testcases)
+		.where(eq(testcases.problemId, problemId));
+	const tcCount = tcCountRow?.count ?? 0;
+
+	const [problem] = await db
+		.select({
+			useFullJudge: problems.useFullJudge,
+			passThreshold: problems.passThreshold,
+		})
+		.from(problems)
+		.where(eq(problems.id, problemId))
+		.limit(1);
+
+	if (!problem || !problem.useFullJudge) return;
+
+	if (tcCount === 0) {
+		if (problem.passThreshold !== null) {
+			await db.update(problems).set({ passThreshold: null }).where(eq(problems.id, problemId));
+		}
+		return;
+	}
+
+	if (problem.passThreshold === null) {
+		await db.update(problems).set({ passThreshold: tcCount }).where(eq(problems.id, problemId));
+		return;
+	}
+
+	if (problem.passThreshold > tcCount) {
+		throw new Error(
+			`통과 기준(${problem.passThreshold})보다 테스트케이스가 적어집니다(${tcCount}). 먼저 통과 기준을 ${tcCount} 이하로 낮춰주세요.`
+		);
+	}
+}
 
 export async function getTestcases(problemId: number) {
 	return db
@@ -22,6 +73,7 @@ export async function createTestcase(data: {
 }) {
 	const [newTestcase] = await db.insert(testcases).values(data).returning();
 	await recomputeProblemSubtaskMeta(data.problemId);
+	await reconcileFullJudgeAfterTestcaseChange(data.problemId);
 	return newTestcase;
 }
 
@@ -30,9 +82,41 @@ export async function deleteTestcase(id: number) {
 		.select({ problemId: testcases.problemId })
 		.from(testcases)
 		.where(eq(testcases.id, id));
+
+	if (row) {
+		// Pre-flight: refuse the delete if it would push the testcase count
+		// below the configured passThreshold for a full-judge problem.
+		const [tcCountRow] = await db
+			.select({ count: count() })
+			.from(testcases)
+			.where(eq(testcases.problemId, row.problemId));
+		const nextN = (tcCountRow?.count ?? 0) - 1;
+
+		const [problem] = await db
+			.select({
+				useFullJudge: problems.useFullJudge,
+				passThreshold: problems.passThreshold,
+			})
+			.from(problems)
+			.where(eq(problems.id, row.problemId))
+			.limit(1);
+
+		if (
+			problem?.useFullJudge &&
+			problem.passThreshold !== null &&
+			nextN > 0 &&
+			problem.passThreshold > nextN
+		) {
+			throw new Error(
+				`통과 기준(${problem.passThreshold})보다 테스트케이스가 적어집니다(${nextN}). 먼저 통과 기준을 ${nextN} 이하로 낮춰주세요.`
+			);
+		}
+	}
+
 	await db.delete(testcases).where(eq(testcases.id, id));
 	if (row) {
 		await recomputeProblemSubtaskMeta(row.problemId);
+		await reconcileFullJudgeAfterTestcaseChange(row.problemId);
 	}
 	return { success: true };
 }
@@ -71,6 +155,7 @@ export async function uploadTestcase(
 		.returning();
 
 	await recomputeProblemSubtaskMeta(problemId);
+	await reconcileFullJudgeAfterTestcaseChange(problemId);
 	return newTestcase;
 }
 
@@ -124,6 +209,7 @@ export async function uploadTestcasesBulk(
 		)
 		.returning();
 	await recomputeProblemSubtaskMeta(problemId);
+	await reconcileFullJudgeAfterTestcaseChange(problemId);
 	return inserted;
 }
 
@@ -158,5 +244,6 @@ export async function updateTestcase(
 		.where(eq(testcases.id, id))
 		.returning();
 	await recomputeProblemSubtaskMeta(row.problemId);
+	await reconcileFullJudgeAfterTestcaseChange(row.problemId);
 	return updated;
 }
