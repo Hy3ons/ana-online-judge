@@ -79,6 +79,7 @@ pub async fn process_anigma_job(
                     memory_used: None,
                     testcase_results: vec![],
                     error_message: Some(format!("Setup failed: {}", e)),
+                    passed_testcases: None,
                 },
                 edit_distance: None,
             });
@@ -96,6 +97,7 @@ pub async fn process_anigma_job(
                 memory_used: None,
                 testcase_results: vec![],
                 error_message: Some(error),
+                passed_testcases: None,
             },
             edit_distance: None,
         });
@@ -182,6 +184,7 @@ pub async fn process_anigma_job(
             },
             testcase_results,
             error_message: None,
+            passed_testcases: None,
         },
         edit_distance,
     })
@@ -283,6 +286,7 @@ pub async fn process_anigma_task1_job(
         },
         testcase_results: vec![],
         error_message,
+        passed_testcases: None,
     })
 }
 

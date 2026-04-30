@@ -42,6 +42,10 @@ pub struct JudgeJob {
     pub max_score: i64,
     #[serde(default)]
     pub has_subtasks: bool,
+    #[serde(default)]
+    pub use_full_judge: bool,
+    #[serde(default)]
+    pub pass_threshold: Option<i32>,
     pub testcases: Vec<TestcaseInfo>,
     #[serde(default)]
     pub problem_type: ProblemType,
@@ -72,6 +76,8 @@ pub struct JudgeResult {
     /// Compile error / Runtime error message
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error_message: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub passed_testcases: Option<i32>,
 }
 
 impl JudgeResult {
@@ -84,6 +90,7 @@ impl JudgeResult {
             memory_used: None,
             testcase_results: vec![],
             error_message: Some(error),
+            passed_testcases: None,
         }
     }
 }
@@ -149,6 +156,7 @@ pub async fn process_judge_job(
                 memory_used: None,
                 testcase_results: vec![],
                 error_message: compile_result.message,
+                passed_testcases: None,
             });
         }
     }
@@ -192,6 +200,7 @@ pub async fn process_judge_job(
                                     "Failed to download Python checker: {:#}",
                                     e
                                 )),
+                                passed_testcases: None,
                             });
                         }
                     }
@@ -215,6 +224,7 @@ pub async fn process_judge_job(
                                 memory_used: None,
                                 testcase_results: vec![],
                                 error_message: Some(format!("Failed to compile checker: {:#}", e)),
+                                passed_testcases: None,
                             });
                         }
                     }
@@ -229,6 +239,7 @@ pub async fn process_judge_job(
                     memory_used: None,
                     testcase_results: vec![],
                     error_message: Some("Special judge problem requires a checker".to_string()),
+                    passed_testcases: None,
                 });
             }
         }
@@ -489,6 +500,7 @@ pub async fn process_judge_job(
         memory_used,
         testcase_results,
         error_message: None,
+        passed_testcases: None,
     })
 }
 
@@ -830,5 +842,42 @@ mod tests {
         assert!(job.has_subtasks);
         assert_eq!(job.testcases[1].subtask_group, 2);
         assert_eq!(job.testcases[1].score, 20);
+    }
+
+    #[test]
+    fn test_judge_job_deserializes_with_full_judge_fields() {
+        let json = r#"{
+            "submission_id": 1,
+            "problem_id": 1,
+            "code": "",
+            "language": "cpp",
+            "time_limit": 1000,
+            "ignore_time_limit_bonus": false,
+            "memory_limit": 256,
+            "ignore_memory_limit_bonus": false,
+            "max_score": 100,
+            "use_full_judge": true,
+            "pass_threshold": 7,
+            "testcases": [
+                { "id": 1, "input_path": "a", "output_path": "b" }
+            ]
+        }"#;
+        let job: JudgeJob = serde_json::from_str(json).unwrap();
+        assert!(job.use_full_judge);
+        assert_eq!(job.pass_threshold, Some(7));
+    }
+
+    #[test]
+    fn test_judge_job_full_judge_defaults() {
+        let json = r#"{
+            "submission_id": 1, "problem_id": 1, "code": "", "language": "cpp",
+            "time_limit": 1000, "ignore_time_limit_bonus": false,
+            "memory_limit": 256, "ignore_memory_limit_bonus": false,
+            "max_score": 100,
+            "testcases": [{ "id": 1, "input_path": "a", "output_path": "b" }]
+        }"#;
+        let job: JudgeJob = serde_json::from_str(json).unwrap();
+        assert!(!job.use_full_judge);
+        assert_eq!(job.pass_threshold, None);
     }
 }
