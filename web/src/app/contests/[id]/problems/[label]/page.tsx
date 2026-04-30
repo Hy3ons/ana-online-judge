@@ -197,14 +197,6 @@ export default async function ContestProblemPage({
 					</div>
 				</>
 			)}
-			{problem.useFullJudge && problem.passThreshold !== null && (
-				<div className="mt-4 rounded-md border border-border bg-secondary/50 p-3 text-sm text-foreground">
-					<strong>
-						{totalTestcases}개의 테스트케이스 중 {problem.passThreshold}개 이상
-					</strong>
-					을 맞히면 정답으로 인정된다.
-				</div>
-			)}
 		</div>
 	);
 
@@ -224,6 +216,7 @@ export default async function ContestProblemPage({
 					tier: problem.tier,
 					tierUpdatedAt: problem.tierUpdatedAt,
 					useFullJudge: problem.useFullJudge,
+					passThreshold: problem.passThreshold,
 					totalTestcases,
 				}}
 				authors={problem.authors}
