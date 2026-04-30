@@ -62,7 +62,8 @@ export function Spotboard({ config, isAwardMode = false }: SpotboardProps) {
 					run.result,
 					run.score,
 					run.problemType,
-					run.anigmaDetails
+					run.anigmaDetails,
+					run.passedTestcases
 				)
 			);
 		}
@@ -161,7 +162,8 @@ export function Spotboard({ config, isAwardMode = false }: SpotboardProps) {
 						run.result,
 						run.score,
 						run.problemType,
-						run.anigmaDetails
+						run.anigmaDetails,
+						run.passedTestcases
 					);
 					logic.addRun(runToAdd);
 				}

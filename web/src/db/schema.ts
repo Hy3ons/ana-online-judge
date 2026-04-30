@@ -153,6 +153,8 @@ export const problems = pgTable(
 		tier: integer("tier").notNull().default(0), // -1=not_ratable, 0=unrated, 1~30=Bronze5~Ruby1
 		tierUpdatedAt: timestamp("tier_updated_at"),
 		hasSubtasks: boolean("has_subtasks").notNull().default(false),
+		useFullJudge: boolean("use_full_judge").notNull().default(false),
+		passThreshold: integer("pass_threshold"),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at").defaultNow().notNull(),
 	},

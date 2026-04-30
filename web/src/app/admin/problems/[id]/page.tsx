@@ -1,7 +1,10 @@
+import { eq, sql } from "drizzle-orm";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getProblemForEdit } from "@/actions/admin";
 import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
+import { db } from "@/db";
+import { testcases } from "@/db/schema";
 import { ProblemForm } from "../problem-form";
 import { ProblemSourcesSection } from "./problem-sources-section";
 import { ProblemStaffSection } from "./problem-staff-section";
@@ -26,11 +29,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function EditProblemPage({ params }: Props) {
 	const { id } = await params;
-	const problem = await getProblemForEdit(parseInt(id, 10));
+	const problemId = parseInt(id, 10);
+	const [problem, tcResult] = await Promise.all([
+		getProblemForEdit(problemId),
+		db
+			.select({ count: sql<number>`COUNT(*)::int` })
+			.from(testcases)
+			.where(eq(testcases.problemId, problemId)),
+	]);
 
 	if (!problem) {
 		notFound();
 	}
+
+	const testcaseCount = tcResult[0]?.count ?? 0;
 
 	return (
 		<div className="space-y-6">
@@ -50,7 +62,7 @@ export default async function EditProblemPage({ params }: Props) {
 
 			<ProblemTabs problemId={problem.id} />
 
-			<ProblemForm problem={problem} />
+			<ProblemForm problem={problem} testcaseCount={testcaseCount} />
 
 			<ProblemSourcesSection problemId={problem.id} />
 

@@ -11,6 +11,7 @@ export interface SpotboardRun {
 		task2Score: number;
 		editDistance: number | null;
 	};
+	passedTestcases?: number; // Full-judge: passed testcase count for this submission
 }
 
 export interface SpotboardTeam {
@@ -24,6 +25,7 @@ export interface SpotboardProblem {
 	title: string;
 	color?: string;
 	problemType?: "icpc" | "special_judge" | "anigma" | "interactive"; // 문제 타입
+	useFullJudge?: boolean; // Full-judge problem flag (enables bestPassedSum tiebreaker)
 }
 
 export interface SpotboardConfig {

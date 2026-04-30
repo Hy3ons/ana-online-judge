@@ -14,6 +14,7 @@ import {
 	problems,
 	submissions,
 	type Translations,
+	testcases,
 	users,
 } from "@/db/schema";
 import { col, tbl } from "@/lib/db-helpers";
@@ -117,6 +118,55 @@ export async function getAdminProblems(options?: {
 	};
 }
 
+async function validateFullJudgeInputs(opts: {
+	problemId?: number;
+	useFullJudge: boolean;
+	passThreshold: number | null;
+	problemType: ProblemType;
+	hasSubtasks: boolean;
+}) {
+	if (!opts.useFullJudge) return;
+
+	if (opts.hasSubtasks) {
+		throw new Error("서브테스크와 전체 채점은 동시에 사용할 수 없습니다.");
+	}
+	if (opts.problemType === "anigma") {
+		throw new Error("Anigma 문제는 전체 채점을 사용할 수 없습니다.");
+	}
+	if (opts.passThreshold !== null && opts.passThreshold < 1) {
+		throw new Error("통과 기준(M)은 1 이상이어야 합니다.");
+	}
+
+	if (opts.problemId === undefined) {
+		// 신규 생성: TC=0 implied, passThreshold 설정 불가
+		if (opts.passThreshold !== null) {
+			throw new Error(
+				"문제 생성 시점에는 통과 기준을 설정할 수 없습니다. 테스트케이스 업로드 후 설정해주세요."
+			);
+		}
+		return;
+	}
+
+	const [{ count: tcCount }] = await db
+		.select({ count: sql<number>`COUNT(*)::int` })
+		.from(testcases)
+		.where(eq(testcases.problemId, opts.problemId));
+
+	if (tcCount === 0) {
+		if (opts.passThreshold !== null) {
+			throw new Error("테스트케이스가 없으면 통과 기준을 설정할 수 없습니다.");
+		}
+		return;
+	}
+	// tcCount > 0
+	if (opts.passThreshold === null) {
+		throw new Error("테스트케이스가 존재하면 통과 기준(M)을 지정해야 합니다.");
+	}
+	if (opts.passThreshold > tcCount) {
+		throw new Error(`통과 기준(${opts.passThreshold})이 테스트케이스 수(${tcCount})보다 큽니다.`);
+	}
+}
+
 export async function createProblem(data: {
 	id?: number;
 	translations: Translations;
@@ -126,11 +176,20 @@ export async function createProblem(data: {
 	isPublic: boolean;
 	judgeAvailable?: boolean;
 	problemType?: ProblemType;
+	useFullJudge?: boolean;
+	passThreshold?: number | null;
 	allowedLanguages?: string[] | null;
 	referenceCodeBuffer?: Buffer | null;
 	solutionCodeBuffer?: Buffer | null;
 }) {
 	const validatedTranslations = translationsSchema.parse(data.translations);
+
+	await validateFullJudgeInputs({
+		useFullJudge: data.useFullJudge ?? false,
+		passThreshold: data.passThreshold ?? null,
+		problemType: data.problemType ?? "icpc",
+		hasSubtasks: false,
+	});
 
 	if (data.id !== undefined) {
 		const existing = await db.select().from(problems).where(eq(problems.id, data.id)).limit(1);
@@ -164,6 +223,8 @@ export async function createProblem(data: {
 			isPublic: data.isPublic,
 			judgeAvailable: data.judgeAvailable ?? false,
 			problemType: data.problemType ?? "icpc",
+			useFullJudge: data.useFullJudge ?? false,
+			passThreshold: data.passThreshold ?? null,
 			allowedLanguages: data.allowedLanguages ?? null,
 			referenceCodePath: referenceCodePath,
 			solutionCodePath: solutionCodePath,
@@ -188,6 +249,8 @@ export async function updateProblem(
 		isPublic?: boolean;
 		judgeAvailable?: boolean;
 		problemType?: ProblemType;
+		useFullJudge?: boolean;
+		passThreshold?: number | null;
 		checkerPath?: string | null;
 		validatorPath?: string | null;
 		allowedLanguages?: string[] | null;
@@ -195,6 +258,31 @@ export async function updateProblem(
 		solutionCodeBuffer?: Buffer | null;
 	}
 ) {
+	const [existing] = await db
+		.select({
+			useFullJudge: problems.useFullJudge,
+			passThreshold: problems.passThreshold,
+			problemType: problems.problemType,
+			hasSubtasks: problems.hasSubtasks,
+		})
+		.from(problems)
+		.where(eq(problems.id, id))
+		.limit(1);
+	if (!existing) throw new Error("문제를 찾을 수 없습니다.");
+
+	const nextUseFullJudge = data.useFullJudge ?? existing.useFullJudge;
+	const nextPassThreshold =
+		data.passThreshold !== undefined ? data.passThreshold : existing.passThreshold;
+	const nextProblemType = data.problemType ?? existing.problemType;
+
+	await validateFullJudgeInputs({
+		problemId: id,
+		useFullJudge: nextUseFullJudge,
+		passThreshold: nextPassThreshold,
+		problemType: nextProblemType,
+		hasSubtasks: existing.hasSubtasks,
+	});
+
 	let referenceCodePath: string | undefined;
 	if (data.problemType === "anigma" && data.referenceCodeBuffer) {
 		referenceCodePath = `problems/${id}/reference_code.zip`;
@@ -214,6 +302,8 @@ export async function updateProblem(
 		isPublic?: boolean;
 		judgeAvailable?: boolean;
 		problemType?: ProblemType;
+		useFullJudge?: boolean;
+		passThreshold?: number | null;
 		checkerPath?: string | null;
 		validatorPath?: string | null;
 		allowedLanguages?: string[] | null;
@@ -449,6 +539,7 @@ export async function getProblems(
 			judgeAvailable: problems.judgeAvailable,
 			languageRestricted: sql<boolean>`${problems.allowedLanguages} IS NOT NULL`,
 			hasSubtasks: problems.hasSubtasks,
+			useFullJudge: problems.useFullJudge,
 			tier: problems.tier,
 			authorNames: sql<
 				string[]
@@ -494,6 +585,8 @@ export async function getProblemById(
 			judgeAvailable: problems.judgeAvailable,
 			allowedLanguages: problems.allowedLanguages,
 			hasSubtasks: problems.hasSubtasks,
+			useFullJudge: problems.useFullJudge,
+			passThreshold: problems.passThreshold,
 			tier: problems.tier,
 			tierUpdatedAt: problems.tierUpdatedAt,
 			authors: sql<

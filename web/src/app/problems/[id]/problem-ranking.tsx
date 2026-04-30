@@ -28,6 +28,8 @@ interface ProblemRankingProps {
 	initialTotal: number;
 	currentUserId?: number | null;
 	contestId?: number;
+	useFullJudge?: boolean;
+	totalTestcases?: number;
 }
 
 export function ProblemRanking({
@@ -36,6 +38,8 @@ export function ProblemRanking({
 	initialTotal,
 	currentUserId,
 	contestId,
+	useFullJudge = false,
+	totalTestcases = 0,
 }: ProblemRankingProps) {
 	const [rankings, setRankings] = useState(initialRankings);
 	const [total, setTotal] = useState(initialTotal);
@@ -88,30 +92,37 @@ export function ProblemRanking({
 		<div>
 			{/* Filters */}
 			<div className="flex items-center gap-3 mb-4">
-				<Select value={sortBy} onValueChange={handleSortChange}>
-					<SelectTrigger className="w-[140px]">
-						<SelectValue />
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="executionTime">실행 시간순</SelectItem>
-						<SelectItem value="codeLength">코드 길이순</SelectItem>
-					</SelectContent>
-				</Select>
+				{!useFullJudge && (
+					<>
+						<Select value={sortBy} onValueChange={handleSortChange}>
+							<SelectTrigger className="w-[140px]">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="executionTime">실행 시간순</SelectItem>
+								<SelectItem value="codeLength">코드 길이순</SelectItem>
+							</SelectContent>
+						</Select>
 
-				<Select value={language} onValueChange={handleLanguageChange}>
-					<SelectTrigger className="w-[120px]">
-						<SelectValue />
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="all">모든 언어</SelectItem>
-						<SelectItem value="c">C</SelectItem>
-						<SelectItem value="cpp">C++</SelectItem>
-						<SelectItem value="python">Python</SelectItem>
-						<SelectItem value="java">Java</SelectItem>
-						<SelectItem value="javascript">JavaScript</SelectItem>
-						<SelectItem value="csharp">C#</SelectItem>
-					</SelectContent>
-				</Select>
+						<Select value={language} onValueChange={handleLanguageChange}>
+							<SelectTrigger className="w-[120px]">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="all">모든 언어</SelectItem>
+								<SelectItem value="c">C</SelectItem>
+								<SelectItem value="cpp">C++</SelectItem>
+								<SelectItem value="python">Python</SelectItem>
+								<SelectItem value="java">Java</SelectItem>
+								<SelectItem value="javascript">JavaScript</SelectItem>
+								<SelectItem value="csharp">C#</SelectItem>
+							</SelectContent>
+						</Select>
+					</>
+				)}
+				{useFullJudge && (
+					<span className="text-xs text-muted-foreground">통과한 테스트케이스 수가 많은 순</span>
+				)}
 
 				{userPercentile && <Badge variant="secondary">상위 {userPercentile}%</Badge>}
 			</div>
@@ -152,6 +163,11 @@ export function ProblemRanking({
 											<span className="truncate" title={item.userName}>
 												{item.userName}
 											</span>
+											{useFullJudge && item.bestPassed != null && (
+												<span className="text-xs text-muted-foreground shrink-0">
+													({item.bestPassed}/{totalTestcases})
+												</span>
+											)}
 											{isMe && (
 												<Badge variant="outline" className="text-xs shrink-0">
 													나

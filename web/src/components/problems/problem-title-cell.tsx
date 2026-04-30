@@ -13,6 +13,7 @@ interface ProblemTitleCellProps {
 	judgeAvailable: boolean;
 	languageRestricted: boolean;
 	hasSubtasks?: boolean;
+	useFullJudge?: boolean;
 	isPublic?: boolean;
 	isSolved?: boolean;
 	score?: number | null;
@@ -26,6 +27,7 @@ export function ProblemTitleCell({
 	judgeAvailable,
 	languageRestricted,
 	hasSubtasks = false,
+	useFullJudge = false,
 	isPublic = true,
 	isSolved = false,
 	score = null,
@@ -53,6 +55,7 @@ export function ProblemTitleCell({
 					judgeAvailable={judgeAvailable}
 					languageRestricted={languageRestricted}
 					hasSubtasks={hasSubtasks}
+					useFullJudge={useFullJudge}
 				/>
 				{!isPublic && (
 					<Badge variant="secondary" className="text-xs">

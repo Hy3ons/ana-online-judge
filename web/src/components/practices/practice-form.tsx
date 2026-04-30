@@ -191,6 +191,7 @@ export function PracticeForm() {
 										judgeAvailable={p.judgeAvailable}
 										languageRestricted={p.languageRestricted}
 										hasSubtasks={p.hasSubtasks}
+										useFullJudge={p.useFullJudge}
 										isPublic={p.isPublic}
 										tier={p.tier}
 									/>

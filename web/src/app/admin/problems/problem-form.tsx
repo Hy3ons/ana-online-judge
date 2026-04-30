@@ -50,7 +50,10 @@ interface ProblemFormProps {
 		referenceCodePath: string | null;
 		solutionCodePath: string | null;
 		allowedLanguages: string[] | null;
+		useFullJudge: boolean;
+		passThreshold: number | null;
 	};
+	testcaseCount?: number;
 }
 
 function createDefaultTranslations(): Translations {
@@ -68,7 +71,7 @@ function createDefaultTranslations(): Translations {
 	};
 }
 
-export function ProblemForm({ problem }: ProblemFormProps) {
+export function ProblemForm({ problem, testcaseCount }: ProblemFormProps) {
 	const router = useRouter();
 	const languages = getLanguageList();
 	const [isSubmitting, setIsSubmitting] = useState(false);
@@ -89,6 +92,8 @@ export function ProblemForm({ problem }: ProblemFormProps) {
 	const [solutionCodeFile, setSolutionCodeFile] = useState<File | null>(null);
 	const [maxScore, setMaxScore] = useState<number>(problem?.maxScore || DEFAULT_MAX_SCORE);
 	const hasSubtasks = problem?.hasSubtasks ?? false;
+	const [useFullJudge, setUseFullJudge] = useState<boolean>(problem?.useFullJudge ?? false);
+	const [passThreshold, setPassThreshold] = useState<number | null>(problem?.passThreshold ?? null);
 	const [pendingAuthors, setPendingAuthors] = useState<StaffUser[]>([]);
 	const [pendingReviewers, setPendingReviewers] = useState<StaffUser[]>([]);
 	const [pendingSources, setPendingSources] = useState<PendingSourceEntry[]>([]);
@@ -140,6 +145,8 @@ export function ProblemForm({ problem }: ProblemFormProps) {
 			isPublic: boolean;
 			judgeAvailable: boolean;
 			problemType?: "icpc" | "special_judge" | "anigma" | "interactive";
+			useFullJudge: boolean;
+			passThreshold: number | null;
 			allowedLanguages?: string[] | null;
 			referenceCodeFile?: File | null;
 			solutionCodeFile?: File | null;
@@ -152,6 +159,8 @@ export function ProblemForm({ problem }: ProblemFormProps) {
 			isPublic: boolean;
 			judgeAvailable: boolean;
 			problemType?: "icpc" | "special_judge" | "anigma" | "interactive";
+			useFullJudge: boolean;
+			passThreshold: number | null;
 			allowedLanguages?: string[] | null;
 			referenceCodeFile?: File | null;
 			solutionCodeFile?: File | null;
@@ -164,6 +173,8 @@ export function ProblemForm({ problem }: ProblemFormProps) {
 			isPublic: formData.get("isPublic") === "on",
 			judgeAvailable: formData.get("judgeAvailable") === "on",
 			problemType,
+			useFullJudge,
+			passThreshold: useFullJudge ? passThreshold : null,
 			allowedLanguages: allowedLanguages.length > 0 ? allowedLanguages : null,
 		};
 
@@ -411,6 +422,47 @@ export function ProblemForm({ problem }: ProblemFormProps) {
 									<SelectItem value="anigma">ANIGMA</SelectItem>
 								</SelectContent>
 							</Select>
+						</div>
+						<div className="space-y-2 col-span-2">
+							<div className="flex items-center space-x-2">
+								<Switch
+									id="useFullJudge"
+									checked={useFullJudge}
+									onCheckedChange={(v) => {
+										setUseFullJudge(v);
+										if (!v) setPassThreshold(null);
+									}}
+									disabled={isSubmitting || hasSubtasks || problemType === "anigma"}
+								/>
+								<Label htmlFor="useFullJudge">전체 채점 사용</Label>
+							</div>
+							{useFullJudge && testcaseCount !== undefined && testcaseCount > 0 && (
+								<div className="space-y-1">
+									<Label htmlFor="passThreshold">통과 기준 (M) — 총 {testcaseCount}개 중</Label>
+									<Input
+										id="passThreshold"
+										type="number"
+										min={1}
+										max={testcaseCount}
+										value={passThreshold ?? testcaseCount}
+										onChange={(e) => setPassThreshold(parseInt(e.target.value, 10) || null)}
+										disabled={isSubmitting}
+									/>
+									<p className="text-xs text-muted-foreground">
+										M개 이상 맞으면 정답 처리. 1 ≤ M ≤ {testcaseCount}.
+									</p>
+								</div>
+							)}
+							{useFullJudge && (testcaseCount === undefined || testcaseCount === 0) && (
+								<p className="text-xs text-muted-foreground">
+									테스트케이스 업로드 후 통과 기준을 설정할 수 있습니다.
+								</p>
+							)}
+							{(hasSubtasks || problemType === "anigma") && (
+								<p className="text-xs text-muted-foreground">
+									{hasSubtasks ? "서브테스크" : "Anigma"} 문제에서는 전체 채점을 사용할 수 없습니다.
+								</p>
+							)}
 						</div>
 					</div>
 

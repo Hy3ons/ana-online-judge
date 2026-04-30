@@ -95,6 +95,8 @@ export async function submitCode(data: {
 			memoryLimit: problem.memoryLimit,
 			maxScore: problem.maxScore,
 			hasSubtasks: problem.hasSubtasks,
+			useFullJudge: problem.useFullJudge,
+			passThreshold: problem.passThreshold,
 			testcases: problemTestcases.map((tc) => ({
 				id: tc.id,
 				inputPath: tc.inputPath,
@@ -184,6 +186,7 @@ export async function getSubmissions(options?: {
 				problemTitle: problems.displayTitle,
 				problemType: problems.problemType,
 				problemIsPublic: problems.isPublic,
+				problemUseFullJudge: problems.useFullJudge,
 				maxScore: problems.maxScore,
 				userId: submissions.userId,
 				userName: users.name,
@@ -194,6 +197,8 @@ export async function getSubmissions(options?: {
 				memoryUsed: submissions.memoryUsed,
 				codeLength: submissions.codeLength,
 				score: submissions.score,
+				passedTestcases: submissions.passedTestcases,
+				totalTestcases: submissions.totalTestcases,
 				createdAt: submissions.createdAt,
 				anigmaTaskType: submissions.anigmaTaskType,
 				contestId: submissions.contestId,
@@ -243,6 +248,7 @@ export async function getSubmissionById(id: number) {
 			problemTitle: problems.displayTitle,
 			problemType: problems.problemType,
 			problemIsPublic: problems.isPublic,
+			problemUseFullJudge: problems.useFullJudge,
 			maxScore: problems.maxScore,
 			hasSubtasks: problems.hasSubtasks,
 			userId: submissions.userId,
@@ -256,6 +262,8 @@ export async function getSubmissionById(id: number) {
 			codeLength: submissions.codeLength,
 			errorMessage: submissions.errorMessage,
 			score: submissions.score,
+			passedTestcases: submissions.passedTestcases,
+			totalTestcases: submissions.totalTestcases,
 			editDistance: submissions.editDistance,
 			createdAt: submissions.createdAt,
 			anigmaTaskType: submissions.anigmaTaskType,
@@ -365,6 +373,8 @@ export async function rejudgeSubmission(id: number) {
 			memoryUsed: null,
 			score: null,
 			errorMessage: null,
+			passedTestcases: 0,
+			totalTestcases: 0,
 		})
 		.where(eq(submissions.id, id));
 
@@ -382,6 +392,8 @@ export async function rejudgeSubmission(id: number) {
 		memoryLimit: problem.memoryLimit,
 		maxScore: problem.maxScore,
 		hasSubtasks: problem.hasSubtasks,
+		useFullJudge: problem.useFullJudge,
+		passThreshold: problem.passThreshold,
 		testcases: problemTestcases.map((tc) => ({
 			id: tc.id,
 			inputPath: tc.inputPath,

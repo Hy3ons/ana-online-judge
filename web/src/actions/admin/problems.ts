@@ -30,6 +30,8 @@ export async function createProblem(data: {
 	isPublic: boolean;
 	judgeAvailable?: boolean;
 	problemType?: ProblemType;
+	useFullJudge?: boolean;
+	passThreshold?: number | null;
 	allowedLanguages?: string[] | null;
 	referenceCodeFile?: File | null;
 	solutionCodeFile?: File | null;
@@ -64,6 +66,8 @@ export async function updateProblem(
 		isPublic?: boolean;
 		judgeAvailable?: boolean;
 		problemType?: ProblemType;
+		useFullJudge?: boolean;
+		passThreshold?: number | null;
 		checkerPath?: string | null;
 		validatorPath?: string | null;
 		allowedLanguages?: string[] | null;

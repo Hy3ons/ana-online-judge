@@ -6,6 +6,7 @@ interface ProblemTypeBadgeProps {
 	judgeAvailable: boolean;
 	languageRestricted: boolean;
 	hasSubtasks?: boolean;
+	useFullJudge?: boolean;
 }
 
 export function ProblemTypeBadges({
@@ -13,6 +14,7 @@ export function ProblemTypeBadges({
 	judgeAvailable = true,
 	languageRestricted = false,
 	hasSubtasks = false,
+	useFullJudge = false,
 }: ProblemTypeBadgeProps) {
 	return (
 		<div className="flex items-center gap-2">
@@ -34,6 +36,11 @@ export function ProblemTypeBadges({
 			{hasSubtasks && (
 				<Badge variant="outline" className="bg-secondary text-foreground">
 					서브테스크
+				</Badge>
+			)}
+			{useFullJudge && (
+				<Badge variant="outline" className="bg-secondary text-foreground">
+					전체 채점
 				</Badge>
 			)}
 			{!judgeAvailable && (

@@ -1,7 +1,7 @@
-import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import type { ScoreboardEntry } from "@/actions/scoreboard";
 import { db } from "@/db";
-import { practiceProblems, practices, problems, submissions, users } from "@/db/schema";
+import { practiceProblems, practices, problems, submissions, testcases, users } from "@/db/schema";
 
 export async function getPracticeScoreboard(practiceId: number): Promise<{
 	practice: {
@@ -36,6 +36,7 @@ export async function getPracticeScoreboard(practiceId: number): Promise<{
 			problemId: practiceProblems.problemId,
 			problemType: problems.problemType,
 			hasSubtasks: problems.hasSubtasks,
+			useFullJudge: problems.useFullJudge,
 			order: practiceProblems.order,
 		})
 		.from(practiceProblems)
@@ -51,6 +52,23 @@ export async function getPracticeScoreboard(practiceId: number): Promise<{
 		};
 	}
 
+	// Build totalTestcases map for full-judge problems (used for cell display "(bestPassed/N)")
+	const fullJudgeProblemIds = practiceProblemsList
+		.filter((p) => p.useFullJudge)
+		.map((p) => p.problemId);
+	let totalsByProblemId = new Map<number, number>();
+	if (fullJudgeProblemIds.length > 0) {
+		const totals = await db
+			.select({
+				problemId: testcases.problemId,
+				count: sql<number>`COUNT(*)::int`,
+			})
+			.from(testcases)
+			.where(inArray(testcases.problemId, fullJudgeProblemIds))
+			.groupBy(testcases.problemId);
+		totalsByProblemId = new Map(totals.map((t) => [t.problemId, t.count]));
+	}
+
 	const problemIds = practiceProblemsList.map((p) => p.problemId);
 	const submissionsList = await db
 		.select({
@@ -59,6 +77,7 @@ export async function getPracticeScoreboard(practiceId: number): Promise<{
 			problemId: submissions.problemId,
 			verdict: submissions.verdict,
 			score: submissions.score,
+			passedTestcases: submissions.passedTestcases,
 			anigmaTaskType: submissions.anigmaTaskType,
 			editDistance: submissions.editDistance,
 			createdAt: submissions.createdAt,
@@ -90,6 +109,7 @@ export async function getPracticeScoreboard(practiceId: number): Promise<{
 			username: participant.username,
 			name: participant.name,
 			totalScore: 0,
+			bestPassedSum: 0,
 			penalty: 0,
 			maxSubmissionTime: 0,
 			problems: {},
@@ -98,6 +118,8 @@ export async function getPracticeScoreboard(practiceId: number): Promise<{
 			entry.problems[cp.label] = {
 				problemType: cp.problemType,
 				hasSubtasks: cp.hasSubtasks,
+				useFullJudge: cp.useFullJudge,
+				...(cp.useFullJudge ? { totalTestcases: totalsByProblemId.get(cp.problemId) ?? 0 } : {}),
 			};
 		}
 
@@ -179,6 +201,18 @@ export async function getPracticeScoreboard(practiceId: number): Promise<{
 						entryProblem.solvedTime = submissionTimeMinutes;
 					}
 				}
+			} else if (cp.useFullJudge) {
+				// Full-judge ICPC: scoring is ICPC-style, but track best passedTestcases as tiebreaker
+				const passed = submission.passedTestcases ?? 0;
+				entryProblem.bestPassed = Math.max(entryProblem.bestPassed ?? 0, passed);
+
+				if (!entryProblem.solved) {
+					entryProblem.attempts = (entryProblem.attempts || 0) + 1;
+					if (submission.verdict === "accepted") {
+						entryProblem.solved = true;
+						entryProblem.solvedTime = submissionTimeMinutes;
+					}
+				}
 			} else {
 				if (!entryProblem.solved) {
 					entryProblem.attempts = (entryProblem.attempts || 0) + 1;
@@ -196,6 +230,13 @@ export async function getPracticeScoreboard(practiceId: number): Promise<{
 				entry.totalScore += p.score ?? 0;
 			} else if (p.hasSubtasks) {
 				entry.totalScore += p.bestScore ?? 0;
+			} else if (p.useFullJudge) {
+				// Full-judge ICPC: same scoring as ICPC; bestPassed contributes to tiebreaker
+				if (p.solved) {
+					entry.totalScore += 100;
+					entry.penalty += (p.solvedTime ?? 0) + ((p.attempts ?? 1) - 1) * practice.penaltyMinutes;
+				}
+				entry.bestPassedSum += p.bestPassed ?? 0;
 			} else if (p.solved) {
 				entry.totalScore += 100;
 				entry.penalty += (p.solvedTime ?? 0) + ((p.attempts ?? 1) - 1) * practice.penaltyMinutes;
@@ -207,6 +248,7 @@ export async function getPracticeScoreboard(practiceId: number): Promise<{
 
 	scoreboard.sort((a, b) => {
 		if (a.totalScore !== b.totalScore) return b.totalScore - a.totalScore;
+		if (a.bestPassedSum !== b.bestPassedSum) return b.bestPassedSum - a.bestPassedSum;
 		if (a.penalty !== b.penalty) return a.penalty - b.penalty;
 		return a.maxSubmissionTime - b.maxSubmissionTime;
 	});
@@ -215,6 +257,7 @@ export async function getPracticeScoreboard(practiceId: number): Promise<{
 			scoreboard[i].rank = 1;
 		} else if (
 			scoreboard[i].totalScore === scoreboard[i - 1].totalScore &&
+			scoreboard[i].bestPassedSum === scoreboard[i - 1].bestPassedSum &&
 			scoreboard[i].penalty === scoreboard[i - 1].penalty &&
 			scoreboard[i].maxSubmissionTime === scoreboard[i - 1].maxSubmissionTime
 		) {

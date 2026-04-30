@@ -136,6 +136,8 @@ export interface ProblemByTagRow {
 	problemType: ProblemType;
 	judgeAvailable: boolean;
 	languageRestricted: boolean;
+	hasSubtasks: boolean;
+	useFullJudge: boolean;
 	isPublic: boolean;
 	tier: number;
 	submissionCount: number;
@@ -199,6 +201,8 @@ export async function listProblemsByTag(
 			problemType: problems.problemType,
 			judgeAvailable: problems.judgeAvailable,
 			languageRestricted: sql<boolean>`${problems.allowedLanguages} IS NOT NULL`,
+			hasSubtasks: problems.hasSubtasks,
+			useFullJudge: problems.useFullJudge,
 			isPublic: problems.isPublic,
 			tier: problems.tier,
 			submissionCount: sql<number>`COALESCE(${statsSq.submissionCount}, 0)`,

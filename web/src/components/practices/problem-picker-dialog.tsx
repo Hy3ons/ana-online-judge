@@ -35,6 +35,7 @@ interface PickerProblem {
 	judgeAvailable: boolean;
 	languageRestricted: boolean;
 	hasSubtasks?: boolean;
+	useFullJudge?: boolean;
 	isPublic: boolean;
 	tier: number;
 }
@@ -233,6 +234,7 @@ export function ProblemPickerDialog({
 															judgeAvailable={p.judgeAvailable}
 															languageRestricted={p.languageRestricted}
 															hasSubtasks={p.hasSubtasks}
+															useFullJudge={p.useFullJudge}
 															isPublic={p.isPublic}
 															tier={p.tier}
 														/>

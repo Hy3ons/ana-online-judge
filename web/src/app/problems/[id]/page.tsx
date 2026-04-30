@@ -1,3 +1,4 @@
+import { eq, sql } from "drizzle-orm";
 import { CheckCircle2, Download, Pencil } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -15,7 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import type { LanguageCode } from "@/db/schema";
+import { db } from "@/db";
+import { type LanguageCode, testcases } from "@/db/schema";
 import { resolveDisplay } from "@/lib/utils/translations";
 import { ProblemDetailClient } from "./problem-detail-client";
 
@@ -72,6 +74,7 @@ export default async function ProblemDetailPage({ params, searchParams }: Props)
 		rankingsResult,
 		userStatus,
 		votePanelData,
+		testcaseCountResult,
 	] = await Promise.all([
 		getProblemStats(problemId),
 		currentUserId
@@ -89,10 +92,22 @@ export default async function ProblemDetailPage({ params, searchParams }: Props)
 			sort: "createdAt",
 			order: "desc",
 		}),
-		getProblemRanking(problemId, { sortBy: "executionTime", page: 1, limit: 20 }),
+		getProblemRanking(problemId, {
+			sortBy: "executionTime",
+			page: 1,
+			limit: 20,
+		}),
 		currentUserId ? getUserProblemStatuses([problemId], currentUserId) : Promise.resolve(new Map()),
 		getProblemVotesData(problemId),
+		problem.useFullJudge
+			? db
+					.select({ count: sql<number>`COUNT(*)::int` })
+					.from(testcases)
+					.where(eq(testcases.problemId, problem.id))
+			: Promise.resolve([{ count: 0 }]),
 	]);
+
+	const totalTestcases = testcaseCountResult[0]?.count ?? 0;
 
 	const status = userStatus.get(problemId);
 	const isSolved = status?.solved ?? false;
@@ -116,6 +131,7 @@ export default async function ProblemDetailPage({ params, searchParams }: Props)
 							judgeAvailable={problem.judgeAvailable}
 							languageRestricted={problem.allowedLanguages !== null}
 							hasSubtasks={problem.hasSubtasks}
+							useFullJudge={problem.useFullJudge}
 						/>
 						{isAdmin && !problem.isPublic && (
 							<Badge variant="secondary" className="text-xs">
@@ -181,6 +197,9 @@ export default async function ProblemDetailPage({ params, searchParams }: Props)
 					isPublic: problem.isPublic,
 					tier: problem.tier,
 					tierUpdatedAt: problem.tierUpdatedAt,
+					useFullJudge: problem.useFullJudge,
+					passThreshold: problem.passThreshold,
+					totalTestcases,
 				}}
 				authors={problem.authors}
 				reviewers={problem.reviewers}

@@ -20,6 +20,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 			executionTime: submissions.executionTime,
 			memoryUsed: submissions.memoryUsed,
 			score: submissions.score,
+			passedTestcases: submissions.passedTestcases,
+			totalTestcases: submissions.totalTestcases,
 			editDistance: submissions.editDistance,
 			userId: submissions.userId,
 			contestId: submissions.contestId,

@@ -12,6 +12,9 @@ interface SubmissionStatusProps {
 	initialVerdict: string;
 	score?: number;
 	maxScore?: number;
+	useFullJudge?: boolean;
+	passedTestcases?: number | null;
+	totalTestcases?: number | null;
 }
 
 export function SubmissionStatus({
@@ -19,10 +22,15 @@ export function SubmissionStatus({
 	initialVerdict,
 	score,
 	maxScore,
+	useFullJudge = false,
+	passedTestcases: initialPassed = null,
+	totalTestcases: initialTotal = null,
 }: SubmissionStatusProps) {
 	const router = useRouter();
 	const [verdict, setVerdict] = useState(initialVerdict);
 	const [currentScore, setScore] = useState(score);
+	const [passedTestcases, setPassedTestcases] = useState<number | null>(initialPassed);
+	const [totalTestcases, setTotalTestcases] = useState<number | null>(initialTotal);
 	const [isJudging, setIsJudging] = useState(
 		initialVerdict === "pending" || initialVerdict === "judging"
 	);
@@ -108,6 +116,12 @@ export function SubmissionStatus({
 						if (data.score !== undefined) {
 							setScore(data.score);
 						}
+						if (data.passedTestcases !== undefined) {
+							setPassedTestcases(data.passedTestcases);
+						}
+						if (data.totalTestcases !== undefined) {
+							setTotalTestcases(data.totalTestcases);
+						}
 						setIsJudging(false);
 
 						// Broadcast result so other components (e.g. MySubmissions) can update
@@ -165,6 +179,8 @@ export function SubmissionStatus({
 
 	const typedVerdict = verdict as Verdict;
 	const acceptedLabel = VERDICT_LABELS.accepted.label;
+	const partialLabel = VERDICT_LABELS.partial.label;
+	const wrongAnswerLabel = VERDICT_LABELS.wrong_answer.label;
 	const baseLabel = VERDICT_LABELS[typedVerdict]?.label ?? verdict;
 
 	// 채점 중일 때 진행률 표시
@@ -191,7 +207,32 @@ export function SubmissionStatus({
 
 	// 완료된 경우 기존 UI
 	let label = baseLabel;
-	if (verdict === "partial" && currentScore !== undefined) {
+	let displayVerdict = typedVerdict;
+
+	const isFullJudgeOverride =
+		useFullJudge &&
+		totalTestcases !== null &&
+		totalTestcases > 0 &&
+		verdict !== "compile_error" &&
+		verdict !== "system_error";
+
+	if (isFullJudgeOverride) {
+		// 전체 채점: 통과 개수에 따라 verdict/라벨 재해석
+		// - passed >= M (서버가 accepted로 판정): 맞았습니다
+		// - 0 < passed < M (서버가 wrong_answer 등으로 판정): 부분 점수
+		// - passed === 0: 틀렸습니다
+		const passed = passedTestcases ?? 0;
+		const progress = `(${passed}/${totalTestcases})`;
+		if (verdict === "accepted") {
+			label = `${acceptedLabel} ${progress}`;
+		} else if (passed > 0) {
+			displayVerdict = "partial" as Verdict;
+			label = `${partialLabel} ${progress}`;
+		} else {
+			displayVerdict = "wrong_answer" as Verdict;
+			label = `${wrongAnswerLabel} ${progress}`;
+		}
+	} else if (verdict === "partial" && currentScore !== undefined) {
 		label = `${acceptedLabel} (${currentScore}점)`;
 	} else if (verdict === "accepted" && currentScore !== undefined) {
 		if (maxScore !== undefined && currentScore !== maxScore) {
@@ -200,8 +241,10 @@ export function SubmissionStatus({
 	}
 
 	return (
-		<Badge variant="verdict" verdict={typedVerdict}>
-			{label}
-		</Badge>
+		<div className="inline-flex items-center gap-2">
+			<Badge variant="verdict" verdict={displayVerdict}>
+				{label}
+			</Badge>
+		</div>
 	);
 }

@@ -1,3 +1,4 @@
+import { eq, sql } from "drizzle-orm";
 import { CheckCircle2, Download } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -14,6 +15,8 @@ import { ProblemTypeBadges } from "@/components/problems/problem-type-badges";
 import { Button } from "@/components/ui/button";
 import { CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { db } from "@/db";
+import { testcases } from "@/db/schema";
 import { getContestStatus } from "@/lib/contest-utils";
 
 export async function generateMetadata({
@@ -102,6 +105,7 @@ export default async function ContestProblemPage({
 		rankingsResult,
 		userStatus,
 		votePanelData,
+		testcaseCountResult,
 	] = await Promise.all([
 		getProblemStats(problem.id, contestId),
 		currentUserId
@@ -134,7 +138,15 @@ export default async function ContestProblemPage({
 			? getUserProblemStatuses([problem.id], currentUserId, contestId)
 			: Promise.resolve(new Map()),
 		getProblemVotesData(problem.id),
+		problem.useFullJudge
+			? db
+					.select({ count: sql<number>`COUNT(*)::int` })
+					.from(testcases)
+					.where(eq(testcases.problemId, problem.id))
+			: Promise.resolve([{ count: 0 }]),
 	]);
+
+	const totalTestcases = testcaseCountResult[0]?.count ?? 0;
 
 	const userProblemStatus = userStatus.get(problem.id);
 	const isSolved = userProblemStatus?.solved ?? false;
@@ -153,6 +165,7 @@ export default async function ContestProblemPage({
 							judgeAvailable={problem.judgeAvailable}
 							languageRestricted={problem.allowedLanguages !== null}
 							hasSubtasks={problem.hasSubtasks}
+							useFullJudge={problem.useFullJudge}
 						/>
 						{isSolved && (
 							<div className="flex items-center gap-1">
@@ -202,6 +215,9 @@ export default async function ContestProblemPage({
 					isPublic: problem.isPublic,
 					tier: problem.tier,
 					tierUpdatedAt: problem.tierUpdatedAt,
+					useFullJudge: problem.useFullJudge,
+					passThreshold: problem.passThreshold,
+					totalTestcases,
 				}}
 				authors={problem.authors}
 				reviewers={problem.reviewers}

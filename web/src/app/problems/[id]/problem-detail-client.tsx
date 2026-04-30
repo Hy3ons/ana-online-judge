@@ -37,6 +37,9 @@ interface ProblemDetailClientProps {
 		isPublic: boolean;
 		tier: number;
 		tierUpdatedAt: Date | null;
+		useFullJudge?: boolean;
+		passThreshold?: number | null;
+		totalTestcases?: number;
 	};
 	authors: { name: string; username: string }[];
 	reviewers: { name: string; username: string }[];
@@ -128,6 +131,8 @@ export function ProblemDetailClient({
 			initialTotal={rankings.total}
 			currentUserId={currentUserId}
 			contestId={contestId}
+			useFullJudge={problem.useFullJudge ?? false}
+			totalTestcases={problem.totalTestcases ?? 0}
 		/>
 	);
 
@@ -140,8 +145,15 @@ export function ProblemDetailClient({
 		/>
 	);
 
+	const showFullJudgeNotice = Boolean(
+		problem.useFullJudge && problem.passThreshold && problem.totalTestcases
+	);
 	const hasCredits =
-		sources.length > 0 || authors.length > 0 || reviewers.length > 0 || confirmedTags.length > 0;
+		sources.length > 0 ||
+		authors.length > 0 ||
+		reviewers.length > 0 ||
+		confirmedTags.length > 0 ||
+		showFullJudgeNotice;
 
 	const staffLinks = (people: { name: string; username: string }[]) =>
 		people.map((p, i) => (
@@ -186,6 +198,14 @@ export function ProblemDetailClient({
 					</div>
 				)}
 				<TagsRevealRow tags={confirmedTags} />
+				{showFullJudgeNotice && (
+					<div className="flex gap-2">
+						<dd>
+							{problem.totalTestcases}개의 테스트케이스 중{" "}
+							<strong>{problem.passThreshold}개 이상</strong> 맞아야 정답으로 인정된다.
+						</dd>
+					</div>
+				)}
 			</dl>
 		</div>
 	) : null;

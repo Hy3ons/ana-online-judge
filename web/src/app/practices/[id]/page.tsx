@@ -128,6 +128,7 @@ export default async function PracticeDetailPage({ params }: { params: Promise<{
 														judgeAvailable={pp.problem.judgeAvailable}
 														languageRestricted={pp.problem.languageRestricted}
 														hasSubtasks={pp.problem.hasSubtasks}
+														useFullJudge={pp.problem.useFullJudge}
 														isSolved={ps?.solved ?? false}
 														score={ps?.score}
 														tier={pp.problem.tier}

@@ -21,13 +21,35 @@ function formatSolveTime(minutes: number): string {
 }
 
 function IcpcCell({ problem, isFirstSolver }: { problem: ProblemEntry; isFirstSolver?: boolean }) {
+	const showFullJudgeProgress =
+		problem.useFullJudge &&
+		problem.bestPassed !== undefined &&
+		problem.bestPassed > 0 &&
+		!!problem.totalTestcases;
+
 	if (!problem.solved && !problem.attempts) {
+		// Full-judge: even with no logged attempts, surface bestPassed if any (defensive — usually
+		// implies attempts > 0, but the cell renders cleanly either way).
+		if (showFullJudgeProgress) {
+			return (
+				<div className="inline-flex flex-col items-center justify-center leading-tight">
+					<span className="text-xs text-muted-foreground">
+						{problem.bestPassed}/{problem.totalTestcases}
+					</span>
+				</div>
+			);
+		}
 		return <span className="text-muted-foreground">·</span>;
 	}
 	if (!problem.solved) {
 		return (
 			<div className="inline-flex flex-col items-center justify-center rounded px-2 py-0.5 bg-red-100 dark:bg-red-950/40 leading-tight">
 				<span className="font-semibold text-red-700 dark:text-red-400">−{problem.attempts}</span>
+				{showFullJudgeProgress && (
+					<span className="text-[11px] font-mono text-red-700/80 dark:text-red-400/80">
+						{problem.bestPassed}/{problem.totalTestcases}
+					</span>
+				)}
 			</div>
 		);
 	}
