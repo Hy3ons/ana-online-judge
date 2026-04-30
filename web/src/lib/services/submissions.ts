@@ -95,6 +95,8 @@ export async function submitCode(data: {
 			memoryLimit: problem.memoryLimit,
 			maxScore: problem.maxScore,
 			hasSubtasks: problem.hasSubtasks,
+			useFullJudge: problem.useFullJudge,
+			passThreshold: problem.passThreshold,
 			testcases: problemTestcases.map((tc) => ({
 				id: tc.id,
 				inputPath: tc.inputPath,
@@ -382,6 +384,8 @@ export async function rejudgeSubmission(id: number) {
 		memoryLimit: problem.memoryLimit,
 		maxScore: problem.maxScore,
 		hasSubtasks: problem.hasSubtasks,
+		useFullJudge: problem.useFullJudge,
+		passThreshold: problem.passThreshold,
 		testcases: problemTestcases.map((tc) => ({
 			id: tc.id,
 			inputPath: tc.inputPath,

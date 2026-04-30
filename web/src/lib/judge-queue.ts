@@ -12,6 +12,8 @@ export async function pushStandardJudgeJob(job: {
 	memoryLimit: number;
 	maxScore: number;
 	hasSubtasks: boolean;
+	useFullJudge: boolean;
+	passThreshold: number | null;
 	testcases: {
 		id: number;
 		inputPath: string;
@@ -36,6 +38,8 @@ export async function pushStandardJudgeJob(job: {
 		ignore_memory_limit_bonus: false,
 		max_score: job.maxScore,
 		has_subtasks: job.hasSubtasks,
+		use_full_judge: job.useFullJudge,
+		pass_threshold: job.passThreshold,
 		testcases: job.testcases.map((tc) => ({
 			id: tc.id,
 			input_path: tc.inputPath,

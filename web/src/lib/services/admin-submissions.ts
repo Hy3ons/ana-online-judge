@@ -272,6 +272,8 @@ export async function rejudgeSubmissionsByIds(ids: number[]): Promise<RejudgeRes
 			memoryLimit: problems.memoryLimit,
 			maxScore: problems.maxScore,
 			hasSubtasks: problems.hasSubtasks,
+			useFullJudge: problems.useFullJudge,
+			passThreshold: problems.passThreshold,
 			checkerPath: problems.checkerPath,
 		})
 		.from(submissions)
@@ -342,6 +344,8 @@ export async function rejudgeSubmissionsByIds(ids: number[]): Promise<RejudgeRes
 			memoryLimit: t.memoryLimit,
 			maxScore: t.maxScore,
 			hasSubtasks: t.hasSubtasks,
+			useFullJudge: t.useFullJudge,
+			passThreshold: t.passThreshold,
 			testcases: problemTcs.map((tc) => ({
 				id: tc.id,
 				inputPath: tc.inputPath,
