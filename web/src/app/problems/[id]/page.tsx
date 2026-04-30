@@ -92,7 +92,12 @@ export default async function ProblemDetailPage({ params, searchParams }: Props)
 			sort: "createdAt",
 			order: "desc",
 		}),
-		getProblemRanking(problemId, { sortBy: "executionTime", page: 1, limit: 20 }),
+		getProblemRanking(problemId, {
+			sortBy: "executionTime",
+			page: 1,
+			limit: 20,
+			useFullJudge: problem.useFullJudge,
+		}),
 		currentUserId ? getUserProblemStatuses([problemId], currentUserId) : Promise.resolve(new Map()),
 		getProblemVotesData(problemId),
 		problem.useFullJudge
@@ -201,6 +206,8 @@ export default async function ProblemDetailPage({ params, searchParams }: Props)
 					isPublic: problem.isPublic,
 					tier: problem.tier,
 					tierUpdatedAt: problem.tierUpdatedAt,
+					useFullJudge: problem.useFullJudge,
+					totalTestcases,
 				}}
 				authors={problem.authors}
 				reviewers={problem.reviewers}

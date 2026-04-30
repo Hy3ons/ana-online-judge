@@ -133,6 +133,7 @@ export default async function ContestProblemPage({
 					page: 1,
 					limit: 20,
 					contestId,
+					useFullJudge: problem.useFullJudge,
 				}),
 		currentUserId
 			? getUserProblemStatuses([problem.id], currentUserId, contestId)
@@ -223,6 +224,8 @@ export default async function ContestProblemPage({
 					isPublic: problem.isPublic,
 					tier: problem.tier,
 					tierUpdatedAt: problem.tierUpdatedAt,
+					useFullJudge: problem.useFullJudge,
+					totalTestcases,
 				}}
 				authors={problem.authors}
 				reviewers={problem.reviewers}

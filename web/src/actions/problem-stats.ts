@@ -17,6 +17,7 @@ export async function getProblemRanking(
 		page?: number;
 		limit?: number;
 		contestId?: number;
+		useFullJudge?: boolean;
 	}
 ) {
 	return getProblemRankingService(problemId, options);

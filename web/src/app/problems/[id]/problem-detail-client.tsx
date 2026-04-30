@@ -37,6 +37,8 @@ interface ProblemDetailClientProps {
 		isPublic: boolean;
 		tier: number;
 		tierUpdatedAt: Date | null;
+		useFullJudge?: boolean;
+		totalTestcases?: number;
 	};
 	authors: { name: string; username: string }[];
 	reviewers: { name: string; username: string }[];
@@ -128,6 +130,8 @@ export function ProblemDetailClient({
 			initialTotal={rankings.total}
 			currentUserId={currentUserId}
 			contestId={contestId}
+			useFullJudge={problem.useFullJudge ?? false}
+			totalTestcases={problem.totalTestcases ?? 0}
 		/>
 	);
 

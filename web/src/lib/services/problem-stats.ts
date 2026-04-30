@@ -19,6 +19,7 @@ export type ProblemRankingItem = {
 	memoryUsed: number | null;
 	codeLength: number | null;
 	createdAt: Date;
+	bestPassed?: number | null;
 };
 
 export type ProblemRanking = {
@@ -80,6 +81,7 @@ export async function getProblemRanking(
 		page?: number;
 		limit?: number;
 		contestId?: number;
+		useFullJudge?: boolean;
 	}
 ): Promise<ProblemRanking> {
 	const sortBy = options?.sortBy ?? "executionTime";
@@ -88,9 +90,7 @@ export async function getProblemRanking(
 	const page = options?.page ?? 1;
 	const limit = options?.limit ?? 20;
 	const offset = (page - 1) * limit;
-
-	const sortColumnName = sortBy === "executionTime" ? "execution_time" : "code_length";
-	const sortByField = sortBy === "executionTime" ? "executionTime" : "codeLength";
+	const useFullJudge = options?.useFullJudge ?? false;
 
 	const languageFilter = language && language !== "all" ? sql`AND s.language = ${language}` : sql``;
 	const contestFilter = contestId ? sql`AND s.contest_id = ${contestId}` : sql``;
@@ -113,6 +113,75 @@ export async function getProblemRanking(
 		.where(and(...countConditions));
 
 	const total = totalResult[0].count;
+
+	// Full-judge problems: order solvers by BEST passedTestcases DESC across ALL submissions
+	// (not just accepted ones), with first-AC time as tiebreaker. Only AC users are listed.
+	if (useFullJudge) {
+		const fullJudgeResult = await db.execute<{
+			id: number;
+			userId: number;
+			userName: string;
+			language: Language;
+			executionTime: number | null;
+			memoryUsed: number | null;
+			codeLength: number | null;
+			createdAt: Date;
+			bestPassed: number | null;
+		}>(sql`
+			SELECT
+				best_ac.id,
+				best_ac."userId",
+				best_ac."userName",
+				best_ac.language,
+				best_ac."executionTime",
+				best_ac."memoryUsed",
+				best_ac."codeLength",
+				best_ac."createdAt",
+				per_user.best_passed AS "bestPassed"
+			FROM (
+				SELECT
+					s.user_id,
+					MAX(COALESCE(s.passed_testcases, 0)) AS best_passed,
+					MIN(s.created_at) FILTER (WHERE s.verdict = 'accepted') AS first_ac_time
+				FROM submissions s
+				WHERE s.problem_id = ${problemId}
+					${languageFilter}
+					${contestFilter}
+				GROUP BY s.user_id
+				HAVING BOOL_OR(s.verdict = 'accepted')
+			) per_user
+			INNER JOIN LATERAL (
+				SELECT DISTINCT ON (s2.user_id)
+					s2.id,
+					s2.user_id AS "userId",
+					u.name AS "userName",
+					s2.language,
+					s2.execution_time AS "executionTime",
+					s2.memory_used AS "memoryUsed",
+					s2.code_length AS "codeLength",
+					s2.created_at AS "createdAt"
+				FROM submissions s2
+				INNER JOIN users u ON s2.user_id = u.id
+				WHERE s2.user_id = per_user.user_id
+					AND s2.problem_id = ${problemId}
+					AND s2.verdict = 'accepted'
+					${languageFilter}
+					${contestFilter}
+				ORDER BY s2.user_id, s2.execution_time ASC NULLS LAST
+				LIMIT 1
+			) best_ac ON TRUE
+			ORDER BY per_user.best_passed DESC, per_user.first_ac_time ASC
+			LIMIT ${limit} OFFSET ${offset}
+		`);
+
+		return {
+			rankings: fullJudgeResult as unknown as ProblemRankingItem[],
+			total,
+		};
+	}
+
+	const sortColumnName = sortBy === "executionTime" ? "execution_time" : "code_length";
+	const sortByField = sortBy === "executionTime" ? "executionTime" : "codeLength";
 
 	// Get best submission per user using DISTINCT ON, then re-order
 	const result = await db.execute<{
