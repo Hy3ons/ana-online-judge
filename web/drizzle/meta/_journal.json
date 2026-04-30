@@ -232,6 +232,13 @@
       "when": 1777456958844,
       "tag": "0032_shallow_turbo",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1777534317227,
+      "tag": "0033_talented_vertigo",
+      "breakpoints": true
     }
   ]
 }
