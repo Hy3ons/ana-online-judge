@@ -15,7 +15,7 @@ import { CreateGroupModal } from "./create-group-modal";
 export default async function AdminGroupsPage() {
 	const groups = await listAllGroupsForAdmin();
 	return (
-		<div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-4">
+		<div className="page-container py-8 space-y-4">
 			<PageBreadcrumb
 				items={[
 					{ label: "관리자", href: "/admin" },
@@ -29,7 +29,7 @@ export default async function AdminGroupsPage() {
 					<CreateGroupModal />
 				</CardHeader>
 				<CardContent>
-					<Table>
+					<Table className="min-w-[700px]">
 						<TableHeader>
 							<TableRow>
 								<TableHead>그룹명</TableHead>

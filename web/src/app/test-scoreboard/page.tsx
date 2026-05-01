@@ -170,7 +170,7 @@ export default function TestScoreboardPage() {
 		<div className="min-h-screen bg-white">
 			{/* Control Panel */}
 			<div className="sticky top-0 z-50 bg-gray-100 border-b border-gray-300 p-4">
-				<div className="max-w-7xl mx-auto flex items-center justify-between">
+				<div className="page-container flex items-center justify-between">
 					<h1 className="text-2xl font-bold">Spotboard 테스트 페이지</h1>
 					<div className="flex items-center gap-4">
 						<button

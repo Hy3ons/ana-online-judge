@@ -59,7 +59,7 @@ export default async function SubmissionDetailPage({ params }: Props) {
 	const canViewEditDistance = isAdmin || isOwnSubmission;
 
 	return (
-		<div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+		<div className="page-container py-8">
 			<PageBreadcrumb
 				items={[{ label: "제출 현황", href: "/submissions" }, { label: `#${submission.id}` }]}
 			/>

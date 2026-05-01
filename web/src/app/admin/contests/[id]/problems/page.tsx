@@ -34,7 +34,7 @@ export default async function ContestProblemsPage({ params }: { params: Promise<
 	}
 
 	return (
-		<div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+		<div className="page-container py-8">
 			<PageBreadcrumb
 				items={[
 					{ label: "관리자", href: "/admin" },

@@ -288,7 +288,7 @@ export function ProblemDetailClient({
 
 	// Single column layout
 	return (
-		<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-4">
+		<div className="page-container space-y-4">
 			<PageBreadcrumb items={breadcrumbItems} />
 			<div className="flex justify-end">
 				<LayoutToggle mode={mode} setMode={setMode} isNarrow={isNarrow} />

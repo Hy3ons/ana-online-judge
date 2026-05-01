@@ -28,7 +28,7 @@ export default async function RankingPage({
 	const totalPages = Math.ceil(total / limit);
 
 	return (
-		<div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+		<div className="page-container py-8">
 			<PageBreadcrumb items={[{ label: "랭킹" }]} />
 			<Card>
 				<CardHeader>

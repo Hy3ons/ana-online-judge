@@ -1,36 +1,6 @@
-import {
-	FileText,
-	FolderOpen,
-	FolderTree,
-	Hammer,
-	LayoutDashboard,
-	ScrollText,
-	Send,
-	Settings,
-	Tags,
-	Trophy,
-	Users,
-	Users2,
-} from "lucide-react";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { cn } from "@/lib/utils";
-
-const sidebarLinks = [
-	{ href: "/admin", label: "대시보드", icon: LayoutDashboard },
-	{ href: "/admin/problems", label: "문제 관리", icon: FileText },
-	{ href: "/admin/submissions", label: "제출 관리", icon: Send },
-	{ href: "/admin/contests", label: "대회 관리", icon: Trophy },
-	{ href: "/admin/sources", label: "출처 관리", icon: FolderTree },
-	{ href: "/admin/tags", label: "알고리즘 태그", icon: Tags },
-	{ href: "/admin/workshop", label: "창작마당", icon: Hammer },
-	{ href: "/admin/workshop/groups", label: "창작마당 그룹", icon: Users2 },
-	{ href: "/admin/users", label: "사용자 관리", icon: Users },
-	{ href: "/admin/files", label: "파일 관리", icon: FolderOpen },
-	{ href: "/admin/logs", label: "서버 로그", icon: ScrollText },
-	{ href: "/admin/settings", label: "사이트 설정", icon: Settings },
-];
+import { AdminSidebar } from "./admin-sidebar";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
 	const session = await auth();
@@ -45,34 +15,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
 	return (
 		<div className="flex min-h-[calc(100vh-4rem)]">
-			{/* Sidebar */}
-			<aside className="w-64 border-r bg-muted/30 hidden md:block">
-				<div className="p-6">
-					<h2 className="text-lg font-semibold flex items-center gap-2">
-						<Settings className="h-5 w-5" />
-						관리자
-					</h2>
-				</div>
-				<nav className="px-4 space-y-1">
-					{sidebarLinks.map((link) => (
-						<Link
-							key={link.href}
-							href={link.href}
-							className={cn(
-								"flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-								"hover:bg-accent hover:text-accent-foreground",
-								"text-muted-foreground"
-							)}
-						>
-							<link.icon className="h-4 w-4" />
-							{link.label}
-						</Link>
-					))}
-				</nav>
-			</aside>
-
-			{/* Main Content */}
-			<main className="flex-1 p-6">{children}</main>
+			<AdminSidebar />
+			<main className="flex-1 p-4 sm:p-6 min-w-0">{children}</main>
 		</div>
 	);
 }

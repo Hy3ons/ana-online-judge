@@ -44,7 +44,7 @@ export function ContestListTable({ contests, emptyLabel = "등록된 대회가 �
 
 	return (
 		<div className="rounded-md border">
-			<Table>
+			<Table className="min-w-[840px]">
 				<TableHeader>
 					<TableRow>
 						<TableHead className="w-[80px]">#</TableHead>

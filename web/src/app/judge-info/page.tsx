@@ -69,7 +69,7 @@ export default function JudgeInfoPage() {
 	const languageEntries = Object.entries(LANGUAGES) as [Language, (typeof LANGUAGES)[Language]][];
 
 	return (
-		<div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+		<div className="page-container py-8 space-y-8">
 			<h1 className="text-3xl font-bold">채점 정보</h1>
 
 			<Card>

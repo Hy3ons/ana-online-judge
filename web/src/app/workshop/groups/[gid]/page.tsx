@@ -22,7 +22,7 @@ export default async function GroupProblemsTab({ params }: { params: Promise<{ g
 					<Link href={`/workshop/new?group=${groupId}`}>이 그룹에서 새 문제 만들기</Link>
 				</Button>
 			</div>
-			<Table>
+			<Table className="min-w-[960px]">
 				<TableHeader>
 					<TableRow>
 						<TableHead>제목</TableHead>

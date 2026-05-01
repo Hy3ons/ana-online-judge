@@ -18,7 +18,7 @@ export default async function GroupReviewTab({ params }: { params: Promise<{ gid
 		<div className="space-y-6">
 			<div>
 				<h2 className="text-lg font-semibold mb-2">요약</h2>
-				<Table>
+				<Table className="min-w-[760px]">
 					<TableHeader>
 						<TableRow>
 							<TableHead className="w-[60px]">#</TableHead>

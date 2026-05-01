@@ -120,7 +120,7 @@ export default async function AdminUsersPage({
 						</div>
 					) : (
 						<>
-							<Table>
+							<Table className="min-w-[1280px]">
 								<TableHeader>
 									<TableRow>
 										<Suspense>

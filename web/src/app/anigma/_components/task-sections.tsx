@@ -8,7 +8,7 @@ export function TaskSections() {
 		<>
 			{/* Task 1 Section */}
 			<section className="py-16 bg-background">
-				<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+				<div className="page-container">
 					<Card className="border-2 border-border">
 						<CardHeader>
 							<div className="flex items-center gap-3">
@@ -80,7 +80,7 @@ export function TaskSections() {
 
 			{/* Task 2 Section */}
 			<section className="py-16 bg-muted/30">
-				<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+				<div className="page-container">
 					<Card className="border-2 border-border">
 						<CardHeader>
 							<div className="flex items-center gap-3">

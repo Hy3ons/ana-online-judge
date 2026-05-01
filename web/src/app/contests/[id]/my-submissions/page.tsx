@@ -71,7 +71,7 @@ export default async function ContestMySubmissionsPage({
 	const canDownload = isAdmin || userId !== null;
 
 	return (
-		<div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+		<div className="page-container py-8">
 			<PageBreadcrumb
 				items={[
 					{ label: "대회", href: "/contests" },

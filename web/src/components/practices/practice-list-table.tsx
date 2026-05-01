@@ -27,7 +27,7 @@ export function PracticeListTable({ practices }: { practices: PracticeListItem[]
 	}
 	return (
 		<div className="rounded-md border">
-			<Table>
+			<Table className="min-w-[880px]">
 				<TableHeader>
 					<TableRow>
 						<TableHead>제목</TableHead>

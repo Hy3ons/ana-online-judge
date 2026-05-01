@@ -124,7 +124,7 @@ export default async function AdminContestsPage({
 						</div>
 					) : (
 						<>
-							<Table>
+							<Table className="min-w-[1200px]">
 								<TableHeader>
 									<TableRow>
 										<Suspense>

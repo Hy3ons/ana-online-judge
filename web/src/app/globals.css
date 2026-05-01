@@ -204,6 +204,33 @@
   }
 }
 
+@utility page-container {
+  width: 100%;
+  margin-inline: auto;
+  max-width: 80rem; /* 1280px — 7xl, default through 1920px laptops/24" */
+  padding-inline: 1rem;
+
+  @media (min-width: 640px) {
+    padding-inline: 1.5rem;
+  }
+
+  @media (min-width: 1024px) {
+    padding-inline: 2rem;
+  }
+
+  @media (min-width: 2048px) {
+    max-width: 96rem; /* 1536px — 27" QHD (2560px) entry */
+  }
+
+  @media (min-width: 2400px) {
+    max-width: 110rem; /* 1760px — 27" QHD comfortable */
+  }
+
+  @media (min-width: 3000px) {
+    max-width: 130rem; /* 2080px — 32"/4K/ultrawide */
+  }
+}
+
 @keyframes highlight-pulse {
     0% { background-color: color-mix(in oklab, var(--primary) 15%, transparent); }
     100% { background-color: transparent; }

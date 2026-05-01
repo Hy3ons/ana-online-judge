@@ -68,7 +68,7 @@ export default async function AdminWorkshopPage({
 							조건에 맞는 문제가 없습니다.
 						</div>
 					) : (
-						<Table>
+						<Table className="min-w-[1100px]">
 							<TableHeader>
 								<TableRow>
 									<TableHead className="w-[80px]">#</TableHead>

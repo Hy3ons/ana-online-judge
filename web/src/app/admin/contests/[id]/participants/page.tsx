@@ -54,7 +54,7 @@ export default async function ContestParticipantsPage({
 	const { participants, total } = await getContestParticipants(contestId);
 
 	return (
-		<div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+		<div className="page-container py-8">
 			<PageBreadcrumb
 				items={[
 					{ label: "관리자", href: "/admin" },
@@ -77,7 +77,7 @@ export default async function ContestParticipantsPage({
 						<div className="text-center py-12 text-muted-foreground">참가자가 없습니다.</div>
 					) : (
 						<div className="rounded-md border">
-							<Table>
+							<Table className="min-w-[800px]">
 								<TableHeader>
 									<TableRow>
 										<TableHead className="w-[80px]">#</TableHead>

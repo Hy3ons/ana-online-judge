@@ -36,7 +36,7 @@ export default async function WorkshopListPage({
 
 	if (userId === null) {
 		return (
-			<div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+			<div className="page-container py-8">
 				<PageBreadcrumb items={[{ label: "창작마당" }]} />
 				<Card>
 					<CardHeader>
@@ -94,7 +94,7 @@ export default async function WorkshopListPage({
 		: groups;
 
 	return (
-		<div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
+		<div className="page-container py-8 space-y-6">
 			<PageBreadcrumb items={[{ label: "창작마당" }]} />
 
 			<Card>
@@ -145,7 +145,7 @@ export default async function WorkshopListPage({
 					</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<Table>
+					<Table className="min-w-[900px]">
 						<TableHeader>
 							<TableRow>
 								<TableHead>제목</TableHead>
@@ -209,7 +209,7 @@ export default async function WorkshopListPage({
 						<CardTitle className="text-lg">{isAdmin ? "모든 그룹" : "내 그룹"}</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<Table>
+						<Table className="min-w-[760px]">
 							<TableHeader>
 								<TableRow>
 									<TableHead>그룹명</TableHead>

@@ -22,7 +22,7 @@ export default async function SourcesRootPage() {
 	const counts = await Promise.all(roots.map((r) => countProblemsInSubtree(r.id)));
 
 	return (
-		<div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+		<div className="page-container py-8">
 			<PageBreadcrumb items={[{ label: "출처" }]} />
 			<Card>
 				<CardHeader className="pb-6">

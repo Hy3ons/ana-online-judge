@@ -77,7 +77,7 @@ export default async function TagDetailPage({ params, searchParams }: Props) {
 	const breadcrumbItems = [{ label: "알고리즘 분류", href: "/tags" }, { label: tag.name }];
 
 	return (
-		<div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+		<div className="page-container py-8">
 			<PageBreadcrumb items={breadcrumbItems} />
 			<Card>
 				<CardHeader className="space-y-2 pb-6">

@@ -5,7 +5,7 @@ import { Separator } from "@/components/ui/separator";
 export function RulesSection() {
 	return (
 		<section className="py-16 bg-background">
-			<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+			<div className="page-container">
 				<div className="text-center mb-12">
 					<h2 className="text-3xl font-bold tracking-tight">대회 규칙</h2>
 					<p className="mt-4 text-lg text-muted-foreground">

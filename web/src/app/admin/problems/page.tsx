@@ -143,7 +143,7 @@ export default async function AdminProblemsPage({
 						</div>
 					) : (
 						<>
-							<Table>
+							<Table className="min-w-[1100px]">
 								<TableHeader>
 									<TableRow>
 										<Suspense>
