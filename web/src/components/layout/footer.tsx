@@ -14,7 +14,7 @@ export function Footer() {
 
 	return (
 		<footer className="border-t">
-			<div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+			<div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
 				<div className="flex flex-col items-center gap-3 text-center">
 					<div className="flex gap-5 text-sm text-muted-foreground">
 						<Link href="/problems" className="hover:text-foreground transition-colors">

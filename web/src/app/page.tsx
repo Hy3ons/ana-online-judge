@@ -70,7 +70,7 @@ export default async function HomePage() {
 		<div className="flex flex-col">
 			{/* Hero */}
 			<section className="border-b">
-				<div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+				<div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
 					<div className="flex flex-col gap-6">
 						<h1 className="text-3xl font-bold tracking-tight sm:text-5xl font-mulmaru">
 							<span className="text-[#02CDB7]">A</span>
@@ -108,7 +108,7 @@ export default async function HomePage() {
 			{/* Active Contests */}
 			{activeContests.length > 0 && (
 				<section className="border-b bg-primary/5">
-					<div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+					<div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
 						<div className="flex items-center gap-2 mb-4">
 							<div className="h-2 w-2 rounded-full bg-[var(--verdict-accepted)] animate-pulse" />
 							<h2 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">
@@ -141,7 +141,7 @@ export default async function HomePage() {
 
 			{/* Main Content */}
 			<section>
-				<div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
+				<div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
 					<div className="grid gap-8 lg:grid-cols-3">
 						{/* Quick Nav */}
 						<div className="lg:col-span-2 grid gap-4 sm:grid-cols-2">

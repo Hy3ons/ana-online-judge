@@ -24,7 +24,7 @@ export default async function GroupLayout({
 	if (!group) notFound();
 
 	return (
-		<div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 space-y-4">
+		<div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-4">
 			<PageBreadcrumb items={[{ label: "창작마당", href: "/workshop" }, { label: group.name }]} />
 			<div>
 				<h1 className="text-2xl font-bold">{group.name}</h1>

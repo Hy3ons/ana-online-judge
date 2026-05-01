@@ -6,7 +6,7 @@ import { Separator } from "@/components/ui/separator";
 export function ScoringSection() {
 	return (
 		<section className="py-16 bg-background">
-			<div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+			<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 				<div className="text-center mb-12">
 					<h2 className="text-3xl font-bold tracking-tight">스코어보드 시스템</h2>
 					<p className="mt-4 text-lg text-muted-foreground">ANIGMA 대회의 등수 매기는 방식</p>

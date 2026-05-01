@@ -30,7 +30,7 @@ export default async function PracticesPage({
 	const canCreate = !!session?.user && (isAdmin || quota?.canCreate);
 
 	return (
-		<div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+		<div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
 			<PageBreadcrumb items={[{ label: "연습" }]} />
 			<Card>
 				<CardHeader className="flex flex-row items-center justify-between">

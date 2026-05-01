@@ -25,7 +25,7 @@ export default async function PlaygroundSessionPage({ params }: PageProps) {
 
 	if (!playgroundSession) {
 		return (
-			<div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+			<div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
 				<h1 className="text-2xl font-bold mb-4">세션을 찾을 수 없습니다</h1>
 				<p>존재하지 않거나 삭제된 세션입니다.</p>
 			</div>

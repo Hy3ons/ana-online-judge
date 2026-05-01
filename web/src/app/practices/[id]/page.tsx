@@ -76,7 +76,7 @@ export default async function PracticeDetailPage({ params }: { params: Promise<{
 	};
 
 	return (
-		<div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 space-y-4 py-8">
+		<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-4 py-8">
 			<PageBreadcrumb items={[{ label: "연습", href: "/practices" }, { label: practice.title }]} />
 			<Card>
 				<CardHeader>
