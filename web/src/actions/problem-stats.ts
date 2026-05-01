@@ -23,8 +23,8 @@ export async function getProblemRanking(
 	}
 ) {
 	// Derive useFullJudge server-side — never trust the client to set the
-	// sort mode, otherwise the bestPassedSum tiebreaker can be bypassed by
-	// forging useFullJudge=false.
+	// sort mode, otherwise the full-judge ranking (best_passed DESC) can be
+	// swapped out by forging useFullJudge=false.
 	const [problem] = await db
 		.select({ useFullJudge: problems.useFullJudge })
 		.from(problems)

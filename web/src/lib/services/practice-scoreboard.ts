@@ -109,7 +109,6 @@ export async function getPracticeScoreboard(practiceId: number): Promise<{
 			username: participant.username,
 			name: participant.name,
 			totalScore: 0,
-			bestPassedSum: 0,
 			penalty: 0,
 			maxSubmissionTime: 0,
 			problems: {},
@@ -230,13 +229,6 @@ export async function getPracticeScoreboard(practiceId: number): Promise<{
 				entry.totalScore += p.score ?? 0;
 			} else if (p.hasSubtasks) {
 				entry.totalScore += p.bestScore ?? 0;
-			} else if (p.useFullJudge) {
-				// Full-judge ICPC: same scoring as ICPC; bestPassed contributes to tiebreaker
-				if (p.solved) {
-					entry.totalScore += 100;
-					entry.penalty += (p.solvedTime ?? 0) + ((p.attempts ?? 1) - 1) * practice.penaltyMinutes;
-				}
-				entry.bestPassedSum += p.bestPassed ?? 0;
 			} else if (p.solved) {
 				entry.totalScore += 100;
 				entry.penalty += (p.solvedTime ?? 0) + ((p.attempts ?? 1) - 1) * practice.penaltyMinutes;
@@ -248,7 +240,6 @@ export async function getPracticeScoreboard(practiceId: number): Promise<{
 
 	scoreboard.sort((a, b) => {
 		if (a.totalScore !== b.totalScore) return b.totalScore - a.totalScore;
-		if (a.bestPassedSum !== b.bestPassedSum) return b.bestPassedSum - a.bestPassedSum;
 		if (a.penalty !== b.penalty) return a.penalty - b.penalty;
 		return a.maxSubmissionTime - b.maxSubmissionTime;
 	});
@@ -257,7 +248,6 @@ export async function getPracticeScoreboard(practiceId: number): Promise<{
 			scoreboard[i].rank = 1;
 		} else if (
 			scoreboard[i].totalScore === scoreboard[i - 1].totalScore &&
-			scoreboard[i].bestPassedSum === scoreboard[i - 1].bestPassedSum &&
 			scoreboard[i].penalty === scoreboard[i - 1].penalty &&
 			scoreboard[i].maxSubmissionTime === scoreboard[i - 1].maxSubmissionTime
 		) {

@@ -25,7 +25,6 @@ export interface SpotboardProblem {
 	title: string;
 	color?: string;
 	problemType?: "icpc" | "special_judge" | "anigma" | "interactive"; // 문제 타입
-	useFullJudge?: boolean; // Full-judge problem flag (enables bestPassedSum tiebreaker)
 }
 
 export interface SpotboardConfig {

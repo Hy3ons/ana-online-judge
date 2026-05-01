@@ -46,20 +46,15 @@ export class Run {
 
 export class TeamProblemStatus {
 	runs: Run[] = [];
-	bestPassed = 0; // Full-judge: max(passedTestcases) across all runs of this problem
 
 	constructor(
 		public problemId: number,
-		public problemType?: "icpc" | "special_judge" | "anigma" | "interactive",
-		public useFullJudge = false
+		public problemType?: "icpc" | "special_judge" | "anigma" | "interactive"
 	) {}
 
 	addRun(run: Run) {
 		this.runs.push(run);
 		this.runs.sort((a, b) => a.id - b.id);
-		if (this.useFullJudge && typeof run.passedTestcases === "number") {
-			this.bestPassed = Math.max(this.bestPassed, run.passedTestcases);
-		}
 	}
 
 	getNetRuns(): Run[] {
@@ -174,20 +169,16 @@ export class TeamStatus {
 
 	getProblemStatus(
 		problemId: number,
-		problemType?: "icpc" | "special_judge" | "anigma" | "interactive",
-		useFullJudge = false
+		problemType?: "icpc" | "special_judge" | "anigma" | "interactive"
 	): TeamProblemStatus {
 		if (!this.problemStatuses.has(problemId)) {
-			this.problemStatuses.set(
-				problemId,
-				new TeamProblemStatus(problemId, problemType, useFullJudge)
-			);
+			this.problemStatuses.set(problemId, new TeamProblemStatus(problemId, problemType));
 		}
 		return this.problemStatuses.get(problemId)!;
 	}
 
-	update(run: Run, useFullJudge = false) {
-		const ps = this.getProblemStatus(run.problemId, run.problemType, useFullJudge);
+	update(run: Run) {
+		const ps = this.getProblemStatus(run.problemId, run.problemType);
 		ps.addRun(run);
 	}
 
@@ -231,17 +222,6 @@ export class TeamStatus {
 		}
 		return total;
 	}
-
-	// Full-judge tiebreaker: sum of bestPassed across all full-judge problems
-	getBestPassedSum(): number {
-		let total = 0;
-		for (const ps of this.problemStatuses.values()) {
-			if (ps.useFullJudge) {
-				total += ps.bestPassed;
-			}
-		}
-		return total;
-	}
 }
 
 export class ContestLogic {
@@ -263,8 +243,7 @@ export class ContestLogic {
 	addRun(run: Run) {
 		this.runs.push(run);
 		if (this.teamStatuses.has(run.teamId)) {
-			const useFullJudge = this.problems.get(run.problemId)?.useFullJudge ?? false;
-			this.teamStatuses.get(run.teamId)!.update(run, useFullJudge);
+			this.teamStatuses.get(run.teamId)!.update(run);
 		}
 	}
 
@@ -288,11 +267,6 @@ export class ContestLogic {
 				const scoreB = b.status.getTotalScore();
 				if (scoreA !== scoreB) return scoreB - scoreA;
 
-				// Full-judge tiebreaker: prefer teams with more passed testcases
-				const passedA = a.status.getBestPassedSum();
-				const passedB = b.status.getBestPassedSum();
-				if (passedA !== passedB) return passedB - passedA;
-
 				// 동점일 경우: 마지막 제출 시간 (빠를수록 높은 순위)
 				return a.status.getLastSolvedTime() - b.status.getLastSolvedTime();
 			} else {
@@ -300,11 +274,6 @@ export class ContestLogic {
 				const solvedA = a.status.getTotalSolved();
 				const solvedB = b.status.getTotalSolved();
 				if (solvedA !== solvedB) return solvedB - solvedA;
-
-				// Full-judge tiebreaker: prefer teams with more passed testcases
-				const passedA = a.status.getBestPassedSum();
-				const passedB = b.status.getBestPassedSum();
-				if (passedA !== passedB) return passedB - passedA;
 
 				const penA = a.status.getTotalPenalty();
 				const penB = b.status.getTotalPenalty();
@@ -324,12 +293,10 @@ export class ContestLogic {
 				const solvedB = prev.status.getTotalSolved();
 				const penA = item.status.getTotalPenalty();
 				const penB = prev.status.getTotalPenalty();
-				const passedA = item.status.getBestPassedSum();
-				const passedB = prev.status.getBestPassedSum();
 				const lastA = item.status.getLastSolvedTime();
 				const lastB = prev.status.getLastSolvedTime();
 
-				if (solvedA === solvedB && penA === penB && passedA === passedB && lastA === lastB) {
+				if (solvedA === solvedB && penA === penB && lastA === lastB) {
 					item.status.rank = prev.status.rank;
 				} else {
 					item.status.rank = i + 1;

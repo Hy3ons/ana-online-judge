@@ -72,7 +72,6 @@ export async function getSpotboardData(contestId: number): Promise<SpotboardConf
 			problemId: contestProblems.problemId,
 			title: problems.displayTitle,
 			problemType: problems.problemType,
-			useFullJudge: problems.useFullJudge,
 			color: problems.displayTitle, // Use title as color placeholder or add color to schema later
 			order: contestProblems.order,
 		})
@@ -86,7 +85,6 @@ export async function getSpotboardData(contestId: number): Promise<SpotboardConf
 		title: p.label, // Spotboard uses short name (A, B, C) as title/name usually
 		color: "", // TODO: Add color support
 		problemType: p.problemType,
-		useFullJudge: p.useFullJudge,
 	}));
 
 	// Get participants (Teams)
