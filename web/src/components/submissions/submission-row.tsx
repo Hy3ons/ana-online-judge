@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import type { SubmissionListItem } from "@/actions/submissions";
 import { SubmissionStatus } from "@/app/submissions/[id]/submission-status";
+import { TierBadge } from "@/components/tier/tier-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SortableHeader } from "@/components/ui/sortable-header";
@@ -93,6 +94,7 @@ export function SubmissionRow({
 			</TableCell>
 			<TableCell>
 				<div className="flex items-center gap-2 min-w-0">
+					<TierBadge tier={submission.problemTier ?? 0} kind="problem" size="sm" />
 					<Link
 						href={
 							submission.contestId && submission.contestProblemLabel
