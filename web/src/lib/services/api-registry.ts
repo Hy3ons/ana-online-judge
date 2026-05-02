@@ -1892,6 +1892,7 @@ export const endpoints: Endpoint[] = [
 				"c",
 				"cpp",
 				"python",
+				"pypy",
 				"java",
 				"rust",
 				"go",
@@ -1965,7 +1966,7 @@ export const endpoints: Endpoint[] = [
 			userId: z.number().int(),
 			name: z.string().min(1).max(64).optional(),
 			language: z
-				.enum(["c", "cpp", "python", "java", "rust", "go", "javascript", "csharp", "text"])
+				.enum(["c", "cpp", "python", "pypy", "java", "rust", "go", "javascript", "csharp", "text"])
 				.optional(),
 			source: z.string().optional(),
 			expectedVerdict: z

@@ -30,6 +30,7 @@ export function languageExtension(lang: Language): string {
 		case "cpp":
 			return "cpp";
 		case "python":
+		case "pypy":
 			return "py";
 		case "java":
 			return "java";

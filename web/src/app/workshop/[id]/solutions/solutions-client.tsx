@@ -52,6 +52,7 @@ const LANGUAGES: LanguageOption[] = [
 	{ value: "cpp", label: "C++" },
 	{ value: "c", label: "C" },
 	{ value: "python", label: "Python" },
+	{ value: "pypy", label: "PyPy" },
 	{ value: "java", label: "Java" },
 	{ value: "rust", label: "Rust" },
 	{ value: "go", label: "Go" },

@@ -36,6 +36,7 @@ export const languageEnum = pgEnum("language", [
 	"c",
 	"cpp",
 	"python",
+	"pypy",
 	"java",
 	"rust",
 	"go",

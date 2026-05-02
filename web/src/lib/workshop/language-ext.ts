@@ -4,7 +4,7 @@
  * generator / solution source files.
  *
  * The enum source of truth is `languageEnum` in `web/src/db/schema.ts` (values
- * are: "c", "cpp", "python", "java", "rust", "go", "javascript", "csharp", "text").
+ * are: "c", "cpp", "python", "pypy", "java", "rust", "go", "javascript", "csharp", "text").
  */
 export function languageToFileExtension(language: string): string {
 	switch (language) {
@@ -13,6 +13,7 @@ export function languageToFileExtension(language: string): string {
 		case "cpp":
 			return "cpp";
 		case "python":
+		case "pypy":
 			return "py";
 		case "java":
 			return "java";

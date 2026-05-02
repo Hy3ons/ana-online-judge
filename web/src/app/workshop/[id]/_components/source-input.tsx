@@ -158,6 +158,7 @@ export function monacoLangFor(lang: string): string {
 		case "c":
 			return "cpp";
 		case "python":
+		case "pypy":
 			return "python";
 		case "java":
 			return "java";

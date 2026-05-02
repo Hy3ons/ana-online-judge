@@ -72,6 +72,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 			c: "c",
 			cpp: "cpp",
 			python: "py",
+			pypy: "py",
 			java: "java",
 			javascript: "js",
 			csharp: "cs",

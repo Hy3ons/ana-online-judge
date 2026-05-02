@@ -86,7 +86,7 @@ export function CodeEditor({
 		<div className="border rounded-md overflow-hidden" onWheelCapture={handleWheelCapture}>
 			<Editor
 				height={height}
-				language={language === "text" ? "plaintext" : language}
+				language={language === "text" ? "plaintext" : language === "pypy" ? "python" : language}
 				value={code}
 				onMount={handleEditorDidMount}
 				onChange={(value) => {

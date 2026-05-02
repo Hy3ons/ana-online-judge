@@ -28,6 +28,7 @@ RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     python3 \
+    pypy3 \
     nodejs \
     openjdk-17-jdk-headless \
     golang-go \

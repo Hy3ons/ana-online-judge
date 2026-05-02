@@ -34,6 +34,15 @@ aliases = ["python3", "py"]
 time_limit = ["3", "2"]     # x3 + 2초
 memory_limit = ["2", "32"]  # x2 + 32MB
 
+[pypy]
+version = "PyPy3 7.3"
+source_file = "Main.py"
+compile_command = "pypy3 -m py_compile Main.py"
+run_command = "pypy3 -W ignore Main.py"
+aliases = ["pypy3"]
+time_limit = ["2", "1"]     # x2 + 1초
+memory_limit = ["2", "64"]  # x2 + 64MB
+
 [java]
 version = "OpenJDK 17"
 source_file = "Main.java"

@@ -113,6 +113,7 @@ export function ProblemRanking({
 								<SelectItem value="c">C</SelectItem>
 								<SelectItem value="cpp">C++</SelectItem>
 								<SelectItem value="python">Python</SelectItem>
+								<SelectItem value="pypy">PyPy</SelectItem>
 								<SelectItem value="java">Java</SelectItem>
 								<SelectItem value="javascript">JavaScript</SelectItem>
 								<SelectItem value="csharp">C#</SelectItem>

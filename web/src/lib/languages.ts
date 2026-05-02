@@ -44,6 +44,16 @@ export const LANGUAGES: Record<Language, LanguageConfig> = {
 		timeLimitFactor: [3, 2],
 		memoryLimitFactor: [2, 32],
 	},
+	pypy: {
+		label: "PyPy",
+		version: "PyPy3 7.3",
+		defaultCode: "",
+		sourceFile: "Main.py",
+		compileCommand: "pypy3 -m py_compile Main.py",
+		runCommand: "pypy3 -W ignore Main.py",
+		timeLimitFactor: [2, 1],
+		memoryLimitFactor: [2, 64],
+	},
 	java: {
 		label: "Java",
 		version: "OpenJDK 17",
