@@ -3,7 +3,12 @@
 import { Command } from "commander";
 import chalk from "chalk";
 import { saveConfig, loadConfig, ApiClient } from "./client.js";
-import { registerAutoCommands, endpointToCommandInfo, fetchContracts } from "./auto-commands.js";
+import {
+	registerAutoCommands,
+	endpointToCommandInfo,
+	fetchContracts,
+	setJsonMode,
+} from "./auto-commands.js";
 import { clearCachedContracts, CACHE_FILE } from "./cache.js";
 import { registerTranslateCommand } from "./translate/index.js";
 
@@ -71,7 +76,8 @@ const program = new Command();
 program
 	.name("aoj")
 	.description("ANA Online Judge CLI — Admin management tool")
-	.version("0.1.0");
+	.version("0.1.0")
+	.option("--json", "Output raw JSON instead of formatted tables (for scripting)");
 
 // Config command (always available, doesn't need server)
 program
@@ -131,7 +137,12 @@ program
 registerTranslateCommand(program);
 
 // Strip bare "--" separators that pnpm injects (e.g., `pnpm dev -- config`)
-const argv = process.argv.filter((a, i) => !(i >= 2 && a === "--"));
+// and pull `--json` out of any position so it can be used as a global flag
+// (commander would otherwise reject it on subcommands that don't declare it).
+const rawArgv = process.argv.filter((a, i) => !(i >= 2 && a === "--"));
+const jsonRequested = rawArgv.includes("--json");
+if (jsonRequested) setJsonMode(true);
+const argv = rawArgv.filter((a) => a !== "--json");
 
 // Check if this is a help/version request
 const firstArg = argv[2];

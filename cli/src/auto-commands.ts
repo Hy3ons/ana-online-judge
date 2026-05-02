@@ -26,6 +26,14 @@ interface EndpointContract {
 	isCustom: boolean;
 }
 
+// --- Output mode (set from index.ts before parsing) ---
+
+let jsonOutputMode = false;
+
+export function setJsonMode(value: boolean): void {
+	jsonOutputMode = value;
+}
+
 // --- Contract fetching ---
 
 let cachedContracts: EndpointContract[] | null = null;
@@ -138,7 +146,14 @@ function coerceValue(value: string, type: string): unknown {
 	return value;
 }
 
-function formatOutput(data: unknown): void {
+type OutputMode = "auto" | "json";
+
+function formatOutput(data: unknown, mode: OutputMode = "auto"): void {
+	if (mode === "json") {
+		console.log(JSON.stringify(data, null, 2));
+		return;
+	}
+
 	if (Array.isArray(data)) {
 		if (data.length === 0) {
 			console.log(chalk.dim("(empty)"));
@@ -166,16 +181,20 @@ function formatOutput(data: unknown): void {
 
 	if (typeof data === "object" && data !== null) {
 		const obj = data as Record<string, unknown>;
-		// If it has a list-like field (submissions, problems, etc.), show as table
-		const listKey = Object.keys(obj).find(
-			(k) => Array.isArray(obj[k]) && k !== "testcaseResults"
-		);
-		if (listKey && Array.isArray(obj[listKey])) {
-			formatOutput(obj[listKey]);
-			if (obj.total !== undefined) {
+		// Only treat the response as a list envelope when it has the canonical
+		// `{ <items>: [...], total: N }` shape. Single-object responses (e.g.
+		// `problems create` returns the new problem with `allowedLanguages: [...]`)
+		// also contain array fields, but they aren't lists — outputting only the
+		// array would hide the rest of the object (issue #20).
+		if (typeof obj.total === "number") {
+			const listKey = Object.keys(obj).find(
+				(k) => Array.isArray(obj[k]) && k !== "testcaseResults"
+			);
+			if (listKey && Array.isArray(obj[listKey])) {
+				formatOutput(obj[listKey], mode);
 				console.log(chalk.dim(`Total: ${obj.total}`));
+				return;
 			}
-			return;
 		}
 	}
 
@@ -318,7 +337,7 @@ export async function registerAutoCommands(program: Command): Promise<void> {
 							: await actionClient.put(apiPath, body);
 				}
 
-				formatOutput(result);
+				formatOutput(result, jsonOutputMode ? "json" : "auto");
 			} catch (error) {
 				console.error(
 					chalk.red("Error:"),
