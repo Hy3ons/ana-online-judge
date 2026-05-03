@@ -14,6 +14,9 @@ import {
 	uniqueIndex,
 	uuid,
 } from "drizzle-orm/pg-core";
+import { LANGUAGE_VALUES } from "@/lib/languages";
+
+export type { Language } from "@/lib/languages";
 
 // Enums
 export const userRoleEnum = pgEnum("user_role", ["user", "admin"]);
@@ -32,18 +35,7 @@ export const verdictEnum = pgEnum("verdict", [
 	"fail",
 	"partial", // Anigma partial score
 ]);
-export const languageEnum = pgEnum("language", [
-	"c",
-	"cpp",
-	"python",
-	"pypy",
-	"java",
-	"rust",
-	"go",
-	"javascript",
-	"csharp",
-	"text",
-]);
+export const languageEnum = pgEnum("language", LANGUAGE_VALUES);
 export const problemTypeEnum = pgEnum("problem_type", [
 	"icpc",
 	"special_judge",
@@ -870,7 +862,8 @@ export type NewProblemConfirmedTag = typeof problemConfirmedTags.$inferInsert;
 
 export type UserRole = (typeof userRoleEnum.enumValues)[number];
 export type Verdict = (typeof verdictEnum.enumValues)[number];
-export type Language = (typeof languageEnum.enumValues)[number];
+// `Language` is re-exported at the top of this file from `@/lib/languages`
+// (the single source of truth for the language set).
 export type ProblemType = (typeof problemTypeEnum.enumValues)[number];
 export type InputMethod = (typeof inputMethodEnum.enumValues)[number];
 export type ContestVisibility = (typeof contestVisibilityEnum.enumValues)[number];

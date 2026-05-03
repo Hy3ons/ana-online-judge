@@ -1,6 +1,7 @@
 import { and, desc, eq, notLike } from "drizzle-orm";
 import { db } from "@/db";
 import type {
+	Language,
 	WorkshopGenerator,
 	WorkshopProblem,
 	WorkshopSolution,
@@ -17,8 +18,8 @@ import {
 	workshopSolutions,
 	workshopTestcases,
 } from "@/db/schema";
+import { getFileExtension } from "@/lib/languages";
 import { deleteAllWithPrefix } from "@/lib/storage/operations";
-import { languageToFileExtension } from "@/lib/workshop/language-ext";
 import { restoreObject, storeAsObjectByKey } from "@/lib/workshop/objects";
 import {
 	workshopDraftBase,
@@ -454,12 +455,12 @@ export async function rollbackToSnapshot(params: {
 
 	// 2a. Checker / validator — paths are derived from language → file extension.
 	if (state.problem.checkerHash && state.problem.checkerLanguage) {
-		const ext = languageToFileExtension(state.problem.checkerLanguage);
+		const ext = getFileExtension(state.problem.checkerLanguage as Language);
 		const dest = workshopDraftCheckerPath(problemId, userId, ext);
 		copyJobs.push(restoreObject(problemId, state.problem.checkerHash, dest));
 	}
 	if (state.problem.validatorHash && state.problem.validatorLanguage) {
-		const ext = languageToFileExtension(state.problem.validatorLanguage);
+		const ext = getFileExtension(state.problem.validatorLanguage as Language);
 		const dest = workshopDraftValidatorPath(problemId, userId, ext);
 		copyJobs.push(restoreObject(problemId, state.problem.validatorHash, dest));
 	}
@@ -486,7 +487,7 @@ export async function rollbackToSnapshot(params: {
 
 	// 2c. Generators — source only (compiled binary is regenerated on next run).
 	for (const g of state.generators) {
-		const ext = languageToFileExtension(g.language);
+		const ext = getFileExtension(g.language);
 		copyJobs.push(
 			restoreObject(
 				problemId,
@@ -498,7 +499,7 @@ export async function rollbackToSnapshot(params: {
 
 	// 2d. Solutions.
 	for (const s of state.solutions) {
-		const ext = languageToFileExtension(s.language);
+		const ext = getFileExtension(s.language);
 		copyJobs.push(
 			restoreObject(
 				problemId,
@@ -529,7 +530,7 @@ export async function rollbackToSnapshot(params: {
 		// Re-insert generators first so testcases can resolve generatorId by name.
 		const genNameToId = new Map<string, number>();
 		for (const g of state.generators) {
-			const ext = languageToFileExtension(g.language);
+			const ext = getFileExtension(g.language);
 			const sourcePath = workshopDraftGeneratorSourcePath(problemId, userId, g.name, ext);
 			const [row] = await tx
 				.insert(workshopGenerators)
@@ -545,7 +546,7 @@ export async function rollbackToSnapshot(params: {
 		}
 
 		for (const s of state.solutions) {
-			const ext = languageToFileExtension(s.language);
+			const ext = getFileExtension(s.language);
 			const sourcePath = workshopDraftSolutionPath(problemId, userId, s.name, ext);
 			await tx.insert(workshopSolutions).values({
 				draftId: draft.id,
@@ -592,7 +593,7 @@ export async function rollbackToSnapshot(params: {
 				? workshopDraftCheckerPath(
 						problemId,
 						userId,
-						languageToFileExtension(state.problem.checkerLanguage)
+						getFileExtension(state.problem.checkerLanguage as Language)
 					)
 				: null;
 		const validatorPath =
@@ -600,7 +601,7 @@ export async function rollbackToSnapshot(params: {
 				? workshopDraftValidatorPath(
 						problemId,
 						userId,
-						languageToFileExtension(state.problem.validatorLanguage)
+						getFileExtension(state.problem.validatorLanguage as Language)
 					)
 				: null;
 		await tx

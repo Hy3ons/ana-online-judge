@@ -1,6 +1,6 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import type { Translations } from "@/db/schema";
+import type { Language, Translations } from "@/db/schema";
 import {
 	problemAuthors,
 	problems,
@@ -9,6 +9,7 @@ import {
 	workshopProblems,
 	workshopSnapshots,
 } from "@/db/schema";
+import { getFileExtension } from "@/lib/languages";
 import { recomputeProblemSubtaskMeta } from "@/lib/services/problem-subtask-meta";
 import {
 	migrateWorkshopImages,
@@ -59,37 +60,6 @@ async function assertReady(workshopProblemId: number): Promise<void> {
 	const r = await computePublishReadiness(workshopProblemId);
 	if (!r.ready) {
 		throw new Error(`출판 준비 미완료:\n${r.issues.map((i) => `- ${i.message}`).join("\n")}`);
-	}
-}
-
-/**
- * Language -> filename extension for checker/validator files on the published
- * side.
- */
-function extensionForLanguage(language: string): string {
-	switch (language) {
-		case "cpp":
-		case "c++":
-			return "cpp";
-		case "c":
-			return "c";
-		case "python":
-		case "py":
-			return "py";
-		case "rust":
-			return "rs";
-		case "go":
-			return "go";
-		case "java":
-			return "java";
-		case "javascript":
-		case "js":
-			return "js";
-		case "csharp":
-		case "cs":
-			return "cs";
-		default:
-			throw new Error(`알 수 없는 체커/밸리데이터 언어: ${language}`);
 	}
 }
 
@@ -183,7 +153,7 @@ export async function publishWorkshopAsNewProblem(opts: PublishOptions): Promise
 		if (!state.problem.checkerHash || !state.problem.checkerLanguage) {
 			throw new Error("체커가 설정되어 있지 않습니다.");
 		}
-		const checkerExt = extensionForLanguage(state.problem.checkerLanguage);
+		const checkerExt = getFileExtension(state.problem.checkerLanguage as Language);
 		const checkerFrom = workshopObjectPath(workshopProblemId, state.problem.checkerHash);
 		const checkerTo = generateCheckerPath(newProblem.id, `main.${checkerExt}`);
 		await copyObject(checkerFrom, checkerTo);
@@ -192,7 +162,7 @@ export async function publishWorkshopAsNewProblem(opts: PublishOptions): Promise
 		// 4) Copy validator (optional).
 		let validatorTo: string | null = null;
 		if (state.problem.validatorHash && state.problem.validatorLanguage) {
-			const validatorExt = extensionForLanguage(state.problem.validatorLanguage);
+			const validatorExt = getFileExtension(state.problem.validatorLanguage as Language);
 			const validatorFrom = workshopObjectPath(workshopProblemId, state.problem.validatorHash);
 			validatorTo = generateValidatorPath(newProblem.id, `main.${validatorExt}`);
 			await copyObject(validatorFrom, validatorTo);
@@ -354,7 +324,7 @@ export async function republishWorkshopToExistingProblem(
 		if (!state.problem.checkerHash || !state.problem.checkerLanguage) {
 			throw new Error("체커가 설정되어 있지 않습니다.");
 		}
-		const checkerExt = extensionForLanguage(state.problem.checkerLanguage);
+		const checkerExt = getFileExtension(state.problem.checkerLanguage as Language);
 		const checkerTo = generateCheckerPath(publishedId, `main.${checkerExt}`);
 		await copyObject(workshopObjectPath(workshopProblemId, state.problem.checkerHash), checkerTo);
 		copiedKeys.push(checkerTo);
@@ -362,7 +332,7 @@ export async function republishWorkshopToExistingProblem(
 		// 4) Copy validator (optional).
 		let validatorTo: string | null = null;
 		if (state.problem.validatorHash && state.problem.validatorLanguage) {
-			const validatorExt = extensionForLanguage(state.problem.validatorLanguage);
+			const validatorExt = getFileExtension(state.problem.validatorLanguage as Language);
 			validatorTo = generateValidatorPath(publishedId, `main.${validatorExt}`);
 			await copyObject(
 				workshopObjectPath(workshopProblemId, state.problem.validatorHash),

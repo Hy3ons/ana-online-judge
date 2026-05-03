@@ -1,6 +1,7 @@
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { type Language, type WorkshopSolution, workshopSolutions } from "@/db/schema";
+import { getFileExtension } from "@/lib/languages";
 import { deleteFile, downloadFile, uploadFile } from "@/lib/storage/operations";
 import type { WorkshopExpectedVerdict } from "@/lib/workshop/expected-verdict";
 import { workshopDraftSolutionPath } from "@/lib/workshop/paths";
@@ -16,35 +17,6 @@ function assertValidName(name: string): void {
 	// canonical filename (Main.cpp / Main.py / etc.), not by user-given name —
 	// so there's no collision with sandbox slot names. "main" is in fact the
 	// conventional name for the primary solution.
-}
-
-/**
- * Map judge language key to source-file extension used for MinIO storage.
- * Matches `judge/files/languages.toml` source_file conventions (workshop
- * stores one file per solution — compile artifacts live inside the sandbox).
- */
-export function languageExtension(lang: Language): string {
-	switch (lang) {
-		case "c":
-			return "c";
-		case "cpp":
-			return "cpp";
-		case "python":
-		case "pypy":
-			return "py";
-		case "java":
-			return "java";
-		case "rust":
-			return "rs";
-		case "go":
-			return "go";
-		case "javascript":
-			return "js";
-		case "csharp":
-			return "cs";
-		case "text":
-			return "txt";
-	}
 }
 
 export async function listSolutionsForDraft(draftId: number): Promise<WorkshopSolution[]> {
@@ -100,7 +72,7 @@ export async function createSolution(input: CreateSolutionInput): Promise<Worksh
 	if (bytes > MAX_SOLUTION_BYTES) {
 		throw new Error("솔루션 소스는 최대 2MB까지 업로드 가능합니다");
 	}
-	const ext = languageExtension(input.language);
+	const ext = getFileExtension(input.language);
 	const sourcePath = workshopDraftSolutionPath(input.problemId, input.userId, input.name, ext);
 
 	return db.transaction(async (tx) => {
@@ -187,7 +159,7 @@ export async function updateSolution(input: UpdateSolutionInput): Promise<Worksh
 			if (dup) throw new Error("같은 이름의 솔루션이 이미 존재합니다");
 		}
 
-		const ext = languageExtension(nextLanguage);
+		const ext = getFileExtension(nextLanguage);
 		const nextPath = workshopDraftSolutionPath(input.problemId, input.userId, nextName, ext);
 
 		const renamedOrRetyped = nextPath !== existing.sourcePath;

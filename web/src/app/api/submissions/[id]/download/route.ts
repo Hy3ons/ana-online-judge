@@ -2,7 +2,9 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/db";
+import type { Language } from "@/db/schema";
 import { problems, submissions } from "@/db/schema";
+import { getFileExtension } from "@/lib/languages";
 import { downloadFile } from "@/lib/storage";
 import { checkSubmissionCodeAccess } from "@/lib/submission-access";
 
@@ -67,20 +69,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 			return NextResponse.json({ error: "Forbidden", reason: access.reason }, { status: 403 });
 		}
 
-		// Determine file extension based on language
-		const languageExtensions: Record<string, string> = {
-			c: "c",
-			cpp: "cpp",
-			python: "py",
-			pypy: "py",
-			java: "java",
-			javascript: "js",
-			csharp: "cs",
-			rust: "rs",
-			go: "go",
-			text: "txt",
-		};
-		const extension = languageExtensions[submission.language] || "txt";
+		const extension = getFileExtension(submission.language as Language);
 
 		// Handle Anigma submissions
 		if (submission.anigmaTaskType === 1 && submission.anigmaInputPath) {

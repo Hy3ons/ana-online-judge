@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { VOTES_PAGE_SIZE } from "@/lib/constants/votes";
+import { LANGUAGE_VALUES } from "@/lib/languages";
 import { enqueue, runNow } from "@/lib/queue/rating-queue";
 import { downloadFile } from "@/lib/storage";
 import { getDescendantIds } from "@/lib/tags/tree-queries";
@@ -1888,18 +1889,7 @@ export const endpoints: Endpoint[] = [
 		body: z.object({
 			userId: z.number().int(),
 			name: z.string().min(1).max(64),
-			language: z.enum([
-				"c",
-				"cpp",
-				"python",
-				"pypy",
-				"java",
-				"rust",
-				"go",
-				"javascript",
-				"csharp",
-				"text",
-			]),
+			language: z.enum(LANGUAGE_VALUES),
 			source: z.string(),
 			expectedVerdict: z.enum([
 				"accepted",
@@ -1965,9 +1955,7 @@ export const endpoints: Endpoint[] = [
 		body: z.object({
 			userId: z.number().int(),
 			name: z.string().min(1).max(64).optional(),
-			language: z
-				.enum(["c", "cpp", "python", "pypy", "java", "rust", "go", "javascript", "csharp", "text"])
-				.optional(),
+			language: z.enum(LANGUAGE_VALUES).optional(),
 			source: z.string().optional(),
 			expectedVerdict: z
 				.enum([

@@ -5,6 +5,7 @@ import type { editor } from "monaco-editor";
 import { useTheme } from "next-themes";
 import { useRef } from "react";
 import type { Language } from "@/db/schema";
+import { getMonacoLanguage } from "@/lib/languages";
 
 interface CodeEditorProps {
 	code: string;
@@ -86,7 +87,7 @@ export function CodeEditor({
 		<div className="border rounded-md overflow-hidden" onWheelCapture={handleWheelCapture}>
 			<Editor
 				height={height}
-				language={language === "text" ? "plaintext" : language === "pypy" ? "python" : language}
+				language={getMonacoLanguage(language)}
 				value={code}
 				onMount={handleEditorDidMount}
 				onChange={(value) => {

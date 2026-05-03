@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type { Language } from "@/db/schema";
+import { getLanguageOptions } from "@/lib/languages";
 import {
 	expectedVerdictLabel,
 	type WorkshopExpectedVerdict,
@@ -48,17 +49,7 @@ type Props = {
 	hasMain: boolean;
 };
 
-const LANGUAGES: LanguageOption[] = [
-	{ value: "cpp", label: "C++" },
-	{ value: "c", label: "C" },
-	{ value: "python", label: "Python" },
-	{ value: "pypy", label: "PyPy" },
-	{ value: "java", label: "Java" },
-	{ value: "rust", label: "Rust" },
-	{ value: "go", label: "Go" },
-	{ value: "javascript", label: "JavaScript" },
-	{ value: "csharp", label: "C#" },
-];
+const LANGUAGES: LanguageOption[] = getLanguageOptions().filter((opt) => opt.value !== "text");
 
 const EXPECTED_VERDICTS: WorkshopExpectedVerdict[] = [
 	"accepted",

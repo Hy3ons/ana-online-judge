@@ -20,6 +20,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { getLanguageOptions } from "@/lib/languages";
 import type { ProblemRankingItem } from "@/lib/services/problem-stats";
 
 interface ProblemRankingProps {
@@ -110,13 +111,13 @@ export function ProblemRanking({
 							</SelectTrigger>
 							<SelectContent>
 								<SelectItem value="all">모든 언어</SelectItem>
-								<SelectItem value="c">C</SelectItem>
-								<SelectItem value="cpp">C++</SelectItem>
-								<SelectItem value="python">Python</SelectItem>
-								<SelectItem value="pypy">PyPy</SelectItem>
-								<SelectItem value="java">Java</SelectItem>
-								<SelectItem value="javascript">JavaScript</SelectItem>
-								<SelectItem value="csharp">C#</SelectItem>
+								{getLanguageOptions()
+									.filter((opt) => opt.value !== "text")
+									.map((opt) => (
+										<SelectItem key={opt.value} value={opt.value}>
+											{opt.label}
+										</SelectItem>
+									))}
 							</SelectContent>
 						</Select>
 					</>

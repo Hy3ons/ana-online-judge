@@ -10,6 +10,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { getLanguageOptions } from "@/lib/languages";
 
 export function SubmissionFilters() {
 	const router = useRouter();
@@ -87,14 +88,11 @@ export function SubmissionFilters() {
 				</SelectTrigger>
 				<SelectContent>
 					<SelectItem value="all">모든 언어</SelectItem>
-					<SelectItem value="c">C</SelectItem>
-					<SelectItem value="cpp">C++</SelectItem>
-					<SelectItem value="python">Python</SelectItem>
-					<SelectItem value="pypy">PyPy</SelectItem>
-					<SelectItem value="java">Java</SelectItem>
-					<SelectItem value="javascript">JavaScript</SelectItem>
-					<SelectItem value="csharp">C#</SelectItem>
-					<SelectItem value="text">Text</SelectItem>
+					{getLanguageOptions().map((opt) => (
+						<SelectItem key={opt.value} value={opt.value}>
+							{opt.label}
+						</SelectItem>
+					))}
 				</SelectContent>
 			</Select>
 		</div>

@@ -7,6 +7,7 @@ import {
 	AdminProblemSearch,
 	AdminUserMultiSearch,
 } from "@/components/admin";
+import { getLanguageOptions } from "@/lib/languages";
 
 const VERDICT_OPTIONS = [
 	{ value: "accepted", label: "AC" },
@@ -24,18 +25,7 @@ const VERDICT_OPTIONS = [
 	{ value: "judging", label: "Judging" },
 ];
 
-const LANGUAGE_OPTIONS = [
-	{ value: "c", label: "C" },
-	{ value: "cpp", label: "C++" },
-	{ value: "python", label: "Python" },
-	{ value: "pypy", label: "PyPy" },
-	{ value: "java", label: "Java" },
-	{ value: "rust", label: "Rust" },
-	{ value: "go", label: "Go" },
-	{ value: "javascript", label: "JS" },
-	{ value: "csharp", label: "C#" },
-	{ value: "text", label: "Text" },
-];
+const LANGUAGE_OPTIONS = getLanguageOptions();
 
 export function AdminSubmissionsToolbar() {
 	return (

@@ -12,6 +12,8 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import type { Language } from "@/db/schema";
+import { getMonacoLanguage, LANGUAGES } from "@/lib/languages";
 
 export type SourceInputMode = "file" | "inline";
 
@@ -150,27 +152,11 @@ export function SourceInput({
 
 /**
  * Shared Monaco-language resolver used by the workshop editors.
- * Kept here so every consumer agrees on the mapping.
+ * Thin wrapper around `getMonacoLanguage` that accepts arbitrary strings —
+ * unknown languages fall through to "plaintext" instead of throwing, since
+ * workshop checker/validator columns are typed as `text` (not the enum).
  */
 export function monacoLangFor(lang: string): string {
-	switch (lang) {
-		case "cpp":
-		case "c":
-			return "cpp";
-		case "python":
-		case "pypy":
-			return "python";
-		case "java":
-			return "java";
-		case "rust":
-			return "rust";
-		case "go":
-			return "go";
-		case "javascript":
-			return "javascript";
-		case "csharp":
-			return "csharp";
-		default:
-			return "plaintext";
-	}
+	if (lang in LANGUAGES) return getMonacoLanguage(lang as Language);
+	return "plaintext";
 }
