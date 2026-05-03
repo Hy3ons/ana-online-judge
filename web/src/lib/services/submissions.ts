@@ -52,7 +52,9 @@ export async function submitCode(data: {
 			return { error: "코드를 입력해주세요." };
 		}
 
-		if (data.code.length > 1000000) {
+		const normalizedCode = data.code.replace(/\r\n?/g, "\n");
+
+		if (normalizedCode.length > 1000000) {
 			return { error: "코드가 너무 깁니다 (최대 1MB)." };
 		}
 
@@ -72,11 +74,11 @@ export async function submitCode(data: {
 			.values({
 				problemId: data.problemId,
 				userId: data.userId,
-				code: data.code,
+				code: normalizedCode,
 				language: data.language as Language,
 				verdict: "pending",
 				contestId: data.contestId,
-				codeLength: new TextEncoder().encode(data.code).byteLength,
+				codeLength: new TextEncoder().encode(normalizedCode).byteLength,
 				visibility,
 			})
 			.returning({ id: submissions.id });
@@ -89,7 +91,7 @@ export async function submitCode(data: {
 		await pushStandardJudgeJob({
 			submissionId: newSubmission.id,
 			problemId: data.problemId,
-			code: data.code,
+			code: normalizedCode,
 			language: data.language,
 			timeLimit: problem.timeLimit,
 			memoryLimit: problem.memoryLimit,
