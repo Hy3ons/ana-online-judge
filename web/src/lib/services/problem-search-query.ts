@@ -1,3 +1,4 @@
+import type { ProblemType } from "@/db/schema";
 import { SHORT_LETTERS } from "@/lib/tier";
 
 /**
@@ -14,9 +15,12 @@ import { SHORT_LETTERS } from "@/lib/tier";
  *      숫자: 1(I, 가장 높음) ~ 5(V, 가장 낮음). 생략 시 그룹 전체.
  *      특수 그룹: u(Unrated, tier=0), n(Not Ratable, tier=-1)
  *      예: `*g` → 골드 전체, `*s5` → 실버 5
+ *  - `^<유형>`             → 문제 유형 (icpc / special_judge / anigma / interactive).
+ *                            `^special` 은 special_judge 의 별칭. `-`/`_` 동치 처리.
+ *  - `/<슬러그>`           → 출처 slug 일치 (해당 출처 + 모든 후손 출처에 속한 문제).
  *  - `<문자열>`            → 제목/내용 부분 일치
  *
- * 빈 토큰이나 형식이 깨진 토큰(`id:abc`, `*g6`, `*xyz`)은 무시한다.
+ * 빈 토큰이나 형식이 깨진 토큰(`id:abc`, `*g6`, `*xyz`, `^foo`)은 무시한다.
  */
 
 export type ProblemSearchToken =
@@ -24,7 +28,24 @@ export type ProblemSearchToken =
 	| { type: "tag"; value: string }
 	| { type: "solver"; value: string }
 	| { type: "tier"; values: number[] }
+	| { type: "problemType"; value: ProblemType }
+	| { type: "source"; value: string }
 	| { type: "text"; value: string };
+
+export const PROBLEM_TYPE_TOKENS: { token: string; value: ProblemType; label: string }[] = [
+	{ token: "icpc", value: "icpc", label: "ICPC" },
+	{ token: "special_judge", value: "special_judge", label: "스페셜 저지" },
+	{ token: "anigma", value: "anigma", label: "ANIGMA" },
+	{ token: "interactive", value: "interactive", label: "인터랙티브" },
+];
+
+export function parseProblemTypeTokenBody(body: string): ProblemType | null {
+	const norm = body.trim().toLowerCase().replace(/-/g, "_");
+	if (!norm) return null;
+	if (norm === "special") return "special_judge";
+	const found = PROBLEM_TYPE_TOKENS.find((t) => t.token === norm);
+	return found ? found.value : null;
+}
 
 const TIER_SPECIALS: Record<string, number> = {
 	u: 0, // Unrated
@@ -82,6 +103,16 @@ export function parseProblemSearchQuery(input: string | undefined): ProblemSearc
 		if (raw.startsWith("*")) {
 			const values = parseTierTokenBody(raw.slice(1));
 			if (values && values.length > 0) tokens.push({ type: "tier", values });
+			continue;
+		}
+		if (raw.startsWith("^")) {
+			const value = parseProblemTypeTokenBody(raw.slice(1));
+			if (value) tokens.push({ type: "problemType", value });
+			continue;
+		}
+		if (raw.startsWith("/")) {
+			const v = raw.slice(1).trim();
+			if (v) tokens.push({ type: "source", value: v });
 			continue;
 		}
 		tokens.push({ type: "text", value: raw });

@@ -12,6 +12,7 @@ import {
 	problemReviewers,
 	problemSources,
 	problems,
+	sources,
 	submissions,
 	type Translations,
 	testcases,
@@ -383,6 +384,8 @@ export async function getProblems(
 	}
 	if (options?.search) {
 		const tokens = parseProblemSearchQuery(options.search);
+		const problemTypeValues: ProblemType[] = [];
+		const sourceSlugs: string[] = [];
 		for (const token of tokens) {
 			switch (token.type) {
 				case "id":
@@ -396,6 +399,12 @@ export async function getProblems(
 					}
 					break;
 				}
+				case "problemType":
+					problemTypeValues.push(token.value);
+					break;
+				case "source":
+					sourceSlugs.push(token.value);
+					break;
 				case "tag": {
 					const pattern = `%${token.value}%`;
 					conditions.push(sql`EXISTS (
@@ -444,6 +453,34 @@ export async function getProblems(
 					break;
 				}
 			}
+		}
+		if (problemTypeValues.length === 1) {
+			conditions.push(eq(problems.problemType, problemTypeValues[0]));
+		} else if (problemTypeValues.length > 1) {
+			conditions.push(inArray(problems.problemType, problemTypeValues));
+		}
+		// 각 source 토큰은 AND 결합. 동일 slug 가 여러 노드에 존재할 수 있으므로 매칭된
+		// 모든 source 의 후손 ID 집합을 모아 problem_sources 와 EXISTS 조인한다.
+		for (const slug of sourceSlugs) {
+			const matched = await db
+				.select({ id: sources.id })
+				.from(sources)
+				.where(eq(sources.slug, slug));
+			if (matched.length === 0) {
+				conditions.push(sql`FALSE`);
+				continue;
+			}
+			const idSets = await Promise.all(matched.map((m) => getDescendantIds(m.id)));
+			const allIds = Array.from(new Set(idSets.flat()));
+			if (allIds.length === 0) {
+				conditions.push(sql`FALSE`);
+				continue;
+			}
+			const matchedProblemIds = db
+				.select({ id: problemSources.problemId })
+				.from(problemSources)
+				.where(inArray(problemSources.sourceId, allIds));
+			conditions.push(inArray(problems.id, matchedProblemIds));
 		}
 	}
 	if (options?.sourceId !== undefined) {

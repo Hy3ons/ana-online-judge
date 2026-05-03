@@ -3,16 +3,18 @@
 import { Loader2, Search } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { publicSearchSources } from "@/actions/sources/public";
 import { searchTagsAction } from "@/actions/tags/queries";
 import { searchUsersPublic } from "@/actions/users";
 import { Input } from "@/components/ui/input";
+import { PROBLEM_TYPE_TOKENS } from "@/lib/services/problem-search-query";
 import { GROUP_NAMES, ROMAN, SHORT_LETTERS, tierLabel } from "@/lib/tier";
 import { cn } from "@/lib/utils";
 
 type ActiveToken =
 	| { kind: "none" }
 	| {
-			kind: "tag" | "solver" | "id" | "tier" | "text";
+			kind: "tag" | "solver" | "id" | "tier" | "problemType" | "source" | "text";
 			query: string;
 			start: number;
 			end: number;
@@ -30,6 +32,8 @@ function analyzeToken(value: string, cursor: number): ActiveToken {
 	if (token.startsWith("#")) return { kind: "tag", query: token.slice(1), start, end };
 	if (token.startsWith("id:")) return { kind: "id", query: token.slice(3), start, end };
 	if (token.startsWith("*")) return { kind: "tier", query: token.slice(1), start, end };
+	if (token.startsWith("^")) return { kind: "problemType", query: token.slice(1), start, end };
+	if (token.startsWith("/")) return { kind: "source", query: token.slice(1), start, end };
 	return { kind: "text", query: token, start, end };
 }
 
@@ -41,10 +45,14 @@ type TagSuggestionData = {
 };
 type UserSuggestionData = { id: number; username: string; name: string };
 type TierSuggestionData = { token: string; label: string };
+type ProblemTypeSuggestionData = { token: string; label: string };
+type SourceSuggestionData = { id: number; slug: string; name: string; year: number | null };
 type Suggestion =
 	| { kind: "tag"; data: TagSuggestionData }
 	| { kind: "solver"; data: UserSuggestionData }
-	| { kind: "tier"; data: TierSuggestionData };
+	| { kind: "tier"; data: TierSuggestionData }
+	| { kind: "problemType"; data: ProblemTypeSuggestionData }
+	| { kind: "source"; data: SourceSuggestionData };
 
 // `*<letter>[num]` autocomplete 후보. tier 정의는 lib/tier.ts(SHORT_LETTERS/GROUP_NAMES/ROMAN)를 그대로 재사용.
 // 특수: u(Unrated, tier=0), n(Not Ratable, tier=-1) — tierLabel로 라벨 산출.
@@ -66,6 +74,17 @@ function subSuggestion(groupIdx: number, subNum: number): TierSuggestionData {
 		token: `*${SHORT_LETTERS[groupIdx].toLowerCase()}${subNum}`,
 		label: `${GROUP_NAMES[groupIdx]} ${ROMAN[5 - subNum]}`,
 	};
+}
+
+function getProblemTypeSuggestions(query: string): ProblemTypeSuggestionData[] {
+	const norm = query.trim().toLowerCase().replace(/-/g, "_");
+	const all = PROBLEM_TYPE_TOKENS.map((t) => ({ token: `^${t.token}`, label: t.label }));
+	if (!norm) return all;
+	return all.filter(
+		(s) =>
+			s.token.slice(1).startsWith(norm) ||
+			s.label.toLowerCase().includes(query.trim().toLowerCase())
+	);
 }
 
 function getTierSuggestions(query: string): TierSuggestionData[] {
@@ -156,7 +175,7 @@ export function ProblemSearch() {
 			setLoading(false);
 			return;
 		}
-		// Tier는 정적 후보. Query가 비어있어도 그룹 목록을 보여준다.
+		// Tier / problemType 는 정적 후보. Query 가 비어있어도 전체 목록을 보여준다.
 		if (activeKind === "tier") {
 			setLoading(false);
 			setSuggestions(
@@ -166,7 +185,16 @@ export function ProblemSearch() {
 			);
 			return;
 		}
-		if (activeKind !== "tag" && activeKind !== "solver") {
+		if (activeKind === "problemType") {
+			setLoading(false);
+			setSuggestions(
+				getProblemTypeSuggestions(activeQuery)
+					.slice(0, MAX_SUGGESTIONS)
+					.map((t) => ({ kind: "problemType", data: t }))
+			);
+			return;
+		}
+		if (activeKind !== "tag" && activeKind !== "solver" && activeKind !== "source") {
 			setSuggestions([]);
 			setLoading(false);
 			return;
@@ -196,11 +224,21 @@ export function ProblemSearch() {
 							}))
 						);
 					}
-				} else {
+				} else if (activeKind === "solver") {
 					const list = await searchUsersPublic(q);
 					if (!cancelled) {
 						setSuggestions(
 							list.slice(0, MAX_SUGGESTIONS).map((u) => ({ kind: "solver", data: u }))
+						);
+					}
+				} else {
+					const list = await publicSearchSources(q);
+					if (!cancelled) {
+						setSuggestions(
+							list.slice(0, MAX_SUGGESTIONS).map((s) => ({
+								kind: "source",
+								data: { id: s.id, slug: s.slug, name: s.name, year: s.year },
+							}))
 						);
 					}
 				}
@@ -230,10 +268,18 @@ export function ProblemSearch() {
 
 	const insertSuggestion = useCallback(
 		(sug: Suggestion) => {
-			if (active.kind !== "tag" && active.kind !== "solver" && active.kind !== "tier") return;
+			if (
+				active.kind !== "tag" &&
+				active.kind !== "solver" &&
+				active.kind !== "tier" &&
+				active.kind !== "problemType" &&
+				active.kind !== "source"
+			)
+				return;
 			let replacement: string;
 			if (sug.kind === "tag") replacement = `#${sug.data.slug}`;
 			else if (sug.kind === "solver") replacement = `s#${sug.data.username}`;
+			else if (sug.kind === "source") replacement = `/${sug.data.slug}`;
 			else replacement = sug.data.token;
 			const before = search.slice(0, active.start);
 			const after = search.slice(active.end);
@@ -257,9 +303,10 @@ export function ProblemSearch() {
 
 	const showAutocomplete =
 		focused &&
-		((activeKind === "tag" || activeKind === "solver") && activeQuery.trim().length > 0
+		((activeKind === "tag" || activeKind === "solver" || activeKind === "source") &&
+		activeQuery.trim().length > 0
 			? true
-			: activeKind === "tier");
+			: activeKind === "tier" || activeKind === "problemType");
 	const showSyntaxHelp = focused && !showAutocomplete;
 
 	return (
@@ -332,7 +379,11 @@ export function ProblemSearch() {
 										? `t-${s.data.id}`
 										: s.kind === "solver"
 											? `u-${s.data.id}`
-											: `r-${s.data.token}`;
+											: s.kind === "source"
+												? `src-${s.data.id}`
+												: s.kind === "problemType"
+													? `pt-${s.data.token}`
+													: `r-${s.data.token}`;
 								return (
 									<button
 										key={key}
@@ -352,6 +403,10 @@ export function ProblemSearch() {
 											<TagSuggestionItem tag={s.data} />
 										) : s.kind === "solver" ? (
 											<UserSuggestionItem user={s.data} />
+										) : s.kind === "source" ? (
+											<SourceSuggestionItem source={s.data} />
+										) : s.kind === "problemType" ? (
+											<ProblemTypeSuggestionItem item={s.data} />
 										) : (
 											<TierSuggestionItem tier={s.data} />
 										)}
@@ -400,6 +455,27 @@ function TierSuggestionItem({ tier }: { tier: TierSuggestionData }) {
 	);
 }
 
+function ProblemTypeSuggestionItem({ item }: { item: ProblemTypeSuggestionData }) {
+	return (
+		<div className="flex items-baseline gap-2">
+			<span className="font-medium">{item.token}</span>
+			<span className="text-muted-foreground text-xs">{item.label}</span>
+		</div>
+	);
+}
+
+function SourceSuggestionItem({ source }: { source: SourceSuggestionData }) {
+	return (
+		<div className="flex items-baseline gap-2">
+			<span className="font-medium">/{source.slug}</span>
+			<span className="text-muted-foreground text-xs">
+				{source.name}
+				{source.year !== null && ` (${source.year})`}
+			</span>
+		</div>
+	);
+}
+
 function SyntaxHelpPanel() {
 	return (
 		<div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-md border bg-popover p-3 text-popover-foreground shadow-md">
@@ -423,6 +499,19 @@ function SyntaxHelpPanel() {
 					<code className="rounded bg-muted px-1 py-0.5 text-xs">*</code>
 					<span className="ml-2 text-muted-foreground text-xs">
 						난이도 (예: <code>*g</code>=골드 전체, <code>*s5</code>=실버 5)
+					</span>
+				</li>
+				<li>
+					<code className="rounded bg-muted px-1 py-0.5 text-xs">^</code>
+					<span className="ml-2 text-muted-foreground text-xs">
+						문제 유형 (예: <code>^icpc</code>, <code>^special_judge</code>, <code>^anigma</code>,{" "}
+						<code>^interactive</code>)
+					</span>
+				</li>
+				<li>
+					<code className="rounded bg-muted px-1 py-0.5 text-xs">/</code>
+					<span className="ml-2 text-muted-foreground text-xs">
+						출처 slug (예: <code>/usaco</code>)
 					</span>
 				</li>
 			</ul>
