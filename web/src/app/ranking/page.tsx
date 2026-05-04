@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getUserRanking } from "@/actions/ranking";
 import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +12,6 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { getUserRanking } from "@/lib/services/ranking";
 
 export const metadata = { title: "랭킹 — AOJ" };
 
