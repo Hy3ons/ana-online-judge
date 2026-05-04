@@ -1,4 +1,5 @@
 export * from "./judge-tools";
+export * from "./logs";
 export * from "./problems";
 export * from "./submissions";
 export * from "./testcases";
