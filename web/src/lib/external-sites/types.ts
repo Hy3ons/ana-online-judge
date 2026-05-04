@@ -16,7 +16,9 @@ export interface UserNameStyle {
 
 export interface ExternalSiteClient {
 	readonly id: ExternalSite;
+	/** Returns null if the handle does not exist (HTTP 404 / API "not found"). Throws on network/transport errors. */
 	fetchUser(handle: string): Promise<ExternalSiteUserInfo | null>;
+	/** Returns null if no color should be applied (e.g., unrated). Pure function — safe for client/server. */
 	styleFor(rating: number | null): UserNameStyle | null;
 	labelFor(rating: number | null): string;
 	readonly rateLimit: { requestsPerMinute: number };
