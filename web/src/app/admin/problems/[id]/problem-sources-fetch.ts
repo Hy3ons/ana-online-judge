@@ -1,7 +1,7 @@
 "use server";
 
+import { getBreadcrumb, listProblemSourceEntries } from "@/actions/sources";
 import { requireAdmin } from "@/lib/auth-utils";
-import { getBreadcrumb, listProblemSourceEntries } from "@/lib/services/sources";
 
 export async function getProblemSourcesAction(problemId: number) {
 	await requireAdmin();

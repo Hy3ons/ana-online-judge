@@ -7,7 +7,7 @@ import { publicSearchSources } from "@/actions/sources/public";
 import { searchTagsAction } from "@/actions/tags/queries";
 import { searchUsersPublic } from "@/actions/users";
 import { Input } from "@/components/ui/input";
-import { PROBLEM_TYPE_TOKENS } from "@/lib/services/problem-search-query";
+import { PROBLEM_TYPE_TOKENS } from "@/lib/problem-type-tokens";
 import { GROUP_NAMES, ROMAN, SHORT_LETTERS, tierLabel } from "@/lib/tier";
 import { cn } from "@/lib/utils";
 

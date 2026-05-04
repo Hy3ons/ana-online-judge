@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { countProblemsInSubtree, listRootSources } from "@/actions/sources";
 import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -10,7 +11,6 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { countProblemsInSubtree, listRootSources } from "@/lib/services/sources";
 
 export const metadata: Metadata = {
 	title: "출처",

@@ -21,3 +21,7 @@ export const PROBLEM_TABLE_SORT_KEYS = [
 export type ProblemTableSort = (typeof PROBLEM_TABLE_SORT_KEYS)[number];
 
 export type SortOrder = "asc" | "desc";
+
+/** `listProblemsByTag` 전용 추가 정렬 키 (태그 뷰에서만 노출되는 acceptedCount 포함). */
+export const PROBLEM_BY_TAG_SORT_KEYS = [...PROBLEM_TABLE_SORT_KEYS, "acceptedCount"] as const;
+export type ProblemByTagSort = (typeof PROBLEM_BY_TAG_SORT_KEYS)[number];

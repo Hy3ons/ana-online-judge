@@ -1,17 +1,16 @@
-import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { listWorkshopGenerators } from "@/actions/workshop/generators";
 import { listWorkshopInvocations } from "@/actions/workshop/invocations";
 import { getWorkshopProblemWithDraft } from "@/actions/workshop/problems";
+import { getGroupName } from "@/actions/workshop/queries";
 import { listWorkshopResources } from "@/actions/workshop/resources";
 import { getStaleDraftInfo, listWorkshopSnapshots } from "@/actions/workshop/snapshots";
 import { listWorkshopSolutions } from "@/actions/workshop/solutions";
 import { listWorkshopTestcases } from "@/actions/workshop/testcases";
 import { getWorkshopValidatorState } from "@/actions/workshop/validator";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { db } from "@/db";
-import { type Verdict, workshopGroups } from "@/db/schema";
+import type { Verdict } from "@/db/schema";
 import {
 	matchesExpectedVerdict,
 	isPending as verdictIsPending,
@@ -97,15 +96,7 @@ export default async function WorkshopProblemDashboardPage({
 	const pendingTestcaseCount = testcases.filter((t) => t.validationStatus === "pending").length;
 	const withOutputCount = testcases.filter((t) => t.outputPath !== null).length;
 
-	let groupName: string | null = null;
-	if (problem.groupId !== null) {
-		const [g] = await db
-			.select({ name: workshopGroups.name })
-			.from(workshopGroups)
-			.where(eq(workshopGroups.id, problem.groupId))
-			.limit(1);
-		groupName = g?.name ?? null;
-	}
+	const groupName = problem.groupId !== null ? await getGroupName(problem.groupId) : null;
 
 	return (
 		<div className="container mx-auto p-6">

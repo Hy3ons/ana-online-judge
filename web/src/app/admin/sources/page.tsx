@@ -1,4 +1,4 @@
-import { listRootSources } from "@/lib/services/sources";
+import { listRootSources } from "@/actions/sources";
 import { SourcesTreeManager } from "./sources-tree-manager";
 
 export default async function AdminSourcesPage() {

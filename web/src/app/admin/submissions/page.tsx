@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { listAdminSubmissionsAction } from "@/actions/admin/submissions";
+import {
+	listAdminSubmissionsAction,
+	parseAdminSubmissionFilter,
+} from "@/actions/admin/submissions";
 import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-	type AdminSubmissionsSort,
-	parseAdminSubmissionFilter,
-} from "@/lib/services/admin-submissions";
+import type { AdminSubmissionsSort } from "@/lib/services/admin-submissions";
 import { AdminSubmissionsTable } from "./_components/admin-submissions-table";
 import { AdminSubmissionsToolbar } from "./_components/admin-submissions-toolbar";
 import { RejudgeShell } from "./_components/rejudge-shell";
@@ -36,7 +36,7 @@ export default async function AdminSubmissionsPage({
 }) {
 	const params = await searchParams;
 	const page = Number.parseInt(params.page ?? "1", 10);
-	const filter = parseAdminSubmissionFilter(params);
+	const filter = await parseAdminSubmissionFilter(params);
 
 	const { submissions, total } = await listAdminSubmissionsAction(
 		filter,

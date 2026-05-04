@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
+import { listAllTagsWithProblemCount } from "@/actions/tags";
 import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
 import { TagListTable } from "@/components/tags/tag-list-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PaginationLinks } from "@/components/ui/pagination-links";
-import { listAllTagsWithProblemCount } from "@/lib/services/algorithm-tags";
 
 export const metadata: Metadata = {
 	title: "알고리즘 분류",

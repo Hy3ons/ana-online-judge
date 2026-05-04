@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { listRootTags } from "@/lib/services/algorithm-tags";
+import { listRootTags } from "@/actions/tags";
 import { TagsTreeManager } from "./tags-tree-manager";
 
 export const metadata: Metadata = {

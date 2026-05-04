@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { listMyGroups } from "@/actions/workshop/groups";
 import { listMyWorkshopProblems } from "@/actions/workshop/problems";
+import { getUserQuotas, getWorkshopUsage, listAllGroups } from "@/actions/workshop/queries";
 import { auth } from "@/auth";
 import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -16,8 +17,6 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { getUserQuotas, getWorkshopUsage } from "@/lib/services/quota";
-import { listAllGroups } from "@/lib/services/workshop-groups";
 import { NewProblemDropdown } from "./_components/new-problem-dropdown";
 import { DeleteWorkshopProblemButton } from "./delete-button";
 import { WorkshopSearch } from "./workshop-search";

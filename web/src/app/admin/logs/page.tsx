@@ -1,11 +1,11 @@
 import { ScrollText } from "lucide-react";
-import { isProxyConfigured } from "@/lib/services/docker-logs";
+import { isProxyConfigured } from "@/actions/admin/logs";
 import { LogViewer } from "./_components/log-viewer";
 
 export const dynamic = "force-dynamic";
 
-export default function AdminLogsPage() {
-	const proxyOn = isProxyConfigured();
+export default async function AdminLogsPage() {
+	const proxyOn = await isProxyConfigured();
 
 	return (
 		<div className="space-y-4">

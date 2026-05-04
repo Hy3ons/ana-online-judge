@@ -4,6 +4,12 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-utils";
 import * as svc from "@/lib/services/admin-submissions";
 
+export async function parseAdminSubmissionFilter(
+	...args: Parameters<typeof svc.parseAdminSubmissionFilter>
+) {
+	return svc.parseAdminSubmissionFilter(...args);
+}
+
 export async function listAdminSubmissionsAction(
 	...args: Parameters<typeof svc.listAdminSubmissions>
 ) {

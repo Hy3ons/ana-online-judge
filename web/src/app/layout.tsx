@@ -5,6 +5,7 @@ import "@fontsource/geist-mono/700.css";
 import "pretendard/dist/web/variable/pretendardvariable.css";
 import "./globals.css";
 import { Toaster as SonnerToaster } from "sonner";
+import { getRunningContestPracticeCounts } from "@/actions/layout";
 import { auth } from "@/auth";
 import { ImpersonationBanner } from "@/components/auth/impersonation-banner";
 import { Footer } from "@/components/layout/footer";
@@ -13,7 +14,6 @@ import { ServerTimeFloater } from "@/components/layout/server-time-floater";
 import { ThemeProvider } from "@/components/layout/theme-provider";
 import { SessionProvider } from "@/components/providers/session-provider";
 import { Toaster } from "@/components/ui/toaster";
-import { getRunningContestPracticeCounts } from "@/lib/services/active-counts";
 
 // Pretendard는 CSS로 로드 (--font-pretendard 변수 자동 생성됨)
 // Geist Mono는 @fontsource/geist-mono CSS로 로드
