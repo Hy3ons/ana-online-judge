@@ -50,6 +50,8 @@ export const submissionVisibilityEnum = pgEnum("submission_visibility", [
 	"private",
 	"public_on_ac",
 ]);
+export const externalSiteEnum = pgEnum("external_site", ["codeforces", "atcoder"]);
+export type ExternalSite = (typeof externalSiteEnum.enumValues)[number];
 
 // Workshop enums
 export const workshopProblemTypeEnum = pgEnum("workshop_problem_type", ["icpc", "special_judge"]);
@@ -104,6 +106,7 @@ export const users = pgTable("users", {
 	avatarUrl: text("avatar_url"),
 	authId: text("auth_id").unique(), // OAuth provider unique ID (e.g., Google ID)
 	authProvider: text("auth_provider"), // OAuth provider name (e.g., 'google', 'github')
+	mainExternalSite: externalSiteEnum("main_external_site"),
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 	updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -793,6 +796,35 @@ export const sourceAuditLog = pgTable(
 	(t) => ({
 		sourceIdx: index("source_audit_log_source_idx").on(t.sourceId, t.createdAt),
 		actorIdx: index("source_audit_log_actor_idx").on(t.actorId, t.createdAt),
+	})
+);
+
+// User External Handles (Codeforces / AtCoder etc.)
+export const userExternalHandles = pgTable(
+	"user_external_handles",
+	{
+		id: serial("id").primaryKey(),
+		userId: integer("user_id")
+			.references(() => users.id, { onDelete: "cascade" })
+			.notNull(),
+		provider: externalSiteEnum("provider").notNull(),
+		handle: text("handle").notNull(),
+		rating: integer("rating"),
+		updatedAt: timestamp("updated_at").defaultNow().notNull(),
+	},
+	(t) => ({
+		userProviderUniq: uniqueIndex("user_external_handles_user_provider_uniq").on(
+			t.userId,
+			t.provider
+		),
+		handleUniq: uniqueIndex("user_external_handles_handle_uniq").on(
+			t.provider,
+			sql`lower(${t.handle})`
+		),
+		providerUpdatedIdx: index("user_external_handles_provider_updated_idx").on(
+			t.provider,
+			t.updatedAt
+		),
 	})
 );
 
