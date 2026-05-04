@@ -891,6 +891,8 @@ export type ProblemVoteTag = typeof problemVoteTags.$inferSelect;
 export type NewProblemVoteTag = typeof problemVoteTags.$inferInsert;
 export type ProblemConfirmedTag = typeof problemConfirmedTags.$inferSelect;
 export type NewProblemConfirmedTag = typeof problemConfirmedTags.$inferInsert;
+export type UserExternalHandle = typeof userExternalHandles.$inferSelect;
+export type NewUserExternalHandle = typeof userExternalHandles.$inferInsert;
 
 export type UserRole = (typeof userRoleEnum.enumValues)[number];
 export type Verdict = (typeof verdictEnum.enumValues)[number];
