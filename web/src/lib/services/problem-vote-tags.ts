@@ -8,7 +8,7 @@ import {
 	submissions,
 } from "@/db/schema";
 import type { TagWithPath } from "@/lib/services/algorithm-tags";
-import { PROBLEM_TABLE_SORT_KEYS, type SortOrder } from "@/lib/services/problem-list-sort";
+import type { ProblemByTagSort, SortOrder } from "@/lib/services/problem-list-sort";
 import { makeCanonicalSolverStatsSubquery } from "@/lib/services/solved-clause";
 import { getAncestorChain } from "@/lib/tags/tree-queries";
 
@@ -145,8 +145,7 @@ export interface ProblemByTagRow {
 	solverCount: number;
 }
 
-export const PROBLEM_BY_TAG_SORT_KEYS = [...PROBLEM_TABLE_SORT_KEYS, "acceptedCount"] as const;
-export type ProblemByTagSort = (typeof PROBLEM_BY_TAG_SORT_KEYS)[number];
+export { PROBLEM_BY_TAG_SORT_KEYS, type ProblemByTagSort } from "@/lib/services/problem-list-sort";
 
 export async function listProblemsByTag(
 	tagId: number,

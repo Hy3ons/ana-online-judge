@@ -1,4 +1,5 @@
 import type { ProblemType } from "@/db/schema";
+import { PROBLEM_TYPE_TOKENS } from "@/lib/problem-type-tokens";
 import { SHORT_LETTERS } from "@/lib/tier";
 
 /**
@@ -32,12 +33,7 @@ export type ProblemSearchToken =
 	| { type: "source"; value: string }
 	| { type: "text"; value: string };
 
-export const PROBLEM_TYPE_TOKENS: { token: string; value: ProblemType; label: string }[] = [
-	{ token: "icpc", value: "icpc", label: "ICPC" },
-	{ token: "special_judge", value: "special_judge", label: "스페셜 저지" },
-	{ token: "anigma", value: "anigma", label: "ANIGMA" },
-	{ token: "interactive", value: "interactive", label: "인터랙티브" },
-];
+export { PROBLEM_TYPE_TOKENS } from "@/lib/problem-type-tokens";
 
 export function parseProblemTypeTokenBody(body: string): ProblemType | null {
 	const norm = body.trim().toLowerCase().replace(/-/g, "_");

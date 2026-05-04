@@ -91,6 +91,18 @@ Browser → Next.js (server actions/API routes)
 - **Auth**: NextAuth v5 with credentials (bcrypt) and Google OAuth (`web/src/auth.ts`)
 - **UI**: shadcn/ui components with Radix primitives, Monaco editor for code input
 
+### Layer Rules
+
+- **Components (pages, layouts, server/client components) MUST NOT import `@/db`
+  or call `@/lib/services/*` functions directly.** All data fetching goes through
+  server actions in `actions/<domain>/queries.ts` (or `actions/<domain>.ts` for
+  small domains). Type-only imports (`import type { ... }`) are allowed.
+- **Server actions SHOULD call `@/lib/services/*`** for shared business logic.
+  Direct `db` access in actions is permitted as a transitional pattern; new code
+  should prefer services.
+- **`app/api/**` routes** may call services directly — they are REST/SSE entry
+  points equivalent to server actions in their layer position.
+
 ### Database Tables (Drizzle)
 `users`, `siteSettings`, `problems`, `testcases`, `submissions`, `submissionResults`, `contests`, `contestProblems`, `contestParticipants`, `playgroundSessions`, `playgroundFiles`
 
