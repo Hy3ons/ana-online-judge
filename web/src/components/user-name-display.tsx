@@ -34,7 +34,9 @@ function renderName(name: string, style: ReturnType<typeof styleFor>, className?
 	if (!style) {
 		return <span className={className}>{name}</span>;
 	}
-	const css: CSSProperties = {};
+	// Any linked external handle renders bold (decision: visual emphasis,
+	// regardless of tier). Color/gradient/firstCharBlack still vary per tier.
+	const css: CSSProperties = { fontWeight: 700 };
 	if (style.gradient) {
 		css.background = style.gradient;
 		css.WebkitBackgroundClip = "text";
@@ -43,12 +45,11 @@ function renderName(name: string, style: ReturnType<typeof styleFor>, className?
 	} else if (style.color) {
 		css.color = style.color;
 	}
-	if (style.bold) css.fontWeight = 700;
 
 	if (style.firstCharBlack && name.length > 0) {
 		return (
 			<span className={cn("inline", className)}>
-				<span style={{ color: "#000", fontWeight: css.fontWeight }}>{name[0]}</span>
+				<span style={{ color: "#000", fontWeight: 700 }}>{name[0]}</span>
 				<span style={css}>{name.slice(1)}</span>
 			</span>
 		);

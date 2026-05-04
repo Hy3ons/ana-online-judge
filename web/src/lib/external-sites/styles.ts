@@ -21,18 +21,19 @@ export function profileUrlFor(site: ExternalSite, handle: string): string {
 }
 
 // Codeforces user colors verified from community.css (.rated-user, .user-*).
-// LGM (3000+) = solid red + first-letter black + bold (no gradient on real site).
-function cfStyle(rating: number | null): UserNameStyle | null {
-	if (rating === null) return null;
-	if (rating < 1200) return { color: "#808080" };
+// Unrated users (rating null — registered but never participated in rated contest)
+// fall into the same gray as Newbie on the real site, so we collapse them.
+// LGM (3000+) = solid red + first-letter black on the real site (no gradient).
+// Bold across all tiers is applied at the render layer (any linked handle = bold).
+function cfStyle(rating: number | null): UserNameStyle {
+	if (rating === null || rating < 1200) return { color: "#808080" };
 	if (rating < 1400) return { color: "#008000" };
 	if (rating < 1600) return { color: "#03A89E" };
 	if (rating < 1900) return { color: "#0000FF" };
 	if (rating < 2100) return { color: "#AA00AA" };
 	if (rating < 2400) return { color: "#FF8C00" };
 	if (rating < 2600) return { color: "#FF0000" };
-	if (rating < 3000) return { color: "#FF0000", firstCharBlack: true };
-	return { color: "#FF0000", firstCharBlack: true, bold: true };
+	return { color: "#FF0000", firstCharBlack: true };
 }
 
 function cfRankName(rating: number): string {
@@ -49,17 +50,18 @@ function cfRankName(rating: number): string {
 }
 
 // AtCoder user colors verified from base.css (.user-red {color:#FF0000;} — plain solid).
-// Red (2800+) is solid #FF0000 on the real site. Bold added for visual emphasis only.
-function atcStyle(rating: number | null): UserNameStyle | null {
-	if (rating === null) return null;
-	if (rating < 400) return { color: "#808080" };
+// Unrated users (rating null — registered but never participated in rated contest)
+// collapse into the same gray as the 0-399 tier (visually identical on the real site).
+// Bold across all tiers is applied at the render layer (any linked handle = bold).
+function atcStyle(rating: number | null): UserNameStyle {
+	if (rating === null || rating < 400) return { color: "#808080" };
 	if (rating < 800) return { color: "#804000" };
 	if (rating < 1200) return { color: "#008000" };
 	if (rating < 1600) return { color: "#00C0C0" };
 	if (rating < 2000) return { color: "#0000FF" };
 	if (rating < 2400) return { color: "#C0C000" };
 	if (rating < 2800) return { color: "#FF8000" };
-	return { color: "#FF0000", bold: true };
+	return { color: "#FF0000" };
 }
 
 function atcRankName(rating: number): string {

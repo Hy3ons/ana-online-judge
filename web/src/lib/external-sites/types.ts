@@ -11,7 +11,6 @@ export interface UserNameStyle {
 	color: string;
 	gradient?: string;
 	firstCharBlack?: boolean;
-	bold?: boolean;
 }
 
 export interface ExternalSiteClient {
