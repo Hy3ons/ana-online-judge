@@ -1,48 +1,21 @@
-import { count, eq } from "drizzle-orm";
 import { CheckCircle, FileText, Send, Users } from "lucide-react";
 import type { Metadata } from "next";
+import { getAdminDashboardStats } from "@/actions/admin/queries";
 import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { db } from "@/db";
-import { problems, submissions, users } from "@/db/schema";
 
 export const metadata: Metadata = {
 	title: "관리자 대시보드",
 };
 
 export default async function AdminDashboardPage() {
-	const [userCount, problemCount, submissionCount, acceptedCount] = await Promise.all([
-		db.select({ count: count() }).from(users),
-		db.select({ count: count() }).from(problems),
-		db.select({ count: count() }).from(submissions),
-		db.select({ count: count() }).from(submissions).where(eq(submissions.verdict, "accepted")),
-	]);
+	const counts = await getAdminDashboardStats();
 
 	const stats = [
-		{
-			title: "총 사용자",
-			value: userCount[0].count,
-			icon: Users,
-			color: "text-blue-500",
-		},
-		{
-			title: "총 문제",
-			value: problemCount[0].count,
-			icon: FileText,
-			color: "text-emerald-500",
-		},
-		{
-			title: "총 제출",
-			value: submissionCount[0].count,
-			icon: Send,
-			color: "text-amber-500",
-		},
-		{
-			title: "정답 제출",
-			value: acceptedCount[0].count,
-			icon: CheckCircle,
-			color: "text-green-500",
-		},
+		{ title: "총 사용자", value: counts.users, icon: Users, color: "text-blue-500" },
+		{ title: "총 문제", value: counts.problems, icon: FileText, color: "text-emerald-500" },
+		{ title: "총 제출", value: counts.submissions, icon: Send, color: "text-amber-500" },
+		{ title: "정답 제출", value: counts.accepted, icon: CheckCircle, color: "text-green-500" },
 	];
 
 	return (
