@@ -2,18 +2,19 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getUserProblemStatuses } from "@/actions/submissions";
+import {
+	getTag,
+	listChildren,
+	listProblemsByTag,
+	PROBLEM_BY_TAG_SORT_KEYS,
+	type ProblemByTagSort,
+} from "@/actions/tags";
 import { auth } from "@/auth";
 import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { ProblemListTable } from "@/components/problems/problem-list-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PaginationLinks } from "@/components/ui/pagination-links";
-import { getTag, listChildren } from "@/lib/services/algorithm-tags";
-import {
-	listProblemsByTag,
-	PROBLEM_BY_TAG_SORT_KEYS,
-	type ProblemByTagSort,
-} from "@/lib/services/problem-vote-tags";
 
 interface Props {
 	params: Promise<{ id: string }>;
