@@ -33,7 +33,7 @@ export function ProfileHeader({
 	user: ProfileUser;
 	stats: UserStats;
 	isOwner: boolean;
-	handles: Array<{ provider: ExternalSite; handle: string }>;
+	handles: Array<{ provider: ExternalSite; handle: string; rating: number | null }>;
 }) {
 	const initials = user.name.slice(0, 2).toUpperCase();
 
