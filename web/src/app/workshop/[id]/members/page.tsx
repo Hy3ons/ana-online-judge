@@ -1,11 +1,9 @@
-import { and, eq } from "drizzle-orm";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { listWorkshopMembers } from "@/actions/workshop/members";
 import { getWorkshopProblemWithDraft } from "@/actions/workshop/problems";
+import { getMyWorkshopProblemRole } from "@/actions/workshop/queries";
 import { auth } from "@/auth";
-import { db } from "@/db";
-import { workshopProblemMembers } from "@/db/schema";
 import { WorkshopProblemNav } from "../nav";
 import { MembersClient } from "./members-client";
 
@@ -57,17 +55,8 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
 
 	let isOwner = isAdmin;
 	if (!isOwner && currentUserId !== null) {
-		const [m] = await db
-			.select({ role: workshopProblemMembers.role })
-			.from(workshopProblemMembers)
-			.where(
-				and(
-					eq(workshopProblemMembers.workshopProblemId, problem.id),
-					eq(workshopProblemMembers.userId, currentUserId)
-				)
-			)
-			.limit(1);
-		isOwner = m?.role === "owner";
+		const role = await getMyWorkshopProblemRole(problem.id, currentUserId);
+		isOwner = role === "owner";
 	}
 
 	return (
