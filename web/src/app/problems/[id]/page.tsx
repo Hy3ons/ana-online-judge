@@ -1,11 +1,10 @@
-import { eq, sql } from "drizzle-orm";
 import { CheckCircle2, Download, Pencil } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProblemRanking, getProblemStats } from "@/actions/problem-stats";
 import { getProblemVotesData } from "@/actions/problem-votes";
-import { getProblemById } from "@/actions/problems";
+import { getProblemById, getProblemTestcaseCount } from "@/actions/problems";
 import { getSubmissions, getUserProblemStatuses } from "@/actions/submissions";
 import { auth } from "@/auth";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
@@ -16,8 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { db } from "@/db";
-import { type LanguageCode, testcases } from "@/db/schema";
+import type { LanguageCode } from "@/db/schema";
 import { resolveDisplay } from "@/lib/utils/translations";
 import { ProblemDetailClient } from "./problem-detail-client";
 
@@ -99,15 +97,10 @@ export default async function ProblemDetailPage({ params, searchParams }: Props)
 		}),
 		currentUserId ? getUserProblemStatuses([problemId], currentUserId) : Promise.resolve(new Map()),
 		getProblemVotesData(problemId),
-		problem.useFullJudge
-			? db
-					.select({ count: sql<number>`COUNT(*)::int` })
-					.from(testcases)
-					.where(eq(testcases.problemId, problem.id))
-			: Promise.resolve([{ count: 0 }]),
+		problem.useFullJudge ? getProblemTestcaseCount(problem.id) : Promise.resolve(0),
 	]);
 
-	const totalTestcases = testcaseCountResult[0]?.count ?? 0;
+	const totalTestcases = testcaseCountResult;
 
 	const status = userStatus.get(problemId);
 	const isSolved = status?.solved ?? false;

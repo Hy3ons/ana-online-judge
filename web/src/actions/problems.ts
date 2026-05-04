@@ -1,5 +1,8 @@
 "use server";
 
+import { eq, sql } from "drizzle-orm";
+import { db } from "@/db";
+import { testcases } from "@/db/schema";
 import { getSessionInfo } from "@/lib/auth-utils";
 import * as problemsService from "@/lib/services/problems";
 
@@ -14,6 +17,14 @@ export async function getProblemById(id: number, contestId?: number) {
 		userId: userId ?? undefined,
 		isAdmin,
 	});
+}
+
+export async function getProblemTestcaseCount(problemId: number): Promise<number> {
+	const [row] = await db
+		.select({ count: sql<number>`COUNT(*)::int` })
+		.from(testcases)
+		.where(eq(testcases.problemId, problemId));
+	return row?.count ?? 0;
 }
 
 export type GetProblemsReturn = Awaited<ReturnType<typeof getProblems>>;
