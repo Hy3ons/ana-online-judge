@@ -3,6 +3,7 @@ import { labelFor, styleFor } from "./styles";
 import type { ExternalSiteClient } from "./types";
 
 const FETCH_TIMEOUT_MS = 5_000;
+const USER_AGENT = "ANA-Online-Judge/1.0";
 
 async function fetchWithTimeout(url: string): Promise<Response> {
 	const ctrl = new AbortController();
@@ -10,7 +11,7 @@ async function fetchWithTimeout(url: string): Promise<Response> {
 	try {
 		return await fetch(url, {
 			signal: ctrl.signal,
-			headers: { "User-Agent": "ANA-Online-Judge/1.0" },
+			headers: { "User-Agent": USER_AGENT },
 		});
 	} finally {
 		clearTimeout(timer);
@@ -49,10 +50,15 @@ export const atcoderClient: ExternalSiteClient = {
 	async fetchUser(handle) {
 		const url = `https://atcoder.jp/users/${encodeURIComponent(handle)}/history/json`;
 		const res = await fetchWithTimeout(url);
+		// AtC currently returns 200 + [] for unknown handles (indistinguishable from
+		// "registered but never rated"), but historically used 404. Keep the guard.
 		if (res.status === 404) return null;
 		if (!res.ok) throw new Error(`AtCoder error: ${res.status}`);
-		const data = (await res.json()) as Array<{ NewRating: number }>;
-		const last = data[data.length - 1];
-		return { handle, rating: last?.NewRating ?? null };
+		const data = (await res.json()) as Array<{ IsRated: boolean; NewRating: number }>;
+		// AtC fills NewRating with the previous rating for unrated contests (open
+		// rounds), so the latest entry can lie. Filter to IsRated entries to mirror
+		// the AtCoder profile UI's display rating.
+		const lastRated = [...data].reverse().find((e) => e.IsRated);
+		return { handle, rating: lastRated?.NewRating ?? null };
 	},
 };
