@@ -1,45 +1,8 @@
-import { and, count, desc, eq, gte, lte } from "drizzle-orm";
 import { ArrowRight, Clock, Terminal, Trophy } from "lucide-react";
 import Link from "next/link";
+import { getActiveContestsForHome, getHomeStats, getUpcomingContestsForHome } from "@/actions/home";
 import { auth } from "@/auth";
 import { Button } from "@/components/ui/button";
-import { db } from "@/db";
-import { contests, problems, submissions, users } from "@/db/schema";
-
-async function getStats() {
-	const [problemCount, userCount, submissionCount] = await Promise.all([
-		db.select({ count: count() }).from(problems).where(eq(problems.isPublic, true)),
-		db.select({ count: count() }).from(users),
-		db.select({ count: count() }).from(submissions),
-	]);
-	return {
-		problems: problemCount[0].count,
-		users: userCount[0].count,
-		submissions: submissionCount[0].count,
-	};
-}
-
-async function getActiveContests() {
-	const now = new Date();
-	const activeContests = await db
-		.select()
-		.from(contests)
-		.where(and(lte(contests.startTime, now), gte(contests.endTime, now)))
-		.orderBy(desc(contests.startTime))
-		.limit(3);
-	return activeContests;
-}
-
-async function getUpcomingContests() {
-	const now = new Date();
-	const upcoming = await db
-		.select()
-		.from(contests)
-		.where(gte(contests.startTime, now))
-		.orderBy(contests.startTime)
-		.limit(3);
-	return upcoming;
-}
 
 function formatDate(date: Date) {
 	return new Intl.DateTimeFormat("ko-KR", {
@@ -61,9 +24,9 @@ function formatTimeLeft(end: Date) {
 export default async function HomePage() {
 	const [session, stats, activeContests, upcomingContests] = await Promise.all([
 		auth(),
-		getStats(),
-		getActiveContests(),
-		getUpcomingContests(),
+		getHomeStats(),
+		getActiveContestsForHome(),
+		getUpcomingContestsForHome(),
 	]);
 
 	return (
