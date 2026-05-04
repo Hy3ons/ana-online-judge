@@ -172,7 +172,7 @@ export async function syncBatch(
 	return { updated, failed };
 }
 
-export async function getMyHandles(userId: number): Promise<MyHandle[]> {
+export async function getUserHandles(userId: number): Promise<MyHandle[]> {
 	return db
 		.select({
 			provider: userExternalHandles.provider,

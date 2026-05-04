@@ -10,6 +10,7 @@ import { UserNameDisplay } from "@/components/user-name-display";
 import type { ExternalSite } from "@/db/schema";
 import type { UserStats } from "@/lib/services/user-stats";
 import { ratingToUserTier } from "@/lib/tier";
+import { ConnectedHandlesCard } from "./connected-handles";
 
 type ProfileUser = {
 	id: number;
@@ -27,10 +28,12 @@ export function ProfileHeader({
 	user,
 	stats,
 	isOwner,
+	handles,
 }: {
 	user: ProfileUser;
 	stats: UserStats;
 	isOwner: boolean;
+	handles: Array<{ provider: ExternalSite; handle: string }>;
 }) {
 	const initials = user.name.slice(0, 2).toUpperCase();
 
@@ -74,6 +77,8 @@ export function ProfileHeader({
 					</div>
 					{user.bio && <p className="text-muted-foreground">{user.bio}</p>}
 					<p className="text-sm text-muted-foreground">{joinDate} 가입</p>
+
+					<ConnectedHandlesCard handles={handles} />
 
 					<div className="flex gap-6 pt-2">
 						<div className="text-center">

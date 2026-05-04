@@ -5,7 +5,7 @@ import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/db";
 import { users } from "@/db/schema";
-import { getMyHandles } from "@/lib/services/external-handles";
+import { getUserHandles } from "@/lib/services/external-handles";
 import { getUserByUsername } from "@/lib/services/users";
 import { ConnectedHandlesForm } from "./connected-handles-form";
 import { ProfileForm } from "./profile-form";
@@ -22,7 +22,7 @@ export default async function SettingsPage() {
 	if (!user) redirect("/login");
 
 	const [handles, mainRow] = await Promise.all([
-		getMyHandles(user.id),
+		getUserHandles(user.id),
 		db.select({ main: users.mainExternalSite }).from(users).where(eq(users.id, user.id)).limit(1),
 	]);
 	const mainExternalSite = mainRow[0]?.main ?? null;

@@ -21,5 +21,7 @@ export interface ExternalSiteClient {
 	/** Returns null if no color should be applied (e.g., unrated). Pure function — safe for client/server. */
 	styleFor(rating: number | null): UserNameStyle | null;
 	labelFor(rating: number | null): string;
+	/** Site-faithful canonical URL for the given handle. Pure function — safe for client/server. */
+	profileUrl(handle: string): string;
 	readonly rateLimit: { requestsPerMinute: number };
 }

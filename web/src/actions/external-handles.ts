@@ -6,7 +6,7 @@ import { requireAuth } from "@/lib/auth-utils";
 import { ALL_SITES } from "@/lib/external-sites/registry";
 import { getRedisClient } from "@/lib/redis";
 import {
-	getMyHandles,
+	getUserHandles,
 	type LinkResult,
 	linkHandle,
 	setMainSite,
@@ -55,9 +55,9 @@ export async function syncMyHandlesAction(): Promise<
 	const acquired = await redis.set(lockKey, "1", "EX", SYNC_COOLDOWN_SEC, "NX");
 	if (acquired !== "OK") return { ok: false, reason: "cooldown" };
 
-	let handles: Awaited<ReturnType<typeof getMyHandles>>;
+	let handles: Awaited<ReturnType<typeof getUserHandles>>;
 	try {
-		handles = await getMyHandles(userId);
+		handles = await getUserHandles(userId);
 	} catch (err) {
 		// Pre-work failure (e.g., DB outage) — release cooldown so user can retry
 		await redis.del(lockKey);

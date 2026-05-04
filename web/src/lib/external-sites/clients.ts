@@ -1,5 +1,5 @@
 import "server-only";
-import { labelFor, styleFor } from "./styles";
+import { labelFor, profileUrlFor, styleFor } from "./styles";
 import type { ExternalSiteClient } from "./types";
 
 const FETCH_TIMEOUT_MS = 5_000;
@@ -23,6 +23,7 @@ export const codeforcesClient: ExternalSiteClient = {
 	rateLimit: { requestsPerMinute: 30 },
 	styleFor: (r) => styleFor("codeforces", r),
 	labelFor: (r) => labelFor("codeforces", r),
+	profileUrl: (handle) => profileUrlFor("codeforces", handle),
 	async fetchUser(handle) {
 		const url = `https://codeforces.com/api/user.info?handles=${encodeURIComponent(handle)}`;
 		const res = await fetchWithTimeout(url);
@@ -47,6 +48,7 @@ export const atcoderClient: ExternalSiteClient = {
 	rateLimit: { requestsPerMinute: 10 },
 	styleFor: (r) => styleFor("atcoder", r),
 	labelFor: (r) => labelFor("atcoder", r),
+	profileUrl: (handle) => profileUrlFor("atcoder", handle),
 	async fetchUser(handle) {
 		const url = `https://atcoder.jp/users/${encodeURIComponent(handle)}/history/json`;
 		const res = await fetchWithTimeout(url);

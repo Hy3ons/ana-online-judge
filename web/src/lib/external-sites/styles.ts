@@ -13,6 +13,13 @@ export function labelFor(site: ExternalSite, rating: number | null): string {
 	return String(rating);
 }
 
+export function profileUrlFor(site: ExternalSite, handle: string): string {
+	if (site === "codeforces") return `https://codeforces.com/profile/${encodeURIComponent(handle)}`;
+	if (site === "atcoder") return `https://atcoder.jp/users/${encodeURIComponent(handle)}`;
+	// Fallback for future sites that haven't been wired yet
+	return "#";
+}
+
 // Codeforces user colors verified from community.css (.rated-user, .user-*).
 // LGM (3000+) = solid red + first-letter black + bold (no gradient on real site).
 function cfStyle(rating: number | null): UserNameStyle | null {
