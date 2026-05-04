@@ -1,13 +1,17 @@
 import { Pencil } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import {
+	getUserByUsername,
+	getUserHandles,
+	getUserHeatmap,
+	getUserLanguageStats,
+	getUserStats,
+} from "@/actions/profile";
 import { getSubmissions } from "@/actions/submissions";
 import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
 import { Button } from "@/components/ui/button";
 import { getSessionInfo } from "@/lib/auth-utils";
-import { getUserHandles } from "@/lib/services/external-handles";
-import { getUserHeatmap, getUserLanguageStats, getUserStats } from "@/lib/services/user-stats";
-import { getUserByUsername } from "@/lib/services/users";
 import { ImpersonateButton } from "./impersonate-button";
 import { ProfileHeader } from "./profile-header";
 import { ProfileHeatmap } from "./profile-heatmap";

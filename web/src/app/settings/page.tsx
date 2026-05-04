@@ -1,12 +1,8 @@
-import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
+import { getMainExternalSite, getUserByUsername, getUserHandles } from "@/actions/profile";
 import { auth } from "@/auth";
 import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { db } from "@/db";
-import { users } from "@/db/schema";
-import { getUserHandles } from "@/lib/services/external-handles";
-import { getUserByUsername } from "@/lib/services/users";
 import { ConnectedHandlesForm } from "./connected-handles-form";
 import { ProfileForm } from "./profile-form";
 import { VisibilityForm } from "./visibility-form";
@@ -21,11 +17,10 @@ export default async function SettingsPage() {
 	const user = await getUserByUsername(username);
 	if (!user) redirect("/login");
 
-	const [handles, mainRow] = await Promise.all([
+	const [handles, mainExternalSite] = await Promise.all([
 		getUserHandles(user.id),
-		db.select({ main: users.mainExternalSite }).from(users).where(eq(users.id, user.id)).limit(1),
+		getMainExternalSite(user.id),
 	]);
-	const mainExternalSite = mainRow[0]?.main ?? null;
 
 	return (
 		<div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-8 space-y-6">

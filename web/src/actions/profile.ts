@@ -1,30 +1,66 @@
 "use server";
 
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { type SubmissionVisibility, submissionVisibilityEnum } from "@/db/schema";
+import { db } from "@/db";
+import { type SubmissionVisibility, submissionVisibilityEnum, users } from "@/db/schema";
 import { requireAuth } from "@/lib/auth-utils";
+import { getUserHandles as svcGetUserHandles } from "@/lib/services/external-handles";
 import { getUserRanking as getUserRankingService } from "@/lib/services/ranking";
-import { getUserHeatmap, getUserLanguageStats, getUserStats } from "@/lib/services/user-stats";
 import {
-	getUserByUsername,
+	getUserHeatmap as svcGetUserHeatmap,
+	getUserLanguageStats as svcGetUserLanguageStats,
+	getUserStats as svcGetUserStats,
+} from "@/lib/services/user-stats";
+import {
+	getUserByUsername as svcGetUserByUsername,
 	updateUserDefaultVisibility as updateUserDefaultVisibilityService,
 	updateUserProfile as updateUserProfileService,
 } from "@/lib/services/users";
 
 export async function getProfile(username: string) {
-	return getUserByUsername(username);
+	return svcGetUserByUsername(username);
 }
 
 export async function getProfileStats(userId: number) {
-	return getUserStats(userId);
+	return svcGetUserStats(userId);
 }
 
 export async function getProfileHeatmap(userId: number) {
-	return getUserHeatmap(userId);
+	return svcGetUserHeatmap(userId);
 }
 
 export async function getProfileLanguageStats(userId: number) {
-	return getUserLanguageStats(userId);
+	return svcGetUserLanguageStats(userId);
+}
+
+export async function getUserByUsername(...args: Parameters<typeof svcGetUserByUsername>) {
+	return svcGetUserByUsername(...args);
+}
+
+export async function getUserHandles(...args: Parameters<typeof svcGetUserHandles>) {
+	return svcGetUserHandles(...args);
+}
+
+export async function getUserStats(...args: Parameters<typeof svcGetUserStats>) {
+	return svcGetUserStats(...args);
+}
+
+export async function getUserHeatmap(...args: Parameters<typeof svcGetUserHeatmap>) {
+	return svcGetUserHeatmap(...args);
+}
+
+export async function getUserLanguageStats(...args: Parameters<typeof svcGetUserLanguageStats>) {
+	return svcGetUserLanguageStats(...args);
+}
+
+export async function getMainExternalSite(userId: number) {
+	const [row] = await db
+		.select({ main: users.mainExternalSite })
+		.from(users)
+		.where(eq(users.id, userId))
+		.limit(1);
+	return row?.main ?? null;
 }
 
 export async function updateProfile(data: {
