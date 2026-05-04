@@ -18,5 +18,12 @@ export async function register() {
 
 		process.on("SIGTERM", shutdown);
 		process.on("SIGINT", shutdown);
+
+		if (process.env.ENABLE_CRON === "true") {
+			const cron = await import("node-cron");
+			const { runWeeklyHandleSync } = await import("./lib/cron/external-handle-sync");
+			cron.schedule("0 4 * * 1", runWeeklyHandleSync, { timezone: "Asia/Seoul" });
+			console.info("[instrumentation] external handle sync cron registered (Mon 04:00 KST)");
+		}
 	}
 }
