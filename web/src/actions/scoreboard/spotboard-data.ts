@@ -11,6 +11,7 @@ import {
 	users,
 } from "@/db/schema";
 import { getSessionInfo } from "@/lib/auth-utils";
+import { userDisplayHandle, userDisplayJoin } from "@/lib/db/user-display";
 import type {
 	SpotboardConfig,
 	SpotboardProblem,
@@ -93,14 +94,20 @@ export async function getSpotboardData(contestId: number): Promise<SpotboardConf
 			userId: contestParticipants.userId,
 			username: users.username,
 			name: users.name,
+			mainExternalSite: users.mainExternalSite,
+			mainExternalRating: userDisplayHandle.rating,
 		})
 		.from(contestParticipants)
 		.innerJoin(users, eq(contestParticipants.userId, users.id))
+		.leftJoin(userDisplayJoin.table, userDisplayJoin.on)
 		.where(eq(contestParticipants.contestId, contestId));
 
 	const spotboardTeams: SpotboardTeam[] = participantsList.map((p) => ({
 		id: p.userId,
 		name: p.name, // or p.username
+		username: p.username,
+		mainExternalSite: p.mainExternalSite,
+		mainExternalRating: p.mainExternalRating,
 		group: p.username,
 	}));
 

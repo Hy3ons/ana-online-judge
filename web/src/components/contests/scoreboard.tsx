@@ -10,6 +10,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { UserNameDisplay } from "@/components/user-name-display";
 import { AnigmaScoreBreakdown } from "./anigma-score-breakdown";
 
 type ProblemEntry = ScoreboardEntry["problems"][string];
@@ -177,7 +178,15 @@ export function Scoreboard({
 									<TableCell className="text-center font-bold">{entry.rank}</TableCell>
 									<TableCell>
 										<div className="font-medium truncate" title={entry.name}>
-											{entry.name}
+											<UserNameDisplay
+												user={{
+													name: entry.name,
+													username: entry.username,
+													mainExternalSite: entry.mainExternalSite,
+													mainExternalRating: entry.mainExternalRating,
+												}}
+												withLink
+											/>
 										</div>
 									</TableCell>
 									<TableCell className="text-right font-bold">{entry.totalScore}</TableCell>

@@ -5,6 +5,7 @@ import {
 	contestParticipants,
 	contestProblems,
 	contests,
+	type ExternalSite,
 	type LanguageCode,
 	type ProblemType,
 	problemAuthors,
@@ -16,6 +17,7 @@ import {
 	submissions,
 	type Translations,
 	testcases,
+	userExternalHandles,
 	users,
 } from "@/db/schema";
 import { col, tbl } from "@/lib/db-helpers";
@@ -627,11 +629,21 @@ export async function getProblemById(
 			tier: problems.tier,
 			tierUpdatedAt: problems.tierUpdatedAt,
 			authors: sql<
-				{ name: string; username: string }[]
-			>`COALESCE((SELECT json_agg(json_build_object('name', ${col(users, users.name)}, 'username', ${col(users, users.username)})) FROM ${tbl(problemAuthors)} INNER JOIN ${tbl(users)} ON ${col(users, users.id)} = ${col(problemAuthors, problemAuthors.userId)} WHERE ${col(problemAuthors, problemAuthors.problemId)} = ${col(problems, problems.id)}), '[]'::json)`,
+				{
+					name: string;
+					username: string;
+					mainExternalSite: ExternalSite | null;
+					mainExternalRating: number | null;
+				}[]
+			>`COALESCE((SELECT json_agg(json_build_object('name', ${col(users, users.name)}, 'username', ${col(users, users.username)}, 'mainExternalSite', ${col(users, users.mainExternalSite)}, 'mainExternalRating', ${col(userExternalHandles, userExternalHandles.rating)})) FROM ${tbl(problemAuthors)} INNER JOIN ${tbl(users)} ON ${col(users, users.id)} = ${col(problemAuthors, problemAuthors.userId)} LEFT JOIN ${tbl(userExternalHandles)} ON ${col(userExternalHandles, userExternalHandles.userId)} = ${col(users, users.id)} AND ${col(userExternalHandles, userExternalHandles.provider)} = ${col(users, users.mainExternalSite)} WHERE ${col(problemAuthors, problemAuthors.problemId)} = ${col(problems, problems.id)}), '[]'::json)`,
 			reviewers: sql<
-				{ name: string; username: string }[]
-			>`COALESCE((SELECT json_agg(json_build_object('name', ${col(users, users.name)}, 'username', ${col(users, users.username)})) FROM ${tbl(problemReviewers)} INNER JOIN ${tbl(users)} ON ${col(users, users.id)} = ${col(problemReviewers, problemReviewers.userId)} WHERE ${col(problemReviewers, problemReviewers.problemId)} = ${col(problems, problems.id)}), '[]'::json)`,
+				{
+					name: string;
+					username: string;
+					mainExternalSite: ExternalSite | null;
+					mainExternalRating: number | null;
+				}[]
+			>`COALESCE((SELECT json_agg(json_build_object('name', ${col(users, users.name)}, 'username', ${col(users, users.username)}, 'mainExternalSite', ${col(users, users.mainExternalSite)}, 'mainExternalRating', ${col(userExternalHandles, userExternalHandles.rating)})) FROM ${tbl(problemReviewers)} INNER JOIN ${tbl(users)} ON ${col(users, users.id)} = ${col(problemReviewers, problemReviewers.userId)} LEFT JOIN ${tbl(userExternalHandles)} ON ${col(userExternalHandles, userExternalHandles.userId)} = ${col(users, users.id)} AND ${col(userExternalHandles, userExternalHandles.provider)} = ${col(users, users.mainExternalSite)} WHERE ${col(problemReviewers, problemReviewers.problemId)} = ${col(problems, problems.id)}), '[]'::json)`,
 			referenceCodePath: problems.referenceCodePath,
 			createdAt: problems.createdAt,
 		})

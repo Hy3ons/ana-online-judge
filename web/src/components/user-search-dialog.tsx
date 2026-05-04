@@ -11,8 +11,16 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { UserNameDisplay } from "@/components/user-name-display";
+import type { ExternalSite } from "@/db/schema";
 
-export type UserSearchResult = { id: number; username: string; name: string };
+export type UserSearchResult = {
+	id: number;
+	username: string;
+	name: string;
+	mainExternalSite: ExternalSite | null;
+	mainExternalRating: number | null;
+};
 
 interface UserSearchDialogProps {
 	open: boolean;
@@ -153,8 +161,26 @@ export function UserSearchDialog({
 										className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors"
 									>
 										<div>
-											<div className="font-medium">{u.username}</div>
-											<div className="text-sm text-muted-foreground">{u.name}</div>
+											<div className="font-medium">
+												<UserNameDisplay
+													user={{
+														name: u.username,
+														username: u.username,
+														mainExternalSite: u.mainExternalSite,
+														mainExternalRating: u.mainExternalRating,
+													}}
+												/>
+											</div>
+											<div className="text-sm text-muted-foreground">
+												<UserNameDisplay
+													user={{
+														name: u.name,
+														username: u.username,
+														mainExternalSite: u.mainExternalSite,
+														mainExternalRating: u.mainExternalRating,
+													}}
+												/>
+											</div>
 										</div>
 										<Button
 											size="sm"

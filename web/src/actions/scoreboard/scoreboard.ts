@@ -6,18 +6,22 @@ import {
 	contestParticipants,
 	contestProblems,
 	contests,
+	type ExternalSite,
 	problems,
 	submissions,
 	testcases,
 	users,
 } from "@/db/schema";
 import { getSessionInfo, requireAdmin } from "@/lib/auth-utils";
+import { userDisplayHandle, userDisplayJoin } from "@/lib/db/user-display";
 
 export interface ScoreboardEntry {
 	rank: number;
 	userId: number;
 	username: string;
 	name: string;
+	mainExternalSite: ExternalSite | null;
+	mainExternalRating: number | null;
 	totalScore: number;
 	penalty: number; // in minutes
 	maxSubmissionTime: number; // 최대 제출 시간 (minutes from contest start, 늦을수록 불리)
@@ -130,9 +134,12 @@ export async function getScoreboard(contestId: number) {
 			userId: contestParticipants.userId,
 			username: users.username,
 			name: users.name,
+			mainExternalSite: users.mainExternalSite,
+			mainExternalRating: userDisplayHandle.rating,
 		})
 		.from(contestParticipants)
 		.innerJoin(users, eq(contestParticipants.userId, users.id))
+		.leftJoin(userDisplayJoin.table, userDisplayJoin.on)
 		.where(eq(contestParticipants.contestId, contestId));
 
 	// Get all submissions for this contest
@@ -167,6 +174,8 @@ export async function getScoreboard(contestId: number) {
 			userId: participant.userId,
 			username: participant.username,
 			name: participant.name,
+			mainExternalSite: participant.mainExternalSite,
+			mainExternalRating: participant.mainExternalRating,
 			totalScore: 0,
 			penalty: 0,
 			maxSubmissionTime: 0, // 최대 제출 시간 (minutes from contest start)

@@ -17,6 +17,9 @@ export interface SpotboardRun {
 export interface SpotboardTeam {
 	id: number;
 	name: string;
+	username: string;
+	mainExternalSite: "codeforces" | "atcoder" | null;
+	mainExternalRating: number | null;
 	group?: string;
 }
 

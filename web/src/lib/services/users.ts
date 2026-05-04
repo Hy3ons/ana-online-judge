@@ -8,6 +8,7 @@ import {
 	workshopProblems,
 } from "@/db/schema";
 import { generateTempPassword } from "@/lib/auth-utils";
+import { userDisplayHandle, userDisplayJoin } from "@/lib/db/user-display";
 import { col, tbl } from "@/lib/db-helpers";
 
 type AdminUsersSort = "id" | "createdAt" | "rating" | "submissionCount";
@@ -176,8 +177,11 @@ export async function searchUsers(query: string, limit: number = 20) {
 			id: users.id,
 			username: users.username,
 			name: users.name,
+			mainExternalSite: users.mainExternalSite,
+			mainExternalRating: userDisplayHandle.rating,
 		})
 		.from(users)
+		.leftJoin(userDisplayJoin.table, userDisplayJoin.on)
 		.where(or(ilike(users.username, searchTerm), ilike(users.name, searchTerm)))
 		.limit(limit);
 }
@@ -193,8 +197,11 @@ export async function getUserByUsername(username: string) {
 			rating: users.rating,
 			defaultSubmissionVisibility: users.defaultSubmissionVisibility,
 			createdAt: users.createdAt,
+			mainExternalSite: users.mainExternalSite,
+			mainExternalRating: userDisplayHandle.rating,
 		})
 		.from(users)
+		.leftJoin(userDisplayJoin.table, userDisplayJoin.on)
 		.where(eq(users.username, username))
 		.limit(1);
 

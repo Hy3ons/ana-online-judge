@@ -1,11 +1,12 @@
 "use client";
 
+import { UserNameDisplay } from "@/components/user-name-display";
 import type { TeamStatus } from "@/lib/spotboard/contest";
-import type { SpotboardConfig, SpotboardRun } from "@/lib/spotboard/types";
+import type { SpotboardConfig, SpotboardRun, SpotboardTeam } from "@/lib/spotboard/types";
 import { formatTime } from "./utils";
 
 interface TeamRowProps {
-	team: { id: number; name: string; group?: string };
+	team: SpotboardTeam;
 	status: TeamStatus;
 	index: number;
 	config: SpotboardConfig;
@@ -184,7 +185,16 @@ export function TeamRow({
 			</div>
 
 			<div className="team-name" style={{ float: "left", width: "300px" }}>
-				<div className="team-title">{team.name}</div>
+				<div className="team-title">
+					<UserNameDisplay
+						user={{
+							name: team.name,
+							username: team.username,
+							mainExternalSite: team.mainExternalSite,
+							mainExternalRating: team.mainExternalRating,
+						}}
+					/>
+				</div>
 			</div>
 		</div>
 	);
