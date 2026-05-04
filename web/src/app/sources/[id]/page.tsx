@@ -2,6 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProblems } from "@/actions/problems";
+import {
+	countProblemsInSubtree,
+	getBreadcrumb,
+	getProblemNumbersForSource,
+	getSource,
+	listChildren,
+	listDirectContests,
+} from "@/actions/sources";
 import { getUserProblemStatuses } from "@/actions/submissions";
 import { auth } from "@/auth";
 import { ContestListTable } from "@/components/contests/contest-list-table";
@@ -18,14 +26,6 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import {
-	countProblemsInSubtree,
-	getBreadcrumb,
-	getProblemNumbersForSource,
-	getSource,
-	listChildren,
-	listDirectContests,
-} from "@/lib/services/sources";
 
 interface Props {
 	params: Promise<{ id: string }>;
