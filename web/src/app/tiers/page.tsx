@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { countPublicProblemsByTier } from "@/actions/tiers";
 import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
 import { TierBadge } from "@/components/tier/tier-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +12,6 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { countPublicProblemsByTier } from "@/lib/services/problem-tier";
 import { tierLabel } from "@/lib/tier";
 
 export const metadata: Metadata = {

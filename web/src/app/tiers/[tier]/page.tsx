@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getUserProblemStatuses } from "@/actions/submissions";
+import {
+	listProblemsByTier,
+	PROBLEM_BY_TIER_SORT_KEYS,
+	type ProblemByTierSort,
+} from "@/actions/tiers";
 import { auth } from "@/auth";
 import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
 import { ProblemListTable } from "@/components/problems/problem-list-table";
 import { TierBadge } from "@/components/tier/tier-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PaginationLinks } from "@/components/ui/pagination-links";
-import {
-	listProblemsByTier,
-	PROBLEM_BY_TIER_SORT_KEYS,
-	type ProblemByTierSort,
-} from "@/lib/services/problem-tier";
 import { tierLabel } from "@/lib/tier";
 
 interface Props {
