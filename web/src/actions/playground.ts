@@ -4,7 +4,11 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { playgroundFiles, playgroundSessions } from "@/db/schema";
 import { requireAuth } from "@/lib/auth-utils";
-import { assertCanCreatePlayground } from "@/lib/services/quota";
+import {
+	assertCanCreatePlayground,
+	getPlaygroundUsage as svcGetPlaygroundUsage,
+	getUserQuotas as svcGetUserQuotas,
+} from "@/lib/services/quota";
 import {
 	deleteAllPlaygroundFiles,
 	deleteFile,
@@ -207,4 +211,12 @@ export async function renamePlaygroundFile(sessionId: string, oldPath: string, n
 			.set({ path: newPath, minioPath: newMinioPath, updatedAt: new Date() })
 			.where(and(eq(playgroundFiles.sessionId, sessionId), eq(playgroundFiles.path, oldPath)));
 	}
+}
+
+export async function getPlaygroundUsage(...args: Parameters<typeof svcGetPlaygroundUsage>) {
+	return svcGetPlaygroundUsage(...args);
+}
+
+export async function getUserQuotas(...args: Parameters<typeof svcGetUserQuotas>) {
+	return svcGetUserQuotas(...args);
 }

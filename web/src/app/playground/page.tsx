@@ -1,7 +1,7 @@
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import Link from "next/link";
-import { getPlaygroundSessions } from "@/actions/playground";
+import { getPlaygroundSessions, getPlaygroundUsage, getUserQuotas } from "@/actions/playground";
 import { auth } from "@/auth";
 import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
 import { CreateSessionButton } from "@/components/playground/create-session-button";
@@ -16,7 +16,6 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { getPlaygroundUsage, getUserQuotas } from "@/lib/services/quota";
 
 export const metadata = {
 	title: "플레이그라운드",
