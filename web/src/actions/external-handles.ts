@@ -46,7 +46,8 @@ export async function setMainSiteAction(provider: ExternalSite | null): Promise<
 }
 
 export async function syncMyHandlesAction(): Promise<
-	{ ok: true; results: Record<ExternalSite, "ok" | "failed"> } | { ok: false; reason: "cooldown" }
+	| { ok: true; results: Partial<Record<ExternalSite, "ok" | "failed">> }
+	| { ok: false; reason: "cooldown" }
 > {
 	const { session, userId } = await requireAuth();
 	const redis = await getRedisClient();
@@ -54,14 +55,24 @@ export async function syncMyHandlesAction(): Promise<
 	const acquired = await redis.set(lockKey, "1", "EX", SYNC_COOLDOWN_SEC, "NX");
 	if (acquired !== "OK") return { ok: false, reason: "cooldown" };
 
-	const handles = await getMyHandles(userId);
-	const results = {} as Record<ExternalSite, "ok" | "failed">;
+	let handles: Awaited<ReturnType<typeof getMyHandles>>;
+	try {
+		handles = await getMyHandles(userId);
+	} catch (err) {
+		// Pre-work failure (e.g., DB outage) — release cooldown so user can retry
+		await redis.del(lockKey);
+		throw err;
+	}
+
+	const results: Partial<Record<ExternalSite, "ok" | "failed">> = {};
+	const linked = new Set(handles.map((h) => h.provider));
 	for (const provider of ALL_SITES) {
-		if (!handles.find((h) => h.provider === provider)) continue;
+		if (!linked.has(provider)) continue;
 		try {
 			await syncOne(userId, provider);
 			results[provider] = "ok";
-		} catch {
+		} catch (err) {
+			console.error("[external-handles] action sync failed", { userId, provider, err });
 			results[provider] = "failed";
 		}
 	}
