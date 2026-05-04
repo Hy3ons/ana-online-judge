@@ -253,6 +253,13 @@
       "when": 1777859925870,
       "tag": "0035_fearless_daimon_hellstrom",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1777905799083,
+      "tag": "0036_wild_switch",
+      "breakpoints": true
     }
   ]
 }
