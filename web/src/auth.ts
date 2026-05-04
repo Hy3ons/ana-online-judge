@@ -1,13 +1,29 @@
 import { compare } from "bcryptjs";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import { db } from "@/db";
-import { users } from "@/db/schema";
+import { userExternalHandles, users } from "@/db/schema";
 import { isGoogleRegistrationOpen } from "@/lib/auth-utils";
 import { serverEnv } from "@/lib/env";
 import { clearImpersonationCookie, getImpersonationTarget } from "@/lib/impersonation";
+
+/**
+ * 사용자의 메인 외부 핸들 rating 을 조회. 메인 사이트 또는 핸들 row 가 없으면 null.
+ */
+async function getMainExternalRating(
+	userId: number,
+	mainSite: (typeof users.$inferSelect)["mainExternalSite"]
+): Promise<number | null> {
+	if (!mainSite) return null;
+	const [row] = await db
+		.select({ rating: userExternalHandles.rating })
+		.from(userExternalHandles)
+		.where(and(eq(userExternalHandles.userId, userId), eq(userExternalHandles.provider, mainSite)))
+		.limit(1);
+	return row?.rating ?? null;
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
 	providers: [
@@ -51,6 +67,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 					return null;
 				}
 
+				const mainExternalRating = await getMainExternalRating(
+					user[0].id,
+					user[0].mainExternalSite
+				);
 				return {
 					id: user[0].id.toString(),
 					email: user[0].email ?? undefined,
@@ -61,6 +81,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 					contestId: user[0].contestId ?? undefined,
 					mustChangePassword: user[0].mustChangePassword ?? false,
 					avatarUrl: user[0].avatarUrl ?? null,
+					mainExternalSite: user[0].mainExternalSite ?? null,
+					mainExternalRating,
 				};
 			},
 		}),
@@ -151,6 +173,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 					const dbUser = await db.select().from(users).where(eq(users.authId, googleId)).limit(1);
 
 					if (dbUser.length > 0) {
+						const mainExternalRating = await getMainExternalRating(
+							dbUser[0].id,
+							dbUser[0].mainExternalSite
+						);
 						token.id = dbUser[0].id.toString();
 						token.username = dbUser[0].username;
 						token.name = dbUser[0].name;
@@ -159,6 +185,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 						token.contestId = dbUser[0].contestId;
 						token.mustChangePassword = false; // OAuth 계정은 비밀번호 없음
 						token.avatarUrl = dbUser[0].avatarUrl ?? null;
+						token.mainExternalSite = dbUser[0].mainExternalSite ?? null;
+						token.mainExternalRating = mainExternalRating;
 					}
 				} else {
 					// Credentials 로그인
@@ -170,6 +198,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 					token.contestId = user.contestId;
 					token.mustChangePassword = user.mustChangePassword ?? false;
 					token.avatarUrl = user.avatarUrl ?? null;
+					token.mainExternalSite = user.mainExternalSite ?? null;
+					token.mainExternalRating = user.mainExternalRating ?? null;
 				}
 			}
 			// 클라이언트에서 update() 호출 시 세션 페이로드 반영
@@ -201,6 +231,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 				session.user.contestId = token.contestId as number | null;
 				session.user.mustChangePassword = (token.mustChangePassword as boolean) ?? false;
 				session.user.avatarUrl = (token.avatarUrl as string | null | undefined) ?? null;
+				session.user.mainExternalSite =
+					(token.mainExternalSite as (typeof users.$inferSelect)["mainExternalSite"]) ?? null;
+				session.user.mainExternalRating = (token.mainExternalRating as number | null) ?? null;
 
 				// 대리 로그인 처리
 				if (token.role === "admin") {
@@ -213,6 +246,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 							.limit(1);
 
 						if (targetUser) {
+							const targetMainExternalRating = await getMainExternalRating(
+								targetUser.id,
+								targetUser.mainExternalSite
+							);
 							session.user.impersonator = {
 								id: token.id as string,
 								username: token.username as string,
@@ -226,6 +263,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 							session.user.contestId = targetUser.contestId ?? null;
 							session.user.mustChangePassword = targetUser.mustChangePassword ?? false;
 							session.user.avatarUrl = targetUser.avatarUrl ?? null;
+							session.user.mainExternalSite = targetUser.mainExternalSite ?? null;
+							session.user.mainExternalRating = targetMainExternalRating;
 						}
 					}
 				}

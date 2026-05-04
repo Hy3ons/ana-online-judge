@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SortableHeader } from "@/components/ui/sortable-header";
 import { TableCell, TableHead, TableRow } from "@/components/ui/table";
+import { UserNameDisplay } from "@/components/user-name-display";
 import { LANGUAGES } from "@/lib/languages";
 import type { CodeAccessDeniedReason } from "@/lib/submission-access";
 
@@ -84,13 +85,17 @@ export function SubmissionRow({
 				)}
 			</TableCell>
 			<TableCell className="font-medium">
-				<Link
-					href={`/profile/${submission.userUsername}`}
-					className="hover:text-primary transition-colors block truncate"
-					title={submission.userName}
-				>
-					{submission.userName}
-				</Link>
+				<div className="block truncate" title={submission.userName}>
+					<UserNameDisplay
+						user={{
+							name: submission.userName,
+							username: submission.userUsername,
+							mainExternalSite: submission.userMainExternalSite,
+							mainExternalRating: submission.userMainExternalRating,
+						}}
+						withLink
+					/>
+				</div>
 			</TableCell>
 			<TableCell>
 				<div className="flex items-center gap-2 min-w-0">

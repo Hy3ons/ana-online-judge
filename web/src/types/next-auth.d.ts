@@ -1,4 +1,5 @@
 import { DefaultSession } from "next-auth";
+import type { ExternalSite } from "@/db/schema";
 
 declare module "next-auth" {
 	interface Session {
@@ -10,6 +11,8 @@ declare module "next-auth" {
 			contestId: number | null;
 			mustChangePassword: boolean;
 			avatarUrl: string | null;
+			mainExternalSite: ExternalSite | null;
+			mainExternalRating: number | null;
 			impersonator?: { id: string; username: string };
 		} & DefaultSession["user"];
 	}
@@ -21,6 +24,8 @@ declare module "next-auth" {
 		contestId?: number | null;
 		mustChangePassword?: boolean;
 		avatarUrl?: string | null;
+		mainExternalSite?: ExternalSite | null;
+		mainExternalRating?: number | null;
 	}
 }
 
@@ -33,5 +38,7 @@ declare module "next-auth/jwt" {
 		contestId?: number | null;
 		mustChangePassword?: boolean;
 		avatarUrl?: string | null;
+		mainExternalSite?: ExternalSite | null;
+		mainExternalRating?: number | null;
 	}
 }

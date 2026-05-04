@@ -13,6 +13,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { UserNameDisplay } from "@/components/user-name-display";
 
 export function UserMenu() {
 	const { data: session } = useSession();
@@ -64,7 +65,16 @@ export function UserMenu() {
 			<DropdownMenuContent className="w-56" align="end" forceMount>
 				<DropdownMenuLabel className="font-normal">
 					<div className="flex flex-col space-y-1">
-						<p className="text-sm font-medium leading-none">{currentUser.name}</p>
+						<p className="text-sm font-medium leading-none">
+							<UserNameDisplay
+								user={{
+									name: currentUser.name ?? currentUser.username,
+									username: currentUser.username,
+									mainExternalSite: currentUser.mainExternalSite,
+									mainExternalRating: currentUser.mainExternalRating,
+								}}
+							/>
+						</p>
 						<p className="text-xs leading-none text-muted-foreground">{currentUser.email}</p>
 					</div>
 				</DropdownMenuLabel>

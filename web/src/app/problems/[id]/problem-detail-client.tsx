@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import type { ProblemVotePanelData } from "@/actions/problem-votes";
@@ -11,7 +10,8 @@ import { SourcePath } from "@/components/sources/source-path";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { ProblemType } from "@/db/schema";
+import { UserNameDisplay } from "@/components/user-name-display";
+import type { ExternalSite, ProblemType } from "@/db/schema";
 import { useProblemLayout } from "@/hooks/use-problem-layout";
 import type { TagWithPath } from "@/lib/services/algorithm-tags";
 import type { ProblemRankingItem, ProblemStats } from "@/lib/services/problem-stats";
@@ -41,8 +41,18 @@ interface ProblemDetailClientProps {
 		passThreshold?: number | null;
 		totalTestcases?: number;
 	};
-	authors: { name: string; username: string }[];
-	reviewers: { name: string; username: string }[];
+	authors: {
+		name: string;
+		username: string;
+		mainExternalSite: ExternalSite | null;
+		mainExternalRating: number | null;
+	}[];
+	reviewers: {
+		name: string;
+		username: string;
+		mainExternalSite: ExternalSite | null;
+		mainExternalRating: number | null;
+	}[];
 	sources: { problemNumber: string | null; segments: { id: number; name: string }[] }[];
 	stats: ProblemStats;
 	mySubmissions: SubmissionListItem[];
@@ -155,13 +165,18 @@ export function ProblemDetailClient({
 		confirmedTags.length > 0 ||
 		showFullJudgeNotice;
 
-	const staffLinks = (people: { name: string; username: string }[]) =>
+	const staffLinks = (
+		people: {
+			name: string;
+			username: string;
+			mainExternalSite: ExternalSite | null;
+			mainExternalRating: number | null;
+		}[]
+	) =>
 		people.map((p, i) => (
 			<span key={p.username}>
 				{i > 0 && ", "}
-				<Link href={`/profile/${p.username}`} className="text-primary hover:underline">
-					{p.name}
-				</Link>
+				<UserNameDisplay user={p} withLink />
 			</span>
 		));
 

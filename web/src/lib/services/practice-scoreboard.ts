@@ -2,6 +2,7 @@ import { and, asc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import type { ScoreboardEntry } from "@/actions/scoreboard";
 import { db } from "@/db";
 import { practiceProblems, practices, problems, submissions, testcases, users } from "@/db/schema";
+import { userDisplayHandle, userDisplayJoin } from "@/lib/db/user-display";
 
 export async function getPracticeScoreboard(practiceId: number): Promise<{
 	practice: {
@@ -97,8 +98,15 @@ export async function getPracticeScoreboard(practiceId: number): Promise<{
 		return { practice, problems: practiceProblemsList, scoreboard: [] };
 	}
 	const participantsList = await db
-		.select({ userId: users.id, username: users.username, name: users.name })
+		.select({
+			userId: users.id,
+			username: users.username,
+			name: users.name,
+			mainExternalSite: users.mainExternalSite,
+			mainExternalRating: userDisplayHandle.rating,
+		})
 		.from(users)
+		.leftJoin(userDisplayJoin.table, userDisplayJoin.on)
 		.where(inArray(users.id, participantIds));
 
 	const scoreboard: ScoreboardEntry[] = [];
@@ -108,6 +116,8 @@ export async function getPracticeScoreboard(practiceId: number): Promise<{
 			userId: participant.userId,
 			username: participant.username,
 			name: participant.name,
+			mainExternalSite: participant.mainExternalSite,
+			mainExternalRating: participant.mainExternalRating,
 			totalScore: 0,
 			penalty: 0,
 			maxSubmissionTime: 0,

@@ -5,6 +5,7 @@ import { getSubmissions } from "@/actions/submissions";
 import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
 import { Button } from "@/components/ui/button";
 import { getSessionInfo } from "@/lib/auth-utils";
+import { getUserHandles } from "@/lib/services/external-handles";
 import { getUserHeatmap, getUserLanguageStats, getUserStats } from "@/lib/services/user-stats";
 import { getUserByUsername } from "@/lib/services/users";
 import { ImpersonateButton } from "./impersonate-button";
@@ -37,11 +38,12 @@ export default async function ProfilePage({
 	const { userId, isAdmin } = await getSessionInfo();
 	const isOwner = userId === user.id;
 
-	const [stats, heatmap, languageStats, submissionsData] = await Promise.all([
+	const [stats, heatmap, languageStats, submissionsData, handles] = await Promise.all([
 		getUserStats(user.id),
 		getUserHeatmap(user.id),
 		getUserLanguageStats(user.id),
 		getSubmissions({ userId: user.id, page, limit: 20, excludeContestSubmissions: true }),
+		getUserHandles(user.id),
 	]);
 
 	return (
@@ -49,7 +51,7 @@ export default async function ProfilePage({
 			<PageBreadcrumb items={[{ label: "프로필" }, { label: user.name }]} />
 			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 				<div className="lg:col-span-2 flex relative">
-					<ProfileHeader user={user} stats={stats} isOwner={isOwner} />
+					<ProfileHeader user={user} stats={stats} isOwner={isOwner} handles={handles} />
 					{isAdmin && !isOwner && (
 						<div className="absolute top-2 right-2 z-10 flex gap-1">
 							<ImpersonateButton userId={user.id} username={user.username} />

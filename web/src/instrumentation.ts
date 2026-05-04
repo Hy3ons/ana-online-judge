@@ -18,5 +18,14 @@ export async function register() {
 
 		process.on("SIGTERM", shutdown);
 		process.on("SIGINT", shutdown);
+
+		// Cron only registers in production. Multi-instance safety provided by
+		// Redis SET NX EX lock inside runWeeklyHandleSync (web/src/lib/redis-lock.ts).
+		if (process.env.NODE_ENV === "production") {
+			const cron = await import("node-cron");
+			const { runWeeklyHandleSync } = await import("./lib/cron/external-handle-sync");
+			cron.schedule("0 4 * * 1", runWeeklyHandleSync, { timezone: "Asia/Seoul" });
+			console.info("[instrumentation] external handle sync cron registered (Mon 04:00 KST)");
+		}
 	}
 }

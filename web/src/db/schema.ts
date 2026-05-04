@@ -50,6 +50,8 @@ export const submissionVisibilityEnum = pgEnum("submission_visibility", [
 	"private",
 	"public_on_ac",
 ]);
+export const externalSiteEnum = pgEnum("external_site", ["codeforces", "atcoder"]);
+export type ExternalSite = (typeof externalSiteEnum.enumValues)[number];
 
 // Workshop enums
 export const workshopProblemTypeEnum = pgEnum("workshop_problem_type", ["icpc", "special_judge"]);
@@ -104,6 +106,7 @@ export const users = pgTable("users", {
 	avatarUrl: text("avatar_url"),
 	authId: text("auth_id").unique(), // OAuth provider unique ID (e.g., Google ID)
 	authProvider: text("auth_provider"), // OAuth provider name (e.g., 'google', 'github')
+	mainExternalSite: externalSiteEnum("main_external_site"),
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 	updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -796,6 +799,35 @@ export const sourceAuditLog = pgTable(
 	})
 );
 
+// User External Handles (Codeforces / AtCoder etc.)
+export const userExternalHandles = pgTable(
+	"user_external_handles",
+	{
+		id: serial("id").primaryKey(),
+		userId: integer("user_id")
+			.references(() => users.id, { onDelete: "cascade" })
+			.notNull(),
+		provider: externalSiteEnum("provider").notNull(),
+		handle: text("handle").notNull(),
+		rating: integer("rating"),
+		updatedAt: timestamp("updated_at").defaultNow().notNull(),
+	},
+	(t) => ({
+		userProviderUniq: uniqueIndex("user_external_handles_user_provider_uniq").on(
+			t.userId,
+			t.provider
+		),
+		handleUniq: uniqueIndex("user_external_handles_handle_uniq").on(
+			t.provider,
+			sql`lower(${t.handle})`
+		),
+		providerUpdatedIdx: index("user_external_handles_provider_updated_idx").on(
+			t.provider,
+			t.updatedAt
+		),
+	})
+);
+
 // Type exports for insert/select
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -859,6 +891,8 @@ export type ProblemVoteTag = typeof problemVoteTags.$inferSelect;
 export type NewProblemVoteTag = typeof problemVoteTags.$inferInsert;
 export type ProblemConfirmedTag = typeof problemConfirmedTags.$inferSelect;
 export type NewProblemConfirmedTag = typeof problemConfirmedTags.$inferInsert;
+export type UserExternalHandle = typeof userExternalHandles.$inferSelect;
+export type NewUserExternalHandle = typeof userExternalHandles.$inferInsert;
 
 export type UserRole = (typeof userRoleEnum.enumValues)[number];
 export type Verdict = (typeof verdictEnum.enumValues)[number];

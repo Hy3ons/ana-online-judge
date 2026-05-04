@@ -6,8 +6,11 @@ import { TierBadge } from "@/components/tier/tier-badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { UserNameDisplay } from "@/components/user-name-display";
+import type { ExternalSite } from "@/db/schema";
 import type { UserStats } from "@/lib/services/user-stats";
 import { ratingToUserTier } from "@/lib/tier";
+import { ConnectedHandlesCard } from "./connected-handles";
 
 type ProfileUser = {
 	id: number;
@@ -17,16 +20,20 @@ type ProfileUser = {
 	avatarUrl: string | null;
 	rating: number | null;
 	createdAt: Date;
+	mainExternalSite: ExternalSite | null;
+	mainExternalRating: number | null;
 };
 
 export function ProfileHeader({
 	user,
 	stats,
 	isOwner,
+	handles,
 }: {
 	user: ProfileUser;
 	stats: UserStats;
 	isOwner: boolean;
+	handles: Array<{ provider: ExternalSite; handle: string; rating: number | null }>;
 }) {
 	const initials = user.name.slice(0, 2).toUpperCase();
 
@@ -46,7 +53,16 @@ export function ProfileHeader({
 
 				<div className="flex-1 min-w-0 space-y-3">
 					<div className="flex items-center gap-3">
-						<h1 className="text-2xl font-bold">{user.name}</h1>
+						<h1 className="text-2xl font-bold">
+							<UserNameDisplay
+								user={{
+									name: user.name,
+									username: user.username,
+									mainExternalSite: user.mainExternalSite,
+									mainExternalRating: user.mainExternalRating,
+								}}
+							/>
+						</h1>
 						<div className="flex items-center gap-2">
 							<TierBadge tier={ratingToUserTier(user.rating ?? 0)} kind="user" size="md" />
 							<span className="text-sm text-muted-foreground">Rating {user.rating ?? 0}</span>
@@ -61,6 +77,8 @@ export function ProfileHeader({
 					</div>
 					{user.bio && <p className="text-muted-foreground">{user.bio}</p>}
 					<p className="text-sm text-muted-foreground">{joinDate} 가입</p>
+
+					<ConnectedHandlesCard handles={handles} />
 
 					<div className="flex gap-6 pt-2">
 						<div className="text-center">

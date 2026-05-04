@@ -13,6 +13,7 @@ import {
 	type Verdict,
 } from "@/db/schema";
 import { validateContestSubmission } from "@/lib/contest-validation";
+import { userDisplayHandle, userDisplayJoin } from "@/lib/db/user-display";
 import { pushStandardJudgeJob } from "@/lib/judge-queue";
 import { ANIGMA_SOLVED_THRESHOLD } from "@/lib/services/solved-clause";
 import { getUserDefaultVisibility } from "@/lib/services/users";
@@ -194,6 +195,8 @@ export async function getSubmissions(options?: {
 				userId: submissions.userId,
 				userName: users.name,
 				userUsername: users.username,
+				userMainExternalSite: users.mainExternalSite,
+				userMainExternalRating: userDisplayHandle.rating,
 				language: submissions.language,
 				verdict: submissions.verdict,
 				executionTime: submissions.executionTime,
@@ -211,6 +214,7 @@ export async function getSubmissions(options?: {
 			.from(submissions)
 			.innerJoin(problems, eq(submissions.problemId, problems.id))
 			.innerJoin(users, eq(submissions.userId, users.id))
+			.leftJoin(userDisplayJoin.table, userDisplayJoin.on)
 			.leftJoin(
 				contestProblems,
 				and(
@@ -258,6 +262,8 @@ export async function getSubmissionById(id: number) {
 			userId: submissions.userId,
 			userName: users.name,
 			userUsername: users.username,
+			userMainExternalSite: users.mainExternalSite,
+			userMainExternalRating: userDisplayHandle.rating,
 			code: submissions.code,
 			language: submissions.language,
 			verdict: submissions.verdict,
@@ -280,6 +286,7 @@ export async function getSubmissionById(id: number) {
 		.from(submissions)
 		.innerJoin(problems, eq(submissions.problemId, problems.id))
 		.innerJoin(users, eq(submissions.userId, users.id))
+		.leftJoin(userDisplayJoin.table, userDisplayJoin.on)
 		.leftJoin(
 			contestProblems,
 			and(
