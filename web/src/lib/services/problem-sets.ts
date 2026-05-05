@@ -1,7 +1,7 @@
-import { count, eq } from "drizzle-orm";
+import { and, count, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import type { ProblemSet } from "@/db/schema";
-import { problemSets } from "@/db/schema";
+import { problemSetItems, problemSets } from "@/db/schema";
 
 export const PROBLEM_SET_MAX_PER_USER = 20;
 export const PROBLEM_SET_TITLE_MAX = 80;
@@ -103,4 +103,61 @@ export async function getProblemSetCreator(id: number): Promise<{
 		.from(problemSets)
 		.where(eq(problemSets.id, id));
 	return row ?? null;
+}
+
+export async function addProblemToSet(problemSetId: number, problemId: number): Promise<void> {
+	const [maxRow] = await db
+		.select({ maxOrder: sql<number>`COALESCE(MAX(${problemSetItems.order}), -1)` })
+		.from(problemSetItems)
+		.where(eq(problemSetItems.problemSetId, problemSetId));
+	const nextOrder = (maxRow?.maxOrder ?? -1) + 1;
+	await db
+		.insert(problemSetItems)
+		.values({ problemSetId, problemId, order: nextOrder })
+		.onConflictDoNothing();
+	await db
+		.update(problemSets)
+		.set({ updatedAt: new Date() })
+		.where(eq(problemSets.id, problemSetId));
+}
+
+export async function removeProblemFromSet(problemSetId: number, problemId: number): Promise<void> {
+	await db
+		.delete(problemSetItems)
+		.where(
+			and(eq(problemSetItems.problemSetId, problemSetId), eq(problemSetItems.problemId, problemId))
+		);
+	await db
+		.update(problemSets)
+		.set({ updatedAt: new Date() })
+		.where(eq(problemSets.id, problemSetId));
+}
+
+export async function reorderProblemSetItems(
+	problemSetId: number,
+	ordered: Array<{ id: number; order: number }>
+): Promise<void> {
+	if (ordered.length === 0) return;
+	await db.transaction(async (tx) => {
+		const ids = ordered.map((o) => o.id);
+		const existing = await tx
+			.select({ id: problemSetItems.id })
+			.from(problemSetItems)
+			.where(and(eq(problemSetItems.problemSetId, problemSetId), inArray(problemSetItems.id, ids)));
+		if (existing.length !== ordered.length) {
+			throw new Error("문제집에 속하지 않은 항목을 재정렬할 수 없습니다.");
+		}
+		const cases = sql.join(
+			ordered.map((o) => sql`WHEN ${problemSetItems.id} = ${o.id} THEN ${o.order}`),
+			sql` `
+		);
+		await tx
+			.update(problemSetItems)
+			.set({ order: sql`CASE ${cases} ELSE ${problemSetItems.order} END` })
+			.where(inArray(problemSetItems.id, ids));
+		await tx
+			.update(problemSets)
+			.set({ updatedAt: new Date() })
+			.where(eq(problemSets.id, problemSetId));
+	});
 }
