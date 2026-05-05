@@ -1,8 +1,8 @@
-import { and, count, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import type { ProblemSet } from "@/db/schema";
 import { problemSetItems, problemSetLikes, problemSets, problems, users } from "@/db/schema";
-import { userSolvedProblemSql } from "@/lib/services/solved-clause";
+import { userSolvedProblemFilterSql, userSolvedProblemSql } from "@/lib/services/solved-clause";
 
 export const PROBLEM_SET_MAX_PER_USER = 20;
 export const PROBLEM_SET_TITLE_MAX = 80;
@@ -361,4 +361,94 @@ export async function listUserProblemSets(
 		createdAt: r.createdAt,
 		updatedAt: r.updatedAt,
 	}));
+}
+
+export interface ProblemSetItemRow {
+	itemId: number;
+	problem: {
+		id: number;
+		title: string;
+		problemNumber: number | null;
+		problemType: string;
+	};
+	order: number;
+	solvedByViewer: boolean;
+}
+
+export interface ProblemSetDetail {
+	set: ProblemSet;
+	creator: ProblemSetCreator;
+	items: ProblemSetItemRow[];
+	likedByViewer: boolean;
+	totalCount: number;
+	solvedCount: number;
+}
+
+export async function getProblemSet(
+	id: number,
+	viewerId?: number
+): Promise<ProblemSetDetail | null> {
+	const [setRow] = await db
+		.select({
+			set: problemSets,
+			creatorId: users.id,
+			creatorName: users.name,
+		})
+		.from(problemSets)
+		.innerJoin(users, eq(users.id, problemSets.createdBy))
+		.where(eq(problemSets.id, id));
+	if (!setRow) return null;
+
+	// `problems` is the drizzle FROM-table here, so use the filter variant
+	// (which references the default `problems` alias rather than `p`).
+	const solvedExpr = viewerId
+		? sql<boolean>`${userSolvedProblemFilterSql(viewerId)}`
+		: sql<boolean>`FALSE`;
+
+	const itemRows = await db
+		.select({
+			itemId: problemSetItems.id,
+			order: problemSetItems.order,
+			problemId: problems.id,
+			problemTitle: problems.displayTitle,
+			problemType: problems.problemType,
+			solvedByViewer: solvedExpr,
+		})
+		.from(problemSetItems)
+		.innerJoin(problems, eq(problems.id, problemSetItems.problemId))
+		.where(eq(problemSetItems.problemSetId, id))
+		.orderBy(asc(problemSetItems.order), asc(problemSetItems.id));
+
+	let likedByViewer = false;
+	if (viewerId) {
+		const [likeRow] = await db
+			.select({ p: problemSetLikes.problemSetId })
+			.from(problemSetLikes)
+			.where(and(eq(problemSetLikes.problemSetId, id), eq(problemSetLikes.userId, viewerId)));
+		likedByViewer = !!likeRow;
+	}
+
+	const totalCount = itemRows.length;
+	const solvedCount = viewerId ? itemRows.filter((r) => r.solvedByViewer).length : 0;
+
+	return {
+		set: setRow.set,
+		creator: { id: setRow.creatorId, name: setRow.creatorName },
+		items: itemRows.map((r) => ({
+			itemId: r.itemId,
+			order: r.order,
+			problem: {
+				id: r.problemId,
+				title: r.problemTitle,
+				// `problems` 테이블에는 problemNumber 컬럼이 없음 (출처별 번호는 problem_sources에 존재).
+				// 호출자가 필요로 하면 별도 join 으로 추가하도록 하고, 여기서는 항상 null.
+				problemNumber: null,
+				problemType: r.problemType,
+			},
+			solvedByViewer: !!r.solvedByViewer,
+		})),
+		likedByViewer,
+		totalCount,
+		solvedCount,
+	};
 }
