@@ -107,19 +107,31 @@ export async function getProblemSetCreator(id: number): Promise<{
 }
 
 export async function addProblemToSet(problemSetId: number, problemId: number): Promise<void> {
-	const [maxRow] = await db
-		.select({ maxOrder: sql<number>`COALESCE(MAX(${problemSetItems.order}), -1)` })
-		.from(problemSetItems)
-		.where(eq(problemSetItems.problemSetId, problemSetId));
-	const nextOrder = (maxRow?.maxOrder ?? -1) + 1;
-	await db
-		.insert(problemSetItems)
-		.values({ problemSetId, problemId, order: nextOrder })
-		.onConflictDoNothing();
-	await db
-		.update(problemSets)
-		.set({ updatedAt: new Date() })
-		.where(eq(problemSets.id, problemSetId));
+	await db.transaction(async (tx) => {
+		// Lock parent row so concurrent inserts serialize on the MAX(order) read.
+		await tx
+			.select({ id: problemSets.id })
+			.from(problemSets)
+			.where(eq(problemSets.id, problemSetId))
+			.for("update")
+			.limit(1);
+
+		const [maxRow] = await tx
+			.select({ maxOrder: sql<number>`COALESCE(MAX(${problemSetItems.order}), -1)` })
+			.from(problemSetItems)
+			.where(eq(problemSetItems.problemSetId, problemSetId));
+		const nextOrder = (maxRow?.maxOrder ?? -1) + 1;
+
+		await tx
+			.insert(problemSetItems)
+			.values({ problemSetId, problemId, order: nextOrder })
+			.onConflictDoNothing();
+
+		await tx
+			.update(problemSets)
+			.set({ updatedAt: new Date() })
+			.where(eq(problemSets.id, problemSetId));
+	});
 }
 
 export async function removeProblemFromSet(problemSetId: number, problemId: number): Promise<void> {
@@ -368,7 +380,6 @@ export interface ProblemSetItemRow {
 	problem: {
 		id: number;
 		title: string;
-		problemNumber: number | null;
 		problemType: string;
 	};
 	order: number;
@@ -440,9 +451,6 @@ export async function getProblemSet(
 			problem: {
 				id: r.problemId,
 				title: r.problemTitle,
-				// `problems` 테이블에는 problemNumber 컬럼이 없음 (출처별 번호는 problem_sources에 존재).
-				// 호출자가 필요로 하면 별도 join 으로 추가하도록 하고, 여기서는 항상 null.
-				problemNumber: null,
 				problemType: r.problemType,
 			},
 			solvedByViewer: !!r.solvedByViewer,
