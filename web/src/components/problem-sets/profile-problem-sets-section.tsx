@@ -5,14 +5,12 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 
 export async function ProfileProblemSetsSection({
 	userId,
-	viewerId,
 	isOwner,
 }: {
 	userId: number;
-	viewerId?: number | null;
 	isOwner: boolean;
 }) {
-	const items = await getUserProblemSets(userId, viewerId ?? undefined);
+	const items = await getUserProblemSets(userId);
 
 	if (items.length === 0 && !isOwner) {
 		// 다른 사용자 프로필이고 문제집이 없으면 섹션 자체를 숨김
@@ -47,11 +45,7 @@ export async function ProfileProblemSetsSection({
 								{it.title}
 							</Link>
 							<div className="w-44 shrink-0">
-								<ProgressBar
-									current={viewerId ? (it.solvedCount ?? 0) : 0}
-									total={it.totalCount}
-									size="sm"
-								/>
+								<ProgressBar current={it.solvedCount ?? 0} total={it.totalCount} size="sm" />
 							</div>
 						</li>
 					))}

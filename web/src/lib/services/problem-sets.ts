@@ -17,7 +17,15 @@ export {
 	PROBLEM_SET_TITLE_MAX,
 };
 
-export type ListSort = "likes" | "recent" | "problemCount" | "solvedRatio";
+export const PROBLEM_SET_SORT_KEYS = [
+	"title",
+	"creator",
+	"problemCount",
+	"solvedRatio",
+	"likes",
+] as const;
+export type ListSort = (typeof PROBLEM_SET_SORT_KEYS)[number];
+export type SortOrder = "asc" | "desc";
 export type ListFilter = "all" | "liked" | "mine";
 
 export interface ProblemSetCreator {
@@ -42,6 +50,7 @@ export interface ListOptions {
 	page: number;
 	pageSize?: number;
 	sort: ListSort;
+	order: SortOrder;
 	q?: string;
 	filter: ListFilter;
 	viewerId?: number;
@@ -97,6 +106,7 @@ export async function replaceProblemSetItems(
 	problemSetId: number,
 	problemIds: number[]
 ): Promise<void> {
+	const uniqueIds = Array.from(new Set(problemIds));
 	await db.transaction(async (tx) => {
 		// Lock parent row so concurrent modifications serialize.
 		await tx
@@ -108,14 +118,17 @@ export async function replaceProblemSetItems(
 
 		await tx.delete(problemSetItems).where(eq(problemSetItems.problemSetId, problemSetId));
 
-		if (problemIds.length > 0) {
-			await tx.insert(problemSetItems).values(
-				problemIds.map((problemId, idx) => ({
-					problemSetId,
-					problemId,
-					order: idx,
-				}))
-			);
+		if (uniqueIds.length > 0) {
+			await tx
+				.insert(problemSetItems)
+				.values(
+					uniqueIds.map((problemId, idx) => ({
+						problemSetId,
+						problemId,
+						order: idx,
+					}))
+				)
+				.onConflictDoNothing();
 		}
 
 		await tx
@@ -151,6 +164,68 @@ export async function updateProblemSet(
 
 export async function deleteProblemSet(id: number): Promise<void> {
 	await db.delete(problemSets).where(eq(problemSets.id, id));
+}
+
+export async function getProblemSetOwner(id: number): Promise<number | null> {
+	const [row] = await db
+		.select({ createdBy: problemSets.createdBy })
+		.from(problemSets)
+		.where(eq(problemSets.id, id))
+		.limit(1);
+	return row?.createdBy ?? null;
+}
+
+export async function updateProblemSetWithItems(
+	id: number,
+	input: { title?: string; description?: string | null; problemIds?: number[] }
+): Promise<void> {
+	const patch: Partial<{ title: string; description: string | null; updatedAt: Date }> = {
+		updatedAt: new Date(),
+	};
+	if (input.title !== undefined) {
+		const t = input.title.trim();
+		if (t.length === 0 || t.length > PROBLEM_SET_TITLE_MAX) {
+			throw new Error(`제목은 1자 이상 ${PROBLEM_SET_TITLE_MAX}자 이하여야 합니다.`);
+		}
+		patch.title = t;
+	}
+	if (input.description !== undefined) {
+		const d = input.description?.trim() || null;
+		if (d && d.length > PROBLEM_SET_DESCRIPTION_MAX) {
+			throw new Error(`설명은 ${PROBLEM_SET_DESCRIPTION_MAX}자 이하여야 합니다.`);
+		}
+		patch.description = d;
+	}
+
+	const uniqueIds = input.problemIds ? Array.from(new Set(input.problemIds)) : null;
+
+	await db.transaction(async (tx) => {
+		// Lock parent row so concurrent modifications serialize.
+		await tx
+			.select({ id: problemSets.id })
+			.from(problemSets)
+			.where(eq(problemSets.id, id))
+			.for("update")
+			.limit(1);
+
+		await tx.update(problemSets).set(patch).where(eq(problemSets.id, id));
+
+		if (uniqueIds !== null) {
+			await tx.delete(problemSetItems).where(eq(problemSetItems.problemSetId, id));
+			if (uniqueIds.length > 0) {
+				await tx
+					.insert(problemSetItems)
+					.values(
+						uniqueIds.map((problemId, idx) => ({
+							problemSetId: id,
+							problemId,
+							order: idx,
+						}))
+					)
+					.onConflictDoNothing();
+			}
+		}
+	});
 }
 
 export async function addProblemToSet(problemSetId: number, problemId: number): Promise<void> {
@@ -320,22 +395,27 @@ export async function listProblemSets(
 	const solvedCountExpr = viewerId ? solvedCountSql(viewerId) : sql<number | null>`NULL`;
 	const likedExpr = viewerId ? likedByViewerSql(viewerId) : sql<boolean>`FALSE`;
 
+	const dir = opts.order === "asc" ? sql`ASC` : sql`DESC`;
+	const nulls = opts.order === "asc" ? sql`NULLS FIRST` : sql`NULLS LAST`;
 	let orderBy: unknown;
 	switch (opts.sort) {
 		case "likes":
-			orderBy = desc(problemSets.likeCount);
+			orderBy = sql`${problemSets.likeCount} ${dir}`;
 			break;
-		case "recent":
-			orderBy = desc(problemSets.createdAt);
+		case "title":
+			orderBy = sql`${problemSets.title} ${dir}`;
+			break;
+		case "creator":
+			orderBy = sql`${users.name} ${dir}`;
 			break;
 		case "problemCount":
-			orderBy = sql`${totalCountExpr} DESC`;
+			orderBy = sql`${totalCountExpr} ${dir}`;
 			break;
 		case "solvedRatio":
 			if (viewerId) {
-				orderBy = sql`(${solvedCountExpr})::float / NULLIF(${totalCountExpr}, 0) DESC NULLS LAST`;
+				orderBy = sql`(${solvedCountExpr})::float / NULLIF(${totalCountExpr}, 0) ${dir} ${nulls}`;
 			} else {
-				orderBy = desc(problemSets.likeCount);
+				orderBy = sql`${problemSets.likeCount} DESC`;
 			}
 			break;
 		default:

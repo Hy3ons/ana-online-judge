@@ -22,7 +22,7 @@ export default async function ProblemSetDetailPage({
 	const role = (session?.user as { role?: "user" | "admin" } | undefined)?.role;
 	const isLoggedIn = !!viewerId;
 
-	const detail = await getProblemSet(numId, viewerId);
+	const detail = await getProblemSet(numId);
 	if (!detail) notFound();
 
 	const canEdit = !!viewerId && (viewerId === detail.creator.id || role === "admin");

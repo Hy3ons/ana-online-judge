@@ -26,14 +26,15 @@ export async function createProblemSetAction(
 	return set;
 }
 
-export async function updateProblemSetAction(
+export async function updateProblemSetWithItemsAction(
 	id: number,
-	input: { title?: string; description?: string }
+	input: { title?: string; description?: string | null; problemIds?: number[] }
 ) {
 	await requireOwnerOrAdminForProblemSet(id);
-	await svc.updateProblemSet(id, input);
+	await svc.updateProblemSetWithItems(id, input);
 	revalidatePath("/problemsets");
 	revalidatePath(`/problemsets/${id}`);
+	revalidatePath(`/problemsets/${id}/edit`);
 	revalidatePath("/profile");
 }
 

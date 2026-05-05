@@ -9,16 +9,20 @@ interface SortableHeaderProps<TKey extends string = string> {
 	label: string;
 	sortKey: TKey;
 	className?: string;
+	defaultSortKey?: TKey;
+	defaultOrder?: "asc" | "desc";
 }
 
 export function SortableHeader<TKey extends string = string>({
 	label,
 	sortKey,
 	className,
+	defaultSortKey = "id" as TKey,
+	defaultOrder = "asc",
 }: SortableHeaderProps<TKey>) {
 	const searchParams = useSearchParams();
-	const currentSort = searchParams.get("sort") || "id";
-	const currentOrder = searchParams.get("order") || "asc";
+	const currentSort = searchParams.get("sort") || defaultSortKey;
+	const currentOrder = searchParams.get("order") || defaultOrder;
 
 	const isCurrent = currentSort === sortKey;
 	const nextOrder = isCurrent && currentOrder === "asc" ? "desc" : "asc";

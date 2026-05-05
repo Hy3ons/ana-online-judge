@@ -20,11 +20,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
-import {
-	createProblemSetAction,
-	replaceItemsAction,
-	updateProblemSetAction,
-} from "@/actions/problem-sets";
+import { createProblemSetAction, updateProblemSetWithItemsAction } from "@/actions/problem-sets";
 import {
 	type PickerProblem,
 	ProblemPickerDialog,
@@ -121,19 +117,17 @@ export function ProblemSetForm(props: Props) {
 		const editProps = props;
 		startTransition(async () => {
 			try {
-				await updateProblemSetAction(editProps.initial.id, {
-					title,
-					description: description.trim() || undefined,
-				});
-
 				const initialIds = editProps.initial.problems.map((p) => p.id);
 				const currentIds = selectedProblems.map((p) => p.id);
-				const changed =
+				const itemsChanged =
 					initialIds.length !== currentIds.length ||
 					initialIds.some((id, idx) => id !== currentIds[idx]);
-				if (changed) {
-					await replaceItemsAction(editProps.initial.id, currentIds);
-				}
+
+				await updateProblemSetWithItemsAction(editProps.initial.id, {
+					title,
+					description: description.trim() || null,
+					problemIds: itemsChanged ? currentIds : undefined,
+				});
 
 				router.push(`/problemsets/${editProps.initial.id}`);
 			} catch (err) {

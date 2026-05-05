@@ -33,7 +33,7 @@ export default async function EditProblemSetPage({ params }: { params: Promise<{
 	const viewerId = Number.parseInt(session.user.id, 10);
 	const role = (session.user as { role?: "user" | "admin" }).role;
 
-	const detail = await getProblemSet(numId, viewerId);
+	const detail = await getProblemSet(numId);
 	if (!detail) notFound();
 	if (detail.creator.id !== viewerId && role !== "admin") {
 		redirect(`/problemsets/${id}`);

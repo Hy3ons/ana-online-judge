@@ -82,7 +82,7 @@ export default async function ProfilePage({
 
 			<ProfileHeatmap data={heatmap} />
 
-			<ProfileProblemSetsSection userId={user.id} viewerId={userId} isOwner={isOwner} />
+			<ProfileProblemSetsSection userId={user.id} isOwner={isOwner} />
 
 			<ProfileSubmissions
 				submissions={submissionsData.submissions}

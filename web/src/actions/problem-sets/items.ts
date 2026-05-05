@@ -27,12 +27,3 @@ export async function reorderItemsAction(
 	revalidatePath(`/problemsets/${problemSetId}`);
 	revalidatePath(`/problemsets/${problemSetId}/edit`);
 }
-
-export async function replaceItemsAction(problemSetId: number, problemIds: number[]) {
-	await requireOwnerOrAdminForProblemSet(problemSetId);
-	await svc.replaceProblemSetItems(problemSetId, problemIds);
-	revalidatePath("/problemsets");
-	revalidatePath(`/problemsets/${problemSetId}`);
-	revalidatePath(`/problemsets/${problemSetId}/edit`);
-	revalidatePath("/profile");
-}

@@ -1,9 +1,7 @@
 import "server-only";
 
-import { eq } from "drizzle-orm";
-import { db } from "@/db";
-import { problemSets } from "@/db/schema";
 import { getSessionInfo, requireAuth } from "@/lib/auth-utils";
+import { getProblemSetOwner } from "@/lib/services/problem-sets";
 
 /**
  * 작성자 본인 또는 관리자만 통과시킨다. 그렇지 않으면 throw.
@@ -17,12 +15,9 @@ export async function requireOwnerOrAdminForProblemSet(
 	if (userId === null) throw new Error("로그인이 필요합니다.");
 	if (isAdmin) return { userId, isAdmin: true };
 
-	const [row] = await db
-		.select({ createdBy: problemSets.createdBy })
-		.from(problemSets)
-		.where(eq(problemSets.id, problemSetId));
-	if (!row) throw new Error("문제집을 찾을 수 없습니다.");
-	if (row.createdBy !== userId) throw new Error("권한이 없습니다.");
+	const ownerId = await getProblemSetOwner(problemSetId);
+	if (ownerId === null) throw new Error("문제집을 찾을 수 없습니다.");
+	if (ownerId !== userId) throw new Error("권한이 없습니다.");
 	return { userId, isAdmin: false };
 }
 
