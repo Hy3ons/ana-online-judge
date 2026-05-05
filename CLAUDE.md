@@ -91,6 +91,18 @@ Browser → Next.js (server actions/API routes)
 - **Auth**: NextAuth v5 with credentials (bcrypt) and Google OAuth (`web/src/auth.ts`)
 - **UI**: shadcn/ui components with Radix primitives, Monaco editor for code input
 
+### UI 작업 (필수)
+
+**UI 페이지나 컴포넌트를 작성·수정하기 전에 반드시:**
+
+1. `.claude/design-system.md`를 처음부터 끝까지 읽는다. 색상 토큰·shadow·radius·금지 패턴 + 페이지 레이아웃 패턴(목록/상세/생성/편집)이 모두 거기 있다.
+2. 작업 도메인에서 가장 가까운 **기존 페이지**를 read한다 (예: 새 목록 페이지 → `web/src/app/practices/page.tsx`). 그 페이지의 wrapper, spacing, typography를 그대로 mimic한다 — 즉흥적 새 패턴 만들지 말 것.
+3. 공용 컴포넌트(`PageBreadcrumb`, `PaginationLinks`, `ProblemListTable`, `ProblemTitleCell`, `ProblemPickerDialog` 등)를 우선 재사용한다. 자체 테이블/다이얼로그 자체 구현 금지.
+4. 색상은 시맨틱 토큰만(`--primary`, `--accent`, `--muted-foreground`, `--verdict-*`). `bg-emerald-*`, `bg-blue-*` 같은 raw Tailwind 팔레트는 verdict 외 사용 금지.
+5. 작업 후 `.claude/design-system.md`의 "작업 완료 후 검증" grep 명령을 실행해 토큰/레이아웃 위반 0 hit 확인.
+
+> 이 절차를 건너뛰면 자주 일관성 위반이 누적되어 사후 리팩토링 비용이 커진다.
+
 ### Layer Rules
 
 - **Components (pages, layouts, server/client components) MUST NOT import `@/db`
