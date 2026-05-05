@@ -1,7 +1,8 @@
-import { and, count, eq, inArray, sql } from "drizzle-orm";
+import { and, count, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import type { ProblemSet } from "@/db/schema";
-import { problemSetItems, problemSetLikes, problemSets } from "@/db/schema";
+import { problemSetItems, problemSetLikes, problemSets, problems, users } from "@/db/schema";
+import { userSolvedProblemSql } from "@/lib/services/solved-clause";
 
 export const PROBLEM_SET_MAX_PER_USER = 20;
 export const PROBLEM_SET_TITLE_MAX = 80;
@@ -197,4 +198,167 @@ export async function toggleLike(
 			.where(eq(problemSets.id, problemSetId));
 		return { liked, likeCount: row?.likeCount ?? 0 };
 	});
+}
+
+function totalCountSql() {
+	return sql<number>`(
+		SELECT COUNT(*)::int FROM ${problemSetItems}
+		WHERE ${problemSetItems.problemSetId} = ${problemSets.id}
+	)`;
+}
+
+function solvedCountSql(viewerId: number) {
+	return sql<number>`(
+		SELECT COUNT(*)::int
+		FROM ${problemSetItems} psi
+		JOIN ${problems} p ON p.id = psi.problem_id
+		WHERE psi.problem_set_id = ${problemSets.id}
+		  AND ${userSolvedProblemSql(viewerId)}
+	)`;
+}
+
+function likedByViewerSql(viewerId: number) {
+	return sql<boolean>`EXISTS (
+		SELECT 1 FROM ${problemSetLikes}
+		WHERE ${problemSetLikes.problemSetId} = ${problemSets.id}
+		  AND ${problemSetLikes.userId} = ${viewerId}
+	)`;
+}
+
+export async function listProblemSets(
+	opts: ListOptions
+): Promise<{ items: ProblemSetListRow[]; total: number }> {
+	const pageSize = opts.pageSize ?? PROBLEM_SET_LIST_PAGE_SIZE;
+	const page = Math.max(1, opts.page);
+	const viewerId = opts.viewerId;
+
+	const conditions = [];
+	if (opts.q && opts.q.trim().length > 0) {
+		const qLike = `%${opts.q.trim()}%`;
+		conditions.push(or(ilike(problemSets.title, qLike), ilike(problemSets.description, qLike)));
+	}
+	if (opts.filter === "mine") {
+		if (!viewerId) return { items: [], total: 0 };
+		conditions.push(eq(problemSets.createdBy, viewerId));
+	}
+	if (opts.filter === "liked") {
+		if (!viewerId) return { items: [], total: 0 };
+		conditions.push(
+			sql`EXISTS (
+				SELECT 1 FROM ${problemSetLikes}
+				WHERE ${problemSetLikes.problemSetId} = ${problemSets.id}
+				  AND ${problemSetLikes.userId} = ${viewerId}
+			)`
+		);
+	}
+	const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+	const [totalRow] = await db.select({ c: count() }).from(problemSets).where(whereClause);
+	const total = totalRow?.c ?? 0;
+	if (total === 0) return { items: [], total: 0 };
+
+	const totalCountExpr = totalCountSql();
+	const solvedCountExpr = viewerId ? solvedCountSql(viewerId) : sql<number | null>`NULL`;
+	const likedExpr = viewerId ? likedByViewerSql(viewerId) : sql<boolean>`FALSE`;
+
+	let orderBy: unknown;
+	switch (opts.sort) {
+		case "likes":
+			orderBy = desc(problemSets.likeCount);
+			break;
+		case "recent":
+			orderBy = desc(problemSets.createdAt);
+			break;
+		case "problemCount":
+			orderBy = sql`${totalCountExpr} DESC`;
+			break;
+		case "solvedRatio":
+			if (viewerId) {
+				orderBy = sql`(${solvedCountExpr})::float / NULLIF(${totalCountExpr}, 0) DESC NULLS LAST`;
+			} else {
+				orderBy = desc(problemSets.likeCount);
+			}
+			break;
+		default:
+			orderBy = desc(problemSets.likeCount);
+	}
+
+	const rows = await db
+		.select({
+			id: problemSets.id,
+			title: problemSets.title,
+			description: problemSets.description,
+			likeCount: problemSets.likeCount,
+			createdAt: problemSets.createdAt,
+			updatedAt: problemSets.updatedAt,
+			creatorId: users.id,
+			creatorName: users.name,
+			totalCount: totalCountExpr,
+			solvedCount: solvedCountExpr,
+			likedByViewer: likedExpr,
+		})
+		.from(problemSets)
+		.innerJoin(users, eq(users.id, problemSets.createdBy))
+		.where(whereClause)
+		// biome-ignore lint/suspicious/noExplicitAny: drizzle orderBy heterogeneous type
+		.orderBy(orderBy as any, desc(problemSets.id))
+		.limit(pageSize)
+		.offset((page - 1) * pageSize);
+
+	const items: ProblemSetListRow[] = rows.map((r) => ({
+		id: r.id,
+		title: r.title,
+		description: r.description,
+		creator: { id: r.creatorId, name: r.creatorName },
+		likeCount: r.likeCount,
+		totalCount: r.totalCount,
+		solvedCount: viewerId ? (r.solvedCount ?? 0) : null,
+		likedByViewer: !!r.likedByViewer,
+		createdAt: r.createdAt,
+		updatedAt: r.updatedAt,
+	}));
+
+	return { items, total };
+}
+
+export async function listUserProblemSets(
+	userId: number,
+	viewerId?: number
+): Promise<ProblemSetListRow[]> {
+	const totalCountExpr = totalCountSql();
+	const solvedCountExpr = viewerId ? solvedCountSql(viewerId) : sql<number | null>`NULL`;
+	const likedExpr = viewerId ? likedByViewerSql(viewerId) : sql<boolean>`FALSE`;
+
+	const rows = await db
+		.select({
+			id: problemSets.id,
+			title: problemSets.title,
+			description: problemSets.description,
+			likeCount: problemSets.likeCount,
+			createdAt: problemSets.createdAt,
+			updatedAt: problemSets.updatedAt,
+			creatorId: users.id,
+			creatorName: users.name,
+			totalCount: totalCountExpr,
+			solvedCount: solvedCountExpr,
+			likedByViewer: likedExpr,
+		})
+		.from(problemSets)
+		.innerJoin(users, eq(users.id, problemSets.createdBy))
+		.where(eq(problemSets.createdBy, userId))
+		.orderBy(desc(problemSets.createdAt))
+		.limit(50);
+
+	return rows.map((r) => ({
+		id: r.id,
+		title: r.title,
+		description: r.description,
+		creator: { id: r.creatorId, name: r.creatorName },
+		likeCount: r.likeCount,
+		totalCount: r.totalCount,
+		solvedCount: viewerId ? (r.solvedCount ?? 0) : null,
+		likedByViewer: !!r.likedByViewer,
+		createdAt: r.createdAt,
+		updatedAt: r.updatedAt,
+	}));
 }
