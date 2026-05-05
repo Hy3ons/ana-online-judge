@@ -9,5 +9,6 @@ export async function toggleLikeAction(problemSetId: number) {
 	const result = await svc.toggleLike(problemSetId, userId);
 	revalidatePath("/problemsets");
 	revalidatePath(`/problemsets/${problemSetId}`);
+	revalidatePath("/profile");
 	return result;
 }

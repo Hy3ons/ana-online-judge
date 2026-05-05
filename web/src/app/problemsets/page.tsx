@@ -6,11 +6,8 @@ import { ProblemSetListTable } from "@/components/problem-sets/problem-set-list-
 import { ProblemSetSearchInput } from "@/components/problem-sets/problem-set-search-input";
 import { ProblemSetSortSelect } from "@/components/problem-sets/problem-set-sort-select";
 import { Button } from "@/components/ui/button";
-import {
-	type ListFilter,
-	type ListSort,
-	PROBLEM_SET_LIST_PAGE_SIZE,
-} from "@/lib/services/problem-sets";
+import { PROBLEM_SET_LIST_PAGE_SIZE } from "@/lib/problem-set-constants";
+import type { ListFilter, ListSort } from "@/lib/services/problem-sets";
 
 const VALID_SORTS: ListSort[] = ["likes", "recent", "problemCount", "solvedRatio"];
 const VALID_FILTERS: ListFilter[] = ["all", "liked", "mine"];

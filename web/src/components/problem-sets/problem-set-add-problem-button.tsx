@@ -1,6 +1,7 @@
 "use client";
 
 import { Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { addProblemAction } from "@/actions/problem-sets";
 import {
@@ -16,6 +17,7 @@ export function ProblemSetAddProblemButton({
 	problemSetId: number;
 	excludeIds: number[];
 }) {
+	const router = useRouter();
 	const [open, setOpen] = useState(false);
 	const [pending, startTransition] = useTransition();
 
@@ -26,6 +28,7 @@ export function ProblemSetAddProblemButton({
 					for (const p of selected) {
 						await addProblemAction(problemSetId, p.id);
 					}
+					router.refresh();
 				} finally {
 					resolve();
 				}

@@ -25,7 +25,7 @@ export function LikeButton({
 
 	const onClick = () => {
 		if (disabled) {
-			router.push("/login");
+			router.push(`/login?redirectTo=/problemsets/${problemSetId}`);
 			return;
 		}
 		const optimisticLiked = !liked;

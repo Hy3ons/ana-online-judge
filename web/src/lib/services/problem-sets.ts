@@ -103,17 +103,6 @@ export async function deleteProblemSet(id: number): Promise<void> {
 	await db.delete(problemSets).where(eq(problemSets.id, id));
 }
 
-export async function getProblemSetCreator(id: number): Promise<{
-	id: number;
-	createdBy: number;
-} | null> {
-	const [row] = await db
-		.select({ id: problemSets.id, createdBy: problemSets.createdBy })
-		.from(problemSets)
-		.where(eq(problemSets.id, id));
-	return row ?? null;
-}
-
 export async function addProblemToSet(problemSetId: number, problemId: number): Promise<void> {
 	await db.transaction(async (tx) => {
 		// Lock parent row so concurrent inserts serialize on the MAX(order) read.

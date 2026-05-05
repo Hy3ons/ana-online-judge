@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { updateProblemSetAction } from "@/actions/problem-sets";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ export function ProblemSetMetaEditForm({
 	initialTitle: string;
 	initialDescription: string;
 }) {
+	const router = useRouter();
 	const [title, setTitle] = useState(initialTitle);
 	const [description, setDescription] = useState(initialDescription);
 	const [pending, startTransition] = useTransition();
@@ -29,6 +31,7 @@ export function ProblemSetMetaEditForm({
 			setError(null);
 			try {
 				await updateProblemSetAction(id, { title, description });
+				router.refresh();
 				setSaved(true);
 			} catch (err) {
 				setError(err instanceof Error ? err.message : "저장에 실패했습니다.");

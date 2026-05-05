@@ -22,6 +22,7 @@ export async function createProblemSetAction(
 	}
 	const set = await svc.createProblemSet(userId, input);
 	revalidatePath("/problemsets");
+	revalidatePath("/profile");
 	return set;
 }
 
@@ -33,10 +34,12 @@ export async function updateProblemSetAction(
 	await svc.updateProblemSet(id, input);
 	revalidatePath("/problemsets");
 	revalidatePath(`/problemsets/${id}`);
+	revalidatePath("/profile");
 }
 
 export async function deleteProblemSetAction(id: number) {
 	await requireOwnerOrAdminForProblemSet(id);
 	await svc.deleteProblemSet(id);
 	revalidatePath("/problemsets");
+	revalidatePath("/profile");
 }
