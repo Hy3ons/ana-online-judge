@@ -42,11 +42,6 @@ export function ProblemSetListTable({
 							<Link href={`/problemsets/${row.id}`} className="hover:underline font-medium">
 								{row.title}
 							</Link>
-							{row.description && (
-								<p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-									{row.description}
-								</p>
-							)}
 						</TableCell>
 						<TableCell className="text-sm">{row.creator.name}</TableCell>
 						<TableCell>
