@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
+import { getProblemSet } from "@/actions/problem-sets";
 import { auth } from "@/auth";
 import { ProblemSetDetailHeader } from "@/components/problem-sets/problem-set-detail-header";
 import { ProblemSetItemList } from "@/components/problem-sets/problem-set-item-list";
-import { getProblemSet } from "@/lib/services/problem-sets";
 
 export default async function ProblemSetDetailPage({
 	params,

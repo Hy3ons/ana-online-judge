@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getProblemSets } from "@/actions/problem-sets";
 import { auth } from "@/auth";
 import { ProblemSetFilterTabs } from "@/components/problem-sets/problem-set-filter-tabs";
 import { ProblemSetListTable } from "@/components/problem-sets/problem-set-list-table";
@@ -8,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import {
 	type ListFilter,
 	type ListSort,
-	listProblemSets,
 	PROBLEM_SET_LIST_PAGE_SIZE,
 } from "@/lib/services/problem-sets";
 
@@ -38,7 +38,7 @@ export default async function ProblemSetsPage({
 		? (sp.filter as ListFilter)
 		: "all";
 
-	const { items, total } = await listProblemSets({
+	const { items, total } = await getProblemSets({
 		page,
 		sort,
 		filter,
