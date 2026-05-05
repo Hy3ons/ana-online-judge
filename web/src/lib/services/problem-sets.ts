@@ -1,3 +1,8 @@
+import { count, eq } from "drizzle-orm";
+import { db } from "@/db";
+import type { ProblemSet } from "@/db/schema";
+import { problemSets } from "@/db/schema";
+
 export const PROBLEM_SET_MAX_PER_USER = 20;
 export const PROBLEM_SET_TITLE_MAX = 80;
 export const PROBLEM_SET_DESCRIPTION_MAX = 1000;
@@ -31,4 +36,71 @@ export interface ListOptions {
 	q?: string;
 	filter: ListFilter;
 	viewerId?: number;
+}
+
+export async function countUserProblemSets(userId: number): Promise<number> {
+	const [row] = await db
+		.select({ c: count() })
+		.from(problemSets)
+		.where(eq(problemSets.createdBy, userId));
+	return row?.c ?? 0;
+}
+
+export async function createProblemSet(
+	userId: number,
+	input: { title: string; description?: string | null }
+): Promise<ProblemSet> {
+	const title = input.title.trim();
+	if (title.length === 0 || title.length > PROBLEM_SET_TITLE_MAX) {
+		throw new Error(`제목은 1자 이상 ${PROBLEM_SET_TITLE_MAX}자 이하여야 합니다.`);
+	}
+	const description = input.description?.trim() || null;
+	if (description && description.length > PROBLEM_SET_DESCRIPTION_MAX) {
+		throw new Error(`설명은 ${PROBLEM_SET_DESCRIPTION_MAX}자 이하여야 합니다.`);
+	}
+	const [row] = await db
+		.insert(problemSets)
+		.values({ title, description, createdBy: userId })
+		.returning();
+	if (!row) throw new Error("문제집 생성에 실패했습니다.");
+	return row;
+}
+
+export async function updateProblemSet(
+	id: number,
+	input: { title?: string; description?: string | null }
+): Promise<void> {
+	const patch: Partial<{ title: string; description: string | null; updatedAt: Date }> = {
+		updatedAt: new Date(),
+	};
+	if (input.title !== undefined) {
+		const t = input.title.trim();
+		if (t.length === 0 || t.length > PROBLEM_SET_TITLE_MAX) {
+			throw new Error(`제목은 1자 이상 ${PROBLEM_SET_TITLE_MAX}자 이하여야 합니다.`);
+		}
+		patch.title = t;
+	}
+	if (input.description !== undefined) {
+		const d = input.description?.trim() || null;
+		if (d && d.length > PROBLEM_SET_DESCRIPTION_MAX) {
+			throw new Error(`설명은 ${PROBLEM_SET_DESCRIPTION_MAX}자 이하여야 합니다.`);
+		}
+		patch.description = d;
+	}
+	await db.update(problemSets).set(patch).where(eq(problemSets.id, id));
+}
+
+export async function deleteProblemSet(id: number): Promise<void> {
+	await db.delete(problemSets).where(eq(problemSets.id, id));
+}
+
+export async function getProblemSetCreator(id: number): Promise<{
+	id: number;
+	createdBy: number;
+} | null> {
+	const [row] = await db
+		.select({ id: problemSets.id, createdBy: problemSets.createdBy })
+		.from(problemSets)
+		.where(eq(problemSets.id, id));
+	return row ?? null;
 }
