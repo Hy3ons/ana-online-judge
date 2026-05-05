@@ -363,6 +363,7 @@ export async function getProblems(
 				includeUnavailable?: boolean;
 				sourceId?: number;
 				sourceIdMode?: "descendants" | "direct";
+				ids?: number[];
 		  }
 		| undefined,
 	context: { isAdmin: boolean }
@@ -483,6 +484,13 @@ export async function getProblems(
 				.from(problemSources)
 				.where(inArray(problemSources.sourceId, allIds));
 			conditions.push(inArray(problems.id, matchedProblemIds));
+		}
+	}
+	if (options?.ids !== undefined) {
+		if (options.ids.length === 0) {
+			conditions.push(sql`FALSE`);
+		} else {
+			conditions.push(inArray(problems.id, options.ids));
 		}
 	}
 	if (options?.sourceId !== undefined) {

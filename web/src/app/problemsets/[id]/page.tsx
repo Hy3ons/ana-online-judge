@@ -1,9 +1,11 @@
 import { notFound } from "next/navigation";
 import { getProblemSet } from "@/actions/problem-sets";
+import { getProblems } from "@/actions/problems";
+import { getUserProblemStatuses } from "@/actions/submissions";
 import { auth } from "@/auth";
 import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
 import { ProblemSetDetailHeader } from "@/components/problem-sets/problem-set-detail-header";
-import { ProblemSetItemList } from "@/components/problem-sets/problem-set-item-list";
+import { ProblemListTable } from "@/components/problems/problem-list-table";
 
 export default async function ProblemSetDetailPage({
 	params,
@@ -24,13 +26,38 @@ export default async function ProblemSetDetailPage({
 
 	const canEdit = !!viewerId && (viewerId === detail.creator.id || role === "admin");
 
+	const orderedIds = detail.items.map((it) => it.problem.id);
+	const [{ problems: problemRows }, userProblemStatuses] = await Promise.all([
+		orderedIds.length > 0
+			? getProblems({
+					ids: orderedIds,
+					userId: viewerId,
+					includeUnavailable: true,
+					limit: orderedIds.length,
+				})
+			: Promise.resolve({ problems: [], total: 0 }),
+		viewerId
+			? getUserProblemStatuses(orderedIds, viewerId)
+			: Promise.resolve(new Map<number, { solved: boolean; score: number | null }>()),
+	]);
+
+	// problem-set 순서대로 정렬
+	const orderIndex = new Map(orderedIds.map((pid, idx) => [pid, idx]));
+	const orderedProblems = [...problemRows].sort(
+		(a, b) => (orderIndex.get(a.id) ?? 0) - (orderIndex.get(b.id) ?? 0)
+	);
+
 	return (
-		<div className="container mx-auto max-w-4xl py-8 space-y-6">
+		<div className="page-container py-8 space-y-6">
 			<PageBreadcrumb
 				items={[{ label: "문제집", href: "/problemsets" }, { label: detail.set.title }]}
 			/>
 			<ProblemSetDetailHeader detail={detail} canEdit={canEdit} isLoggedIn={isLoggedIn} />
-			<ProblemSetItemList items={detail.items} showSolved={isLoggedIn} />
+			<ProblemListTable
+				problems={orderedProblems}
+				userProblemStatuses={userProblemStatuses}
+				emptyLabel="문제가 없습니다."
+			/>
 		</div>
 	);
 }
