@@ -1,7 +1,7 @@
 import { and, count, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import type { ProblemSet } from "@/db/schema";
-import { problemSetItems, problemSets } from "@/db/schema";
+import { problemSetItems, problemSetLikes, problemSets } from "@/db/schema";
 
 export const PROBLEM_SET_MAX_PER_USER = 20;
 export const PROBLEM_SET_TITLE_MAX = 80;
@@ -159,5 +159,42 @@ export async function reorderProblemSetItems(
 			.update(problemSets)
 			.set({ updatedAt: new Date() })
 			.where(eq(problemSets.id, problemSetId));
+	});
+}
+
+export async function toggleLike(
+	problemSetId: number,
+	userId: number
+): Promise<{ liked: boolean; likeCount: number }> {
+	return await db.transaction(async (tx) => {
+		const inserted = await tx
+			.insert(problemSetLikes)
+			.values({ problemSetId, userId })
+			.onConflictDoNothing()
+			.returning({ problemSetId: problemSetLikes.problemSetId });
+		let liked: boolean;
+		if (inserted.length > 0) {
+			await tx
+				.update(problemSets)
+				.set({ likeCount: sql`${problemSets.likeCount} + 1` })
+				.where(eq(problemSets.id, problemSetId));
+			liked = true;
+		} else {
+			await tx
+				.delete(problemSetLikes)
+				.where(
+					and(eq(problemSetLikes.problemSetId, problemSetId), eq(problemSetLikes.userId, userId))
+				);
+			await tx
+				.update(problemSets)
+				.set({ likeCount: sql`GREATEST(${problemSets.likeCount} - 1, 0)` })
+				.where(eq(problemSets.id, problemSetId));
+			liked = false;
+		}
+		const [row] = await tx
+			.select({ likeCount: problemSets.likeCount })
+			.from(problemSets)
+			.where(eq(problemSets.id, problemSetId));
+		return { liked, likeCount: row?.likeCount ?? 0 };
 	});
 }
