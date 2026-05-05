@@ -57,7 +57,7 @@ export async function countUserProblemSets(userId: number): Promise<number> {
 
 export async function createProblemSet(
 	userId: number,
-	input: { title: string; description?: string | null }
+	input: { title: string; description?: string | null; problemIds?: number[] }
 ): Promise<ProblemSet> {
 	const title = input.title.trim();
 	if (title.length === 0 || title.length > PROBLEM_SET_TITLE_MAX) {
@@ -67,12 +67,62 @@ export async function createProblemSet(
 	if (description && description.length > PROBLEM_SET_DESCRIPTION_MAX) {
 		throw new Error(`설명은 ${PROBLEM_SET_DESCRIPTION_MAX}자 이하여야 합니다.`);
 	}
-	const [row] = await db
-		.insert(problemSets)
-		.values({ title, description, createdBy: userId })
-		.returning();
-	if (!row) throw new Error("문제집 생성에 실패했습니다.");
-	return row;
+	const problemIds = input.problemIds ?? [];
+
+	return await db.transaction(async (tx) => {
+		const [row] = await tx
+			.insert(problemSets)
+			.values({ title, description, createdBy: userId })
+			.returning();
+		if (!row) throw new Error("문제집 생성에 실패했습니다.");
+
+		if (problemIds.length > 0) {
+			await tx
+				.insert(problemSetItems)
+				.values(
+					problemIds.map((problemId, idx) => ({
+						problemSetId: row.id,
+						problemId,
+						order: idx,
+					}))
+				)
+				.onConflictDoNothing();
+		}
+
+		return row;
+	});
+}
+
+export async function replaceProblemSetItems(
+	problemSetId: number,
+	problemIds: number[]
+): Promise<void> {
+	await db.transaction(async (tx) => {
+		// Lock parent row so concurrent modifications serialize.
+		await tx
+			.select({ id: problemSets.id })
+			.from(problemSets)
+			.where(eq(problemSets.id, problemSetId))
+			.for("update")
+			.limit(1);
+
+		await tx.delete(problemSetItems).where(eq(problemSetItems.problemSetId, problemSetId));
+
+		if (problemIds.length > 0) {
+			await tx.insert(problemSetItems).values(
+				problemIds.map((problemId, idx) => ({
+					problemSetId,
+					problemId,
+					order: idx,
+				}))
+			);
+		}
+
+		await tx
+			.update(problemSets)
+			.set({ updatedAt: new Date() })
+			.where(eq(problemSets.id, problemSetId));
+	});
 }
 
 export async function updateProblemSet(
@@ -378,6 +428,12 @@ export interface ProblemSetItemRow {
 		id: number;
 		title: string;
 		problemType: string;
+		judgeAvailable: boolean;
+		languageRestricted: boolean;
+		hasSubtasks: boolean;
+		useFullJudge: boolean;
+		isPublic: boolean;
+		tier: number;
 	};
 	order: number;
 	solvedByViewer: boolean;
@@ -420,6 +476,12 @@ export async function getProblemSet(
 			problemId: problems.id,
 			problemTitle: problems.displayTitle,
 			problemType: problems.problemType,
+			judgeAvailable: problems.judgeAvailable,
+			languageRestricted: sql<boolean>`${problems.allowedLanguages} IS NOT NULL`,
+			hasSubtasks: problems.hasSubtasks,
+			useFullJudge: problems.useFullJudge,
+			isPublic: problems.isPublic,
+			tier: problems.tier,
 			solvedByViewer: solvedExpr,
 		})
 		.from(problemSetItems)
@@ -449,6 +511,12 @@ export async function getProblemSet(
 				id: r.problemId,
 				title: r.problemTitle,
 				problemType: r.problemType,
+				judgeAvailable: r.judgeAvailable,
+				languageRestricted: r.languageRestricted,
+				hasSubtasks: r.hasSubtasks,
+				useFullJudge: r.useFullJudge,
+				isPublic: r.isPublic,
+				tier: r.tier,
 			},
 			solvedByViewer: !!r.solvedByViewer,
 		})),

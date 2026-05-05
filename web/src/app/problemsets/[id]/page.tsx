@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getProblemSet } from "@/actions/problem-sets";
 import { auth } from "@/auth";
+import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
 import { ProblemSetDetailHeader } from "@/components/problem-sets/problem-set-detail-header";
 import { ProblemSetItemList } from "@/components/problem-sets/problem-set-item-list";
 
@@ -25,6 +26,9 @@ export default async function ProblemSetDetailPage({
 
 	return (
 		<div className="container mx-auto max-w-4xl py-8 space-y-6">
+			<PageBreadcrumb
+				items={[{ label: "문제집", href: "/problemsets" }, { label: detail.set.title }]}
+			/>
 			<ProblemSetDetailHeader detail={detail} canEdit={canEdit} isLoggedIn={isLoggedIn} />
 			<ProblemSetItemList items={detail.items} showSolved={isLoggedIn} />
 		</div>

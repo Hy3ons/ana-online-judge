@@ -1,13 +1,22 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { getProblemSets } from "@/actions/problem-sets";
 import { auth } from "@/auth";
+import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
 import { ProblemSetFilterTabs } from "@/components/problem-sets/problem-set-filter-tabs";
 import { ProblemSetListTable } from "@/components/problem-sets/problem-set-list-table";
 import { ProblemSetSearchInput } from "@/components/problem-sets/problem-set-search-input";
 import { ProblemSetSortSelect } from "@/components/problem-sets/problem-set-sort-select";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PaginationLinks } from "@/components/ui/pagination-links";
 import { PROBLEM_SET_LIST_PAGE_SIZE } from "@/lib/problem-set-constants";
 import type { ListFilter, ListSort } from "@/lib/services/problem-sets";
+
+export const metadata: Metadata = {
+	title: "문제집",
+	description: "사용자가 만든 문제 모음을 둘러보세요",
+};
 
 const VALID_SORTS: ListSort[] = ["likes", "recent", "problemCount", "solvedRatio"];
 const VALID_FILTERS: ListFilter[] = ["all", "liked", "mine"];
@@ -55,39 +64,31 @@ export default async function ProblemSetsPage({
 	};
 
 	return (
-		<div className="container mx-auto max-w-5xl py-8 space-y-6">
-			<div className="flex items-center justify-between">
-				<h1 className="text-2xl font-semibold">문제집</h1>
-				{isLoggedIn && (
-					<Button asChild>
-						<Link href="/problemsets/new">+ 새 문제집</Link>
-					</Button>
-				)}
-			</div>
-
-			<div className="flex flex-wrap items-center gap-3 justify-between">
-				<ProblemSetFilterTabs isLoggedIn={isLoggedIn} />
-				<div className="flex items-center gap-2">
-					<ProblemSetSearchInput />
-					<ProblemSetSortSelect isLoggedIn={isLoggedIn} />
-				</div>
-			</div>
-
-			<ProblemSetListTable items={items} isLoggedIn={isLoggedIn} />
-
-			{totalPages > 1 && (
-				<div className="flex items-center justify-center gap-2">
-					<Button asChild variant="outline" disabled={page <= 1}>
-						<Link href={buildHref(page - 1)}>이전</Link>
-					</Button>
-					<span className="text-sm tabular-nums">
-						{page} / {totalPages}
-					</span>
-					<Button asChild variant="outline" disabled={page >= totalPages}>
-						<Link href={buildHref(page + 1)}>다음</Link>
-					</Button>
-				</div>
-			)}
+		<div className="page-container py-8">
+			<PageBreadcrumb items={[{ label: "문제집" }]} />
+			<Card>
+				<CardHeader className="flex flex-row items-center justify-between">
+					<CardTitle className="text-2xl">문제집 목록</CardTitle>
+					{isLoggedIn && (
+						<Button asChild>
+							<Link href="/problemsets/new">문제집 만들기</Link>
+						</Button>
+					)}
+				</CardHeader>
+				<CardContent>
+					<div className="mb-4 flex flex-wrap items-center gap-3 justify-between">
+						<ProblemSetFilterTabs isLoggedIn={isLoggedIn} />
+						<div className="flex items-center gap-2">
+							<ProblemSetSearchInput />
+							<ProblemSetSortSelect isLoggedIn={isLoggedIn} />
+						</div>
+					</div>
+					<ProblemSetListTable items={items} isLoggedIn={isLoggedIn} />
+					{items.length > 0 && (
+						<PaginationLinks currentPage={page} totalPages={totalPages} buildHref={buildHref} />
+					)}
+				</CardContent>
+			</Card>
 		</div>
 	);
 }

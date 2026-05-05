@@ -1,9 +1,26 @@
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { getProblemSet } from "@/actions/problem-sets";
 import { auth } from "@/auth";
-import { ProblemSetAddProblemButton } from "@/components/problem-sets/problem-set-add-problem-button";
-import { ProblemSetEditor } from "@/components/problem-sets/problem-set-editor";
-import { ProblemSetMetaEditForm } from "@/components/problem-sets/problem-set-meta-edit-form";
+import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
+import type { PickerProblem } from "@/components/practices/problem-picker-dialog";
+import { DeleteProblemSetButton } from "@/components/problem-sets/delete-problem-set-button";
+import { ProblemSetForm } from "@/components/problem-sets/problem-set-form";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { ProblemType } from "@/db/schema";
+
+export async function generateMetadata({
+	params,
+}: {
+	params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+	const { id } = await params;
+	const numId = Number.parseInt(id, 10);
+	if (Number.isNaN(numId)) return { title: "문제집을 찾을 수 없습니다" };
+	const detail = await getProblemSet(numId);
+	if (!detail) return { title: "문제집을 찾을 수 없습니다" };
+	return { title: `${detail.set.title} - 편집` };
+}
 
 export default async function EditProblemSetPage({ params }: { params: Promise<{ id: string }> }) {
 	const { id } = await params;
@@ -22,21 +39,48 @@ export default async function EditProblemSetPage({ params }: { params: Promise<{
 		redirect(`/problemsets/${id}`);
 	}
 
+	const initial = {
+		id: detail.set.id,
+		title: detail.set.title,
+		description: detail.set.description,
+		problems: detail.items.map<PickerProblem>((it) => ({
+			id: it.problem.id,
+			title: it.problem.title,
+			problemType: it.problem.problemType as ProblemType,
+			judgeAvailable: it.problem.judgeAvailable,
+			languageRestricted: it.problem.languageRestricted,
+			hasSubtasks: it.problem.hasSubtasks,
+			useFullJudge: it.problem.useFullJudge,
+			isPublic: it.problem.isPublic,
+			tier: it.problem.tier,
+		})),
+	};
+
 	return (
-		<div className="container mx-auto max-w-3xl py-8 space-y-6">
-			<div className="flex items-center justify-between">
-				<h1 className="text-2xl font-semibold">문제집 편집</h1>
-				<ProblemSetAddProblemButton
-					problemSetId={detail.set.id}
-					excludeIds={detail.items.map((i) => i.problem.id)}
-				/>
-			</div>
-			<ProblemSetMetaEditForm
-				id={detail.set.id}
-				initialTitle={detail.set.title}
-				initialDescription={detail.set.description ?? ""}
+		<div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
+			<PageBreadcrumb
+				items={[
+					{ label: "문제집", href: "/problemsets" },
+					{ label: detail.set.title, href: `/problemsets/${id}` },
+					{ label: "편집" },
+				]}
 			/>
-			<ProblemSetEditor problemSetId={detail.set.id} initialItems={detail.items} />
+			<Card>
+				<CardHeader>
+					<CardTitle>문제집 편집</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<ProblemSetForm mode="edit" initial={initial} />
+				</CardContent>
+			</Card>
+			<Card>
+				<CardHeader>
+					<CardTitle>위험 영역</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<DeleteProblemSetButton problemSetId={detail.set.id} />
+				</CardContent>
+			</Card>
 		</div>
 	);
 }

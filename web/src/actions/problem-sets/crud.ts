@@ -9,7 +9,7 @@ import * as svc from "@/lib/services/problem-sets";
 import { assertTurnstile } from "@/lib/turnstile-guard";
 
 export async function createProblemSetAction(
-	input: { title: string; description?: string },
+	input: { title: string; description?: string; problemIds?: number[] },
 	turnstileToken: string
 ) {
 	await assertTurnstile(turnstileToken);
