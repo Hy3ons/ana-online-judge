@@ -1,6 +1,23 @@
 "use client";
 
-import { Plus, X } from "lucide-react";
+import {
+	closestCenter,
+	DndContext,
+	type DragEndEvent,
+	KeyboardSensor,
+	PointerSensor,
+	useSensor,
+	useSensors,
+} from "@dnd-kit/core";
+import {
+	arrayMove,
+	SortableContext,
+	sortableKeyboardCoordinates,
+	useSortable,
+	verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { GripVertical, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import {
@@ -19,9 +36,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PROBLEM_SET_DESCRIPTION_MAX, PROBLEM_SET_TITLE_MAX } from "@/lib/problem-set-constants";
-
-// TODO: drag-and-drop reorder (cf. practice-form pattern; intentional parity).
-// Order is currently insertion order; remove + re-add to rearrange, matching practice-form.
 
 type Props =
 	| { mode: "create" }
@@ -53,6 +67,20 @@ export function ProblemSetForm(props: Props) {
 
 	function removeProblem(id: number) {
 		setSelectedProblems((prev) => prev.filter((p) => p.id !== id));
+	}
+
+	const sensors = useSensors(
+		useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+		useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+	);
+
+	function onDragEnd(event: DragEndEvent) {
+		const { active, over } = event;
+		if (!over || active.id === over.id) return;
+		const oldIndex = selectedProblems.findIndex((p) => p.id === active.id);
+		const newIndex = selectedProblems.findIndex((p) => p.id === over.id);
+		if (oldIndex < 0 || newIndex < 0) return;
+		setSelectedProblems((prev) => arrayMove(prev, oldIndex, newIndex));
 	}
 
 	function onSubmit(e: React.FormEvent) {
@@ -163,37 +191,18 @@ export function ProblemSetForm(props: Props) {
 						아직 선택된 문제가 없습니다. "문제 추가"를 눌러 문제를 검색하고 선택하세요.
 					</div>
 				) : (
-					<div className="rounded-md border divide-y">
-						{selectedProblems.map((p, idx) => (
-							<div key={p.id} className="flex items-center gap-2 px-3 py-2">
-								<span className="font-mono text-xs text-muted-foreground w-6">
-									{String.fromCharCode(65 + (idx % 26))}
-								</span>
-								<span className="font-mono text-xs text-muted-foreground w-12">{p.id}</span>
-								<div className="flex-1 min-w-0">
-									<ProblemTitleCell
-										title={p.title}
-										problemType={p.problemType}
-										judgeAvailable={p.judgeAvailable}
-										languageRestricted={p.languageRestricted}
-										hasSubtasks={p.hasSubtasks}
-										useFullJudge={p.useFullJudge}
-										isPublic={p.isPublic}
-										tier={p.tier}
-									/>
-								</div>
-								<Button
-									type="button"
-									variant="ghost"
-									size="icon-sm"
-									onClick={() => removeProblem(p.id)}
-									aria-label="제거"
-								>
-									<X className="h-4 w-4" />
-								</Button>
+					<DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+						<SortableContext
+							items={selectedProblems.map((p) => p.id)}
+							strategy={verticalListSortingStrategy}
+						>
+							<div className="rounded-md border divide-y">
+								{selectedProblems.map((p, idx) => (
+									<SortableProblemRow key={p.id} problem={p} idx={idx} onRemove={removeProblem} />
+								))}
 							</div>
-						))}
-					</div>
+						</SortableContext>
+					</DndContext>
 				)}
 			</div>
 			{props.mode === "create" && (
@@ -226,5 +235,63 @@ export function ProblemSetForm(props: Props) {
 				confirmLabel="추가"
 			/>
 		</form>
+	);
+}
+
+function SortableProblemRow({
+	problem,
+	idx,
+	onRemove,
+}: {
+	problem: PickerProblem;
+	idx: number;
+	onRemove: (id: number) => void;
+}) {
+	const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+		id: problem.id,
+	});
+	const style = {
+		transform: CSS.Transform.toString(transform),
+		transition,
+		opacity: isDragging ? 0.6 : 1,
+	};
+
+	return (
+		<div ref={setNodeRef} style={style} className="flex items-center gap-2 px-3 py-2">
+			<button
+				type="button"
+				className="cursor-grab text-muted-foreground shrink-0"
+				aria-label="드래그하여 순서 변경"
+				{...attributes}
+				{...listeners}
+			>
+				<GripVertical className="size-4" />
+			</button>
+			<span className="font-mono text-xs text-muted-foreground w-6">
+				{String.fromCharCode(65 + (idx % 26))}
+			</span>
+			<span className="font-mono text-xs text-muted-foreground w-12">{problem.id}</span>
+			<div className="flex-1 min-w-0">
+				<ProblemTitleCell
+					title={problem.title}
+					problemType={problem.problemType}
+					judgeAvailable={problem.judgeAvailable}
+					languageRestricted={problem.languageRestricted}
+					hasSubtasks={problem.hasSubtasks}
+					useFullJudge={problem.useFullJudge}
+					isPublic={problem.isPublic}
+					tier={problem.tier}
+				/>
+			</div>
+			<Button
+				type="button"
+				variant="ghost"
+				size="icon-sm"
+				onClick={() => onRemove(problem.id)}
+				aria-label="제거"
+			>
+				<X className="h-4 w-4" />
+			</Button>
+		</div>
 	);
 }
