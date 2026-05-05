@@ -2,12 +2,20 @@ import { and, asc, count, desc, eq, ilike, inArray, or, sql } from "drizzle-orm"
 import { db } from "@/db";
 import type { ProblemSet } from "@/db/schema";
 import { problemSetItems, problemSetLikes, problemSets, problems, users } from "@/db/schema";
+import {
+	PROBLEM_SET_DESCRIPTION_MAX,
+	PROBLEM_SET_LIST_PAGE_SIZE,
+	PROBLEM_SET_MAX_PER_USER,
+	PROBLEM_SET_TITLE_MAX,
+} from "@/lib/problem-set-constants";
 import { userSolvedProblemFilterSql, userSolvedProblemSql } from "@/lib/services/solved-clause";
 
-export const PROBLEM_SET_MAX_PER_USER = 20;
-export const PROBLEM_SET_TITLE_MAX = 80;
-export const PROBLEM_SET_DESCRIPTION_MAX = 1000;
-export const PROBLEM_SET_LIST_PAGE_SIZE = 20;
+export {
+	PROBLEM_SET_DESCRIPTION_MAX,
+	PROBLEM_SET_LIST_PAGE_SIZE,
+	PROBLEM_SET_MAX_PER_USER,
+	PROBLEM_SET_TITLE_MAX,
+};
 
 export type ListSort = "likes" | "recent" | "problemCount" | "solvedRatio";
 export type ListFilter = "all" | "liked" | "mine";
