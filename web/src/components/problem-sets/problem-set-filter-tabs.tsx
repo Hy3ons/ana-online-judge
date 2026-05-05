@@ -7,7 +7,7 @@ type FilterTab = "all" | "liked" | "mine";
 
 const tabs: { value: FilterTab; label: string; requiresAuth: boolean }[] = [
 	{ value: "all", label: "전체", requiresAuth: false },
-	{ value: "liked", label: "좋아요한", requiresAuth: true },
+	{ value: "liked", label: "좋아요", requiresAuth: true },
 	{ value: "mine", label: "내 문제집", requiresAuth: true },
 ];
 

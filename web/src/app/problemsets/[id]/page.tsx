@@ -6,6 +6,7 @@ import { auth } from "@/auth";
 import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
 import { ProblemSetDetailHeader } from "@/components/problem-sets/problem-set-detail-header";
 import { ProblemListTable } from "@/components/problems/problem-list-table";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default async function ProblemSetDetailPage({
 	params,
@@ -53,11 +54,15 @@ export default async function ProblemSetDetailPage({
 				items={[{ label: "문제집", href: "/problemsets" }, { label: detail.set.title }]}
 			/>
 			<ProblemSetDetailHeader detail={detail} canEdit={canEdit} isLoggedIn={isLoggedIn} />
-			<ProblemListTable
-				problems={orderedProblems}
-				userProblemStatuses={userProblemStatuses}
-				emptyLabel="문제가 없습니다."
-			/>
+			<Card>
+				<CardContent className="p-6">
+					<ProblemListTable
+						problems={orderedProblems}
+						userProblemStatuses={userProblemStatuses}
+						emptyLabel="문제가 없습니다."
+					/>
+				</CardContent>
+			</Card>
 		</div>
 	);
 }
