@@ -24,11 +24,6 @@ export async function ProfileProblemSetsSection({
 			<div className="flex items-center justify-between">
 				<h2 className="text-lg font-semibold">문제집</h2>
 				<div className="flex items-center gap-2">
-					{isOwner && (
-						<Link className="text-sm text-primary hover:underline" href="/problemsets/new">
-							+ 새 문제집
-						</Link>
-					)}
 					{items.length > 0 && (
 						<Link
 							className="text-sm text-muted-foreground hover:underline"

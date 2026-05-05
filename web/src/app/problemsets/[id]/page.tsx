@@ -53,9 +53,9 @@ export default async function ProblemSetDetailPage({
 			<PageBreadcrumb
 				items={[{ label: "문제집", href: "/problemsets" }, { label: detail.set.title }]}
 			/>
-			<ProblemSetDetailHeader detail={detail} canEdit={canEdit} isLoggedIn={isLoggedIn} />
 			<Card>
-				<CardContent className="p-6">
+				<ProblemSetDetailHeader detail={detail} canEdit={canEdit} isLoggedIn={isLoggedIn} />
+				<CardContent>
 					<ProblemListTable
 						problems={orderedProblems}
 						userProblemStatuses={userProblemStatuses}
