@@ -10,6 +10,7 @@ import {
 } from "@/actions/profile";
 import { getSubmissions } from "@/actions/submissions";
 import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
+import { ProfileProblemSetsSection } from "@/components/problem-sets/profile-problem-sets-section";
 import { Button } from "@/components/ui/button";
 import { getSessionInfo } from "@/lib/auth-utils";
 import { ImpersonateButton } from "./impersonate-button";
@@ -80,6 +81,8 @@ export default async function ProfilePage({
 			</div>
 
 			<ProfileHeatmap data={heatmap} />
+
+			<ProfileProblemSetsSection userId={user.id} isOwner={isOwner} />
 
 			<ProfileSubmissions
 				submissions={submissionsData.submissions}

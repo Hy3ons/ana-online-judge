@@ -470,6 +470,66 @@ export const practiceProblems = pgTable(
 	})
 );
 
+// Problem Sets (사용자 큐레이션 문제집)
+export const problemSets = pgTable(
+	"problem_sets",
+	{
+		id: serial("id").primaryKey(),
+		title: text("title").notNull(),
+		description: text("description"),
+		createdBy: integer("created_by")
+			.references(() => users.id, { onDelete: "cascade" })
+			.notNull(),
+		likeCount: integer("like_count").default(0).notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at").defaultNow().notNull(),
+	},
+	(t) => ({
+		createdByIdx: index("problem_sets_created_by_idx").on(t.createdBy),
+		likeCountIdx: index("problem_sets_like_count_idx").on(t.likeCount),
+		titleTrgmIdx: index("problem_sets_title_trgm_idx").using("gin", sql`${t.title} gin_trgm_ops`),
+		descriptionTrgmIdx: index("problem_sets_description_trgm_idx").using(
+			"gin",
+			sql`${t.description} gin_trgm_ops`
+		),
+	})
+);
+
+export const problemSetItems = pgTable(
+	"problem_set_items",
+	{
+		id: serial("id").primaryKey(),
+		problemSetId: integer("problem_set_id")
+			.references(() => problemSets.id, { onDelete: "cascade" })
+			.notNull(),
+		problemId: integer("problem_id")
+			.references(() => problems.id, { onDelete: "cascade" })
+			.notNull(),
+		order: integer("order").notNull(),
+	},
+	(t) => ({
+		setOrderIdx: index("problem_set_items_set_order_idx").on(t.problemSetId, t.order),
+		uniqProblem: uniqueIndex("problem_set_items_uniq").on(t.problemSetId, t.problemId),
+	})
+);
+
+export const problemSetLikes = pgTable(
+	"problem_set_likes",
+	{
+		problemSetId: integer("problem_set_id")
+			.references(() => problemSets.id, { onDelete: "cascade" })
+			.notNull(),
+		userId: integer("user_id")
+			.references(() => users.id, { onDelete: "cascade" })
+			.notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+	},
+	(t) => ({
+		pk: primaryKey({ columns: [t.problemSetId, t.userId] }),
+		userCreatedIdx: index("problem_set_likes_user_created_idx").on(t.userId, t.createdAt),
+	})
+);
+
 // Playground Sessions
 export const playgroundSessions = pgTable(
 	"playground_sessions",
@@ -861,6 +921,12 @@ export type Practice = typeof practices.$inferSelect;
 export type NewPractice = typeof practices.$inferInsert;
 export type PracticeProblem = typeof practiceProblems.$inferSelect;
 export type NewPracticeProblem = typeof practiceProblems.$inferInsert;
+export type ProblemSet = typeof problemSets.$inferSelect;
+export type NewProblemSet = typeof problemSets.$inferInsert;
+export type ProblemSetItem = typeof problemSetItems.$inferSelect;
+export type NewProblemSetItem = typeof problemSetItems.$inferInsert;
+export type ProblemSetLike = typeof problemSetLikes.$inferSelect;
+export type NewProblemSetLike = typeof problemSetLikes.$inferInsert;
 export type WorkshopProblem = typeof workshopProblems.$inferSelect;
 export type NewWorkshopProblem = typeof workshopProblems.$inferInsert;
 export type WorkshopDraft = typeof workshopDrafts.$inferSelect;
