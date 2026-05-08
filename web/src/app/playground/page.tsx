@@ -55,7 +55,7 @@ export default async function PlaygroundPage() {
 	}
 
 	const [sessions, quotas, usage] = await Promise.all([
-		getPlaygroundSessions(userId),
+		getPlaygroundSessions(),
 		getUserQuotas(userId),
 		getPlaygroundUsage(userId),
 	]);
@@ -74,7 +74,7 @@ export default async function PlaygroundPage() {
 							{isAdmin ? `${usage}개 사용 중 · 무제한` : `${usage}/${quota}개 사용 중`}
 						</p>
 					</div>
-					<CreateSessionButton userId={userId} disabled={full} />
+					<CreateSessionButton disabled={full} />
 				</CardHeader>
 				<CardContent>
 					<Table>
@@ -112,7 +112,7 @@ export default async function PlaygroundPage() {
 												: "방금 전"}
 										</TableCell>
 										<TableCell className="text-right">
-											<DeleteSessionButton sessionId={s.id} userId={userId} name={s.name} />
+											<DeleteSessionButton sessionId={s.id} name={s.name} />
 										</TableCell>
 									</TableRow>
 								))

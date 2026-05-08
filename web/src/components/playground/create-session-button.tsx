@@ -18,13 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export function CreateSessionButton({
-	userId,
-	disabled = false,
-}: {
-	userId: number;
-	disabled?: boolean;
-}) {
+export function CreateSessionButton({ disabled = false }: { disabled?: boolean }) {
 	const router = useRouter();
 	const [open, setOpen] = useState(false);
 	const [name, setName] = useState("");
@@ -40,7 +34,7 @@ export function CreateSessionButton({
 		const token = captchaToken;
 		startTransition(async () => {
 			try {
-				await createPlaygroundSession(userId, name || "Untitled", token);
+				await createPlaygroundSession(name || "Untitled", token);
 				toast.success("세션이 생성되었습니다");
 				setName("");
 				setCaptchaToken(null);

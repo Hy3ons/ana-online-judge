@@ -18,15 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 
-export function DeleteSessionButton({
-	sessionId,
-	userId,
-	name,
-}: {
-	sessionId: string;
-	userId: number;
-	name: string;
-}) {
+export function DeleteSessionButton({ sessionId, name }: { sessionId: string; name: string }) {
 	const router = useRouter();
 	const [open, setOpen] = useState(false);
 	const [pending, startTransition] = useTransition();
@@ -34,7 +26,7 @@ export function DeleteSessionButton({
 	function onConfirm() {
 		startTransition(async () => {
 			try {
-				await deletePlaygroundSession(sessionId, userId);
+				await deletePlaygroundSession(sessionId);
 				toast.success("세션이 삭제되었습니다");
 				setOpen(false);
 				router.refresh();

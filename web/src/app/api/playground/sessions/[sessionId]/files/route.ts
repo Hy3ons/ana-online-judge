@@ -12,9 +12,8 @@ export async function GET(
 	}
 
 	const { sessionId } = await params;
-	const userId = parseInt(session.user.id, 10);
 
-	const playgroundSession = await getPlaygroundSession(sessionId, userId);
+	const playgroundSession = await getPlaygroundSession(sessionId);
 	if (!playgroundSession) {
 		return NextResponse.json({ error: "Session not found" }, { status: 404 });
 	}

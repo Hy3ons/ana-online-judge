@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 	} = await request.json();
 
 	// 세션 파일 조회
-	const playgroundSession = await getPlaygroundSession(sessionId, userId);
+	const playgroundSession = await getPlaygroundSession(sessionId);
 	if (!playgroundSession) {
 		return NextResponse.json({ error: "Session not found" }, { status: 404 });
 	}

@@ -18,11 +18,8 @@ import {
 } from "@/lib/storage";
 import { assertTurnstile } from "@/lib/turnstile-guard";
 
-export async function createPlaygroundSession(
-	userId: number,
-	name?: string,
-	turnstileToken?: string
-) {
+export async function createPlaygroundSession(name?: string, turnstileToken?: string) {
+	const { userId } = await requireAuth();
 	await assertTurnstile(turnstileToken);
 	return db.transaction(async (tx) => {
 		await assertCanCreatePlayground(userId, tx);
@@ -37,7 +34,8 @@ export async function createPlaygroundSession(
 	});
 }
 
-export async function getPlaygroundSessions(userId: number) {
+export async function getPlaygroundSessions() {
+	const { userId } = await requireAuth();
 	return db
 		.select()
 		.from(playgroundSessions)
@@ -45,7 +43,8 @@ export async function getPlaygroundSessions(userId: number) {
 		.orderBy(playgroundSessions.updatedAt);
 }
 
-export async function getPlaygroundSession(sessionId: string, userId: number) {
+export async function getPlaygroundSession(sessionId: string) {
+	const { userId } = await requireAuth();
 	const [session] = await db
 		.select()
 		.from(playgroundSessions)
@@ -73,12 +72,12 @@ export async function getPlaygroundSession(sessionId: string, userId: number) {
 	return { ...session, files };
 }
 
-export async function deletePlaygroundSession(sessionId: string, userId: number) {
+export async function deletePlaygroundSession(sessionId: string) {
+	await verifySessionOwnership(sessionId);
+
 	await deleteAllPlaygroundFiles(sessionId);
 
-	await db
-		.delete(playgroundSessions)
-		.where(and(eq(playgroundSessions.id, sessionId), eq(playgroundSessions.userId, userId)));
+	await db.delete(playgroundSessions).where(eq(playgroundSessions.id, sessionId));
 
 	return { success: true };
 }

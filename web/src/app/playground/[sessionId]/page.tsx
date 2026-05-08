@@ -19,9 +19,7 @@ export default async function PlaygroundSessionPage({ params }: PageProps) {
 		redirect("/login");
 	}
 
-	const userId = parseInt(session.user.id, 10);
-
-	const playgroundSession = await getPlaygroundSession(resolvedParams.sessionId, userId);
+	const playgroundSession = await getPlaygroundSession(resolvedParams.sessionId);
 
 	if (!playgroundSession) {
 		return (
