@@ -72,12 +72,9 @@ pub fn parse_meta(content: &str) -> IsolateMeta {
                     meta.wall_time_ms = (t * 1000.0) as u32;
                 }
             }
-            "cg-mem" | "max-rss" => {
-                // cg-mem for cgroups, max-rss for non-cgroups (both in KB)
+            "max-rss" => {
                 if let Ok(m) = value.parse::<u32>() {
-                    if meta.memory_kb == 0 || m > meta.memory_kb {
-                        meta.memory_kb = m;
-                    }
+                    meta.memory_kb = m;
                 }
             }
             "status" => {
@@ -120,7 +117,7 @@ mod tests {
 
     #[test]
     fn test_parse_meta_success() {
-        let content = "time:0.015\ntime-wall:0.020\ncg-mem:1024\nexitcode:0\n";
+        let content = "time:0.015\ntime-wall:0.020\nmax-rss:1024\ncg-mem:9999\nexitcode:0\n";
         let meta = parse_meta(content);
 
         assert_eq!(meta.time_ms, 15);

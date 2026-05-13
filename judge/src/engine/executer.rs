@@ -8,6 +8,9 @@ use tokio::fs;
 /// Global counter for box ID allocation within worker's range
 static BOX_ID_COUNTER: AtomicU32 = AtomicU32::new(0);
 
+/// Extra cgroup memory headroom (MB) added on top of the user's memory limit.
+const CG_MEM_HEADROOM_MB: u32 = 128;
+
 /// Get next box ID for isolate sandbox using worker-aware allocation
 /// Each worker (0-9) gets a dedicated range of 1000 box IDs to prevent collisions
 pub fn next_box_id() -> u32 {
@@ -173,7 +176,7 @@ pub async fn execute_sandboxed(spec: &ExecutionSpec) -> anyhow::Result<Execution
     // Build sandbox limits
     let sandbox_limits = Limits {
         time_ms: spec.limits.time_ms,
-        memory_mb: spec.limits.memory_mb,
+        memory_mb: spec.limits.memory_mb + CG_MEM_HEADROOM_MB,
         processes: 64,
         open_files: 256,
         fsize_kb: 262144,
@@ -280,7 +283,7 @@ pub async fn execute_interactive(
 
     let sandbox_limits = Limits {
         time_ms: user_spec.limits.time_ms,
-        memory_mb: user_spec.limits.memory_mb,
+        memory_mb: user_spec.limits.memory_mb + CG_MEM_HEADROOM_MB,
         processes: 64,
         open_files: 256,
         fsize_kb: 262144,
