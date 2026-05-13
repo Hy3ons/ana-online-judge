@@ -28,8 +28,6 @@ export type GenerateRun = {
 	jobIds: Set<string>;
 	/** Indexed by job_id. */
 	progress: Map<string, GenerateJobProgress>;
-	/** Script lines tagged as `manual` — they complete synchronously. */
-	manualCount: number;
 	/** Generated lines — the ones we wait for. */
 	generatedCount: number;
 	createdAt: number;
@@ -55,7 +53,6 @@ export function createRun(params: {
 	userId: number;
 	draftId: number;
 	jobIds: string[];
-	manualCount: number;
 	pendingProgress: GenerateJobProgress[];
 }): GenerateRun {
 	gc();
@@ -69,7 +66,6 @@ export function createRun(params: {
 		draftId: params.draftId,
 		jobIds: new Set(params.jobIds),
 		progress,
-		manualCount: params.manualCount,
 		generatedCount: params.jobIds.length,
 		createdAt: Date.now(),
 		done: params.jobIds.length === 0,
@@ -81,6 +77,18 @@ export function createRun(params: {
 
 export function getRun(runId: string): GenerateRun | undefined {
 	return runs.get(runId);
+}
+
+/**
+ * Return true if `userId` has any non-`done` run still registered.
+ * Used by `runScript` to enforce one-at-a-time per user.
+ */
+export function hasActiveRunForUser(userId: number): boolean {
+	gc();
+	for (const run of runs.values()) {
+		if (run.userId === userId && !run.done) return true;
+	}
+	return false;
 }
 
 export function recordRunProgress(runId: string, evt: GenerateJobProgress): void {

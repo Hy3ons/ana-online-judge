@@ -27,6 +27,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+
+type InputMode = "file" | "text";
 
 function formatBytes(n: number): string {
 	if (n < 1024) return `${n}B`;
@@ -190,27 +193,45 @@ function AddTestcaseDialog({
 	problemId: number;
 }) {
 	const [pending, startTransition] = useTransition();
+	const [inputMode, setInputMode] = useState<InputMode>("file");
 	const [inputFile, setInputFile] = useState<File | null>(null);
+	const [inputText, setInputText] = useState("");
+	const [outputMode, setOutputMode] = useState<InputMode>("file");
 	const [outputFile, setOutputFile] = useState<File | null>(null);
+	const [outputText, setOutputText] = useState("");
 	const [score, setScore] = useState("0");
 	const [subtaskGroup, setSubtaskGroup] = useState("0");
 
 	function reset() {
+		setInputMode("file");
 		setInputFile(null);
+		setInputText("");
+		setOutputMode("file");
 		setOutputFile(null);
+		setOutputText("");
 		setScore("0");
 		setSubtaskGroup("0");
 	}
 
 	function onSubmit(e: React.FormEvent) {
 		e.preventDefault();
-		if (!inputFile) {
+		if (inputMode === "file" && !inputFile) {
 			toast.error("입력 파일을 선택해주세요");
 			return;
 		}
 		const fd = new FormData();
-		fd.append("inputFile", inputFile);
-		if (outputFile) fd.append("outputFile", outputFile);
+		fd.append("inputMode", inputMode);
+		if (inputMode === "file" && inputFile) {
+			fd.append("inputFile", inputFile);
+		} else {
+			fd.append("inputText", inputText);
+		}
+		fd.append("outputMode", outputMode);
+		if (outputMode === "file" && outputFile) {
+			fd.append("outputFile", outputFile);
+		} else if (outputMode === "text" && outputText.length > 0) {
+			fd.append("outputText", outputText);
+		}
 		fd.append("score", score);
 		fd.append("subtaskGroup", subtaskGroup);
 		startTransition(async () => {
@@ -224,6 +245,8 @@ function AddTestcaseDialog({
 			}
 		});
 	}
+
+	const submitDisabled = pending || (inputMode === "file" && !inputFile);
 
 	return (
 		<Dialog
@@ -242,23 +265,59 @@ function AddTestcaseDialog({
 					</DialogDescription>
 				</DialogHeader>
 				<form onSubmit={onSubmit} className="space-y-4">
-					<div>
-						<Label htmlFor="tcIn">입력 파일</Label>
-						<Input
-							id="tcIn"
-							type="file"
-							onChange={(e) => setInputFile(e.target.files?.[0] ?? null)}
-							disabled={pending}
-						/>
+					<div className="space-y-2">
+						<Label>입력</Label>
+						<Tabs value={inputMode} onValueChange={(v) => setInputMode(v as InputMode)}>
+							<TabsList>
+								<TabsTrigger value="file">파일 업로드</TabsTrigger>
+								<TabsTrigger value="text">직접 입력</TabsTrigger>
+							</TabsList>
+							<TabsContent value="file" className="pt-2">
+								<Input
+									id="tcIn"
+									type="file"
+									onChange={(e) => setInputFile(e.target.files?.[0] ?? null)}
+									disabled={pending}
+								/>
+							</TabsContent>
+							<TabsContent value="text" className="pt-2">
+								<Textarea
+									value={inputText}
+									onChange={(e) => setInputText(e.target.value)}
+									placeholder="여기에 입력 내용을 붙여넣으세요"
+									rows={6}
+									className="font-mono text-xs"
+									disabled={pending}
+								/>
+							</TabsContent>
+						</Tabs>
 					</div>
-					<div>
-						<Label htmlFor="tcOut">출력 파일 (선택)</Label>
-						<Input
-							id="tcOut"
-							type="file"
-							onChange={(e) => setOutputFile(e.target.files?.[0] ?? null)}
-							disabled={pending}
-						/>
+					<div className="space-y-2">
+						<Label>출력 (선택)</Label>
+						<Tabs value={outputMode} onValueChange={(v) => setOutputMode(v as InputMode)}>
+							<TabsList>
+								<TabsTrigger value="file">파일 업로드</TabsTrigger>
+								<TabsTrigger value="text">직접 입력</TabsTrigger>
+							</TabsList>
+							<TabsContent value="file" className="pt-2">
+								<Input
+									id="tcOut"
+									type="file"
+									onChange={(e) => setOutputFile(e.target.files?.[0] ?? null)}
+									disabled={pending}
+								/>
+							</TabsContent>
+							<TabsContent value="text" className="pt-2">
+								<Textarea
+									value={outputText}
+									onChange={(e) => setOutputText(e.target.value)}
+									placeholder="여기에 출력 내용을 붙여넣으세요 (비워두면 정답 미생성)"
+									rows={6}
+									className="font-mono text-xs"
+									disabled={pending}
+								/>
+							</TabsContent>
+						</Tabs>
 					</div>
 					<div className="grid grid-cols-2 gap-3">
 						<div>
@@ -293,7 +352,7 @@ function AddTestcaseDialog({
 						>
 							취소
 						</Button>
-						<Button type="submit" disabled={pending || !inputFile}>
+						<Button type="submit" disabled={submitDisabled}>
 							{pending ? (
 								<>
 									<Loader2 className="h-4 w-4 mr-1 animate-spin" />

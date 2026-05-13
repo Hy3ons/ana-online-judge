@@ -1,24 +1,21 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, count, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { type WorkshopProblem, workshopTestcases } from "@/db/schema";
 import { getRedisClient } from "@/lib/redis";
-import { deleteFile, downloadFile, uploadFile } from "@/lib/storage/operations";
+import { deleteFile } from "@/lib/storage/operations";
 import {
 	createRun,
 	type GenerateJobProgress,
 	type GenerateRun,
+	hasActiveRunForUser,
 	recordRunProgress,
 } from "@/lib/workshop/generate-runs";
-import { workshopDraftManualInboxPath, workshopDraftTestcasePath } from "@/lib/workshop/paths";
-import {
-	collectReferencedGenerators,
-	type ParsedStep,
-	parseGeneratorScript,
-} from "@/lib/workshop/script-parser";
+import { workshopDraftTestcasePath } from "@/lib/workshop/paths";
+import { collectReferencedGenerators, parseGeneratorScript } from "@/lib/workshop/script-parser";
 import { indexByName, listGeneratorsForDraft } from "./workshop-generators";
-import { listInbox } from "./workshop-manual-inbox";
 
+const MAX_TESTCASES_PER_DRAFT = 200;
 const GENERATE_TIME_LIMIT_MS = 30_000;
 const GENERATE_MEMORY_LIMIT_MB = 1024;
 
@@ -27,19 +24,12 @@ type ResourceForJudge = { name: string; storage_path: string };
 export type ScriptRunOutcome = {
 	runId: string;
 	generatedCount: number;
-	manualCount: number;
 };
 
 /**
- * Parse the script text, validate, wipe existing testcases, enqueue
- * workshop_generate jobs for generated lines, and (synchronously) copy inbox
- * files for manual lines. Returns a runId the caller surfaces to the client
- * via SSE.
- *
- * Partial-failure handling: inbox-consumption errors throw immediately AFTER
- * the wipe — the caller surfaces a friendly error, and the user re-uploads.
- * Enqueue-side errors (rare) are caught and recorded in the run's progress
- * as status=failed so the SSE endpoint reports them.
+ * Parse the script text, validate, wipe existing generated testcases, and
+ * enqueue `workshop_generate` jobs. Returns a runId the caller surfaces to
+ * the client via SSE.
  *
  * Known limitation (I6 — wipe-then-enqueue non-atomicity, deferred):
  *   The current flow wipes existing testcase rows + MinIO files BEFORE
@@ -58,33 +48,38 @@ export async function runScript(params: {
 }): Promise<ScriptRunOutcome> {
 	const { problem, userId, draftId } = params;
 
-	// 1) Load generators + inbox listing — needed for validation.
-	const [generatorRows, inbox] = await Promise.all([
-		listGeneratorsForDraft(draftId),
-		listInbox(problem.id, userId),
-	]);
+	if (hasActiveRunForUser(userId)) {
+		throw new Error("이미 진행 중인 스크립트 실행이 있습니다. 완료된 후 다시 시도하세요");
+	}
+
+	// 1) Load generators — needed for validation.
+	const generatorRows = await listGeneratorsForDraft(draftId);
 	const generatorsByName = indexByName(generatorRows);
 
 	// 2) Parse & validate. Throws WorkshopScriptParseError on user error.
 	const steps = parseGeneratorScript(params.script, new Set(generatorRows.map((g) => g.name)));
 
-	// Distinguish manual vs generated up-front, and pre-validate inbox
-	// sufficiency so we fail BEFORE destroying anything.
-	const manualSteps = steps.filter(
-		(s): s is Extract<ParsedStep, { kind: "manual" }> => s.kind === "manual"
-	);
-	if (manualSteps.length > inbox.length) {
-		throw new Error(
-			`수동 인박스에 파일이 ${inbox.length}개 있는데, 스크립트는 ${manualSteps.length}개를 요구합니다. 인박스에 파일을 먼저 업로드하세요.`
-		);
-	}
-	// Also sanity-check every referenced generator exists (the parser already
-	// did this when knownGeneratorNames was provided, so this is a belt-and-
+	// Sanity-check every referenced generator exists (the parser already did
+	// this when knownGeneratorNames was provided, so this is a belt-and-
 	// suspenders check).
 	for (const name of collectReferencedGenerators(steps)) {
 		if (!generatorsByName.has(name)) {
 			throw new Error(`알 수 없는 제너레이터: ${name}`);
 		}
+	}
+
+	// Pre-wipe cap check: existing manual testcases survive, generated rows
+	// are replaced by `steps.length` new rows. Refuse before destroying state
+	// if the post-run count would exceed the per-draft cap.
+	const [{ value: existingManualCount }] = await db
+		.select({ value: count() })
+		.from(workshopTestcases)
+		.where(and(eq(workshopTestcases.draftId, draftId), eq(workshopTestcases.source, "manual")));
+	const totalAfter = existingManualCount + steps.length;
+	if (totalAfter > MAX_TESTCASES_PER_DRAFT) {
+		throw new Error(
+			`스크립트 실행 후 테스트케이스가 ${totalAfter}개가 되어 draft당 한도(${MAX_TESTCASES_PER_DRAFT}개)를 초과합니다`
+		);
 	}
 
 	// 3) WIPE — only `source='generated'` rows. Manual testcases (added via UI
@@ -130,82 +125,60 @@ export async function runScript(params: {
 	const jobIds: string[] = [];
 	const pendingProgress: GenerateJobProgress[] = [];
 
-	let inboxCursor = 0;
 	for (let i = 0; i < steps.length; i++) {
 		const step = steps[i];
 		const index = baseIndex + i + 1;
 		const inputPath = workshopDraftTestcasePath(problem.id, userId, index, "input");
 
-		if (step.kind === "manual") {
-			// Consume next inbox file (FIFO).
-			const entry = inbox[inboxCursor];
-			inboxCursor++;
-			const src = workshopDraftManualInboxPath(problem.id, userId, entry.name);
-			const bytes = await downloadFile(src);
-			await uploadFile(inputPath, bytes, "text/plain");
+		const gen = generatorsByName.get(step.generatorName);
+		if (!gen) {
+			// Should never happen because of the pre-validate above.
+			throw new Error(`제너레이터 조회 실패: ${step.generatorName}`);
+		}
 
-			await db.insert(workshopTestcases).values({
+		const [row] = await db
+			.insert(workshopTestcases)
+			.values({
 				draftId,
 				index,
-				source: "manual",
+				source: "generated",
+				generatorId: gen.id,
+				generatorArgs: step.args.join(" "),
 				inputPath,
 				outputPath: null,
 				subtaskGroup: 0,
 				score: 0,
 				validationStatus: "pending",
-			});
-		} else {
-			// Generated — enqueue workshop_generate.
-			const gen = generatorsByName.get(step.generatorName);
-			if (!gen) {
-				// Should never happen because of the pre-validate above.
-				throw new Error(`제너레이터 조회 실패: ${step.generatorName}`);
-			}
+			})
+			.returning();
 
-			const [row] = await db
-				.insert(workshopTestcases)
-				.values({
-					draftId,
-					index,
-					source: "generated",
-					generatorId: gen.id,
-					generatorArgs: step.args.join(" "),
-					inputPath,
-					outputPath: null,
-					subtaskGroup: 0,
-					score: 0,
-					validationStatus: "pending",
-				})
-				.returning();
+		const jobId = randomUUID();
+		jobIds.push(jobId);
+		pendingProgress.push({
+			job_id: jobId,
+			testcase_index: index,
+			status: "pending",
+		});
 
-			const jobId = randomUUID();
-			jobIds.push(jobId);
-			pendingProgress.push({
-				job_id: jobId,
-				testcase_index: index,
-				status: "pending",
-			});
+		const payload = {
+			job_type: "workshop_generate",
+			job_id: jobId,
+			problem_id: problem.id,
+			user_id: userId,
+			testcase_index: index,
+			language: gen.language,
+			source_path: gen.sourcePath,
+			args: step.args,
+			seed: problem.seed,
+			resources,
+			output_path: inputPath,
+			time_limit_ms: GENERATE_TIME_LIMIT_MS,
+			memory_limit_mb: GENERATE_MEMORY_LIMIT_MB,
+		};
+		await redis.rpush("judge:queue", JSON.stringify(payload));
 
-			const payload = {
-				job_type: "workshop_generate",
-				job_id: jobId,
-				problem_id: problem.id,
-				user_id: userId,
-				testcase_index: index,
-				language: gen.language,
-				source_path: gen.sourcePath,
-				args: step.args,
-				seed: problem.seed,
-				resources,
-				output_path: inputPath,
-				time_limit_ms: GENERATE_TIME_LIMIT_MS,
-				memory_limit_mb: GENERATE_MEMORY_LIMIT_MB,
-			};
-			await redis.rpush("judge:queue", JSON.stringify(payload));
-
-			// Fire-and-forget stash so the SSE endpoint can correlate testcase_index → row.
-			void row;
-		}
+		// Fire-and-forget stash so the SSE endpoint can correlate testcase_index → row.
+		void row;
 	}
 
 	// 6) Create the run registry entry + start Redis subscription.
@@ -214,7 +187,6 @@ export async function runScript(params: {
 		userId,
 		draftId,
 		jobIds,
-		manualCount: steps.length - jobIds.length,
 		pendingProgress,
 	});
 	attachRedisSubscriber(run).catch((err) => {
@@ -224,7 +196,6 @@ export async function runScript(params: {
 	return {
 		runId: run.runId,
 		generatedCount: jobIds.length,
-		manualCount: steps.length - jobIds.length,
 	};
 }
 

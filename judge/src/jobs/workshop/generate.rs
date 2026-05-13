@@ -67,6 +67,8 @@ impl WorkshopGenerateResult {
 
 const STDOUT_PREVIEW_BYTES: usize = 4096;
 
+const MAX_GENERATOR_OUTPUT_BYTES: usize = 256 * 1024 * 1024;
+
 pub async fn process_workshop_generate_job(
     job: &WorkshopGenerateJob,
     storage: &StorageClient,
@@ -246,6 +248,27 @@ pub async fn process_workshop_generate_job(
                 .collect::<String>(),
         )
     };
+
+    // Reject overly-large generator output before uploading.
+    if success && outcome.stdout_bytes.len() > MAX_GENERATOR_OUTPUT_BYTES {
+        return Ok(WorkshopGenerateResult {
+            job_id: job.job_id.clone(),
+            problem_id: job.problem_id,
+            testcase_index: job.testcase_index,
+            success: false,
+            output_path: None,
+            stdout_preview,
+            stderr: format!(
+                "Generator output {} bytes exceeded {} MiB limit",
+                outcome.stdout_bytes.len(),
+                MAX_GENERATOR_OUTPUT_BYTES / (1024 * 1024)
+            ),
+            exit_code: -1,
+            time_ms: outcome.time_ms,
+            memory_kb: outcome.memory_kb,
+            compile_message: None,
+        });
+    }
 
     // 5. On success, upload stdout as the testcase input.
     let output_path = if success {

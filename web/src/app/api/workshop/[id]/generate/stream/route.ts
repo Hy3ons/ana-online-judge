@@ -72,7 +72,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 			write("snapshot", {
 				runId,
 				generatedCount: run.generatedCount,
-				manualCount: run.manualCount,
 				progress: [...run.progress.values()],
 				done: run.done,
 			});

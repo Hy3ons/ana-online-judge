@@ -2,11 +2,53 @@ import { and, asc, desc, eq, inArray, max } from "drizzle-orm";
 import JSZip from "jszip";
 import { db } from "@/db";
 import { type WorkshopTestcase, workshopTestcases } from "@/db/schema";
-import { deleteFile, downloadFile, uploadFile } from "@/lib/storage/operations";
-import { workshopDraftTestcasePath } from "@/lib/workshop/paths";
+import {
+	deleteFile,
+	downloadFile,
+	listObjectsWithDetails,
+	uploadFile,
+} from "@/lib/storage/operations";
+import { workshopDraftBase, workshopDraftTestcasePath } from "@/lib/workshop/paths";
 
 const MAX_TESTCASE_BYTES = 50 * 1024 * 1024; // 50MB per file
+const MAX_TESTCASES_PER_DRAFT = 200;
+const MAX_TOTAL_TESTCASE_BYTES = 512 * 1024 * 1024; // 512MB per draft
 const PREVIEW_BYTE_LIMIT = 200 * 1024; // 200KB for preview
+
+/**
+ * Throw if adding/updating testcases would push the draft over the configured
+ * per-draft caps (count and aggregate stored bytes).
+ *
+ * `newSizesByKey` lists the keys that will be (over)written by the current
+ * operation and their resulting byte sizes. Keys already in MinIO with sizes
+ * absent from this map count toward the total; keys present in the map use
+ * the supplied size (i.e. the simulated post-write state).
+ */
+async function assertTestcaseCapacity(args: {
+	problemId: number;
+	userId: number;
+	draftId: number;
+	addedRows: number;
+	newSizesByKey: Map<string, number>;
+}): Promise<void> {
+	const count = await countTestcasesForDraft(args.draftId);
+	if (count + args.addedRows > MAX_TESTCASES_PER_DRAFT) {
+		throw new Error(
+			`테스트케이스는 draft당 최대 ${MAX_TESTCASES_PER_DRAFT}개까지 추가할 수 있습니다`
+		);
+	}
+	const prefix = `${workshopDraftBase(args.problemId, args.userId)}/testcases/`;
+	const existing = await listObjectsWithDetails(prefix);
+	let total = 0;
+	for (const o of existing) {
+		if (!args.newSizesByKey.has(o.key)) total += o.size;
+	}
+	for (const size of args.newSizesByKey.values()) total += size;
+	if (total > MAX_TOTAL_TESTCASE_BYTES) {
+		const mb = Math.floor(MAX_TOTAL_TESTCASE_BYTES / (1024 * 1024));
+		throw new Error(`테스트케이스 총 용량은 ${mb}MB 를 초과할 수 없습니다`);
+	}
+}
 
 export async function listTestcasesForDraft(draftId: number): Promise<WorkshopTestcase[]> {
 	return db
@@ -61,10 +103,23 @@ export async function createManualTestcase(
 	}
 	const index = await nextManualIndex(input.draftId);
 	const inputPath = workshopDraftTestcasePath(input.problemId, input.userId, index, "input");
+	const outputPath: string | null = input.output
+		? workshopDraftTestcasePath(input.problemId, input.userId, index, "output")
+		: null;
+	const plannedSizes = new Map<string, number>();
+	plannedSizes.set(inputPath, input.input.byteLength);
+	if (input.output && outputPath) {
+		plannedSizes.set(outputPath, input.output.byteLength);
+	}
+	await assertTestcaseCapacity({
+		problemId: input.problemId,
+		userId: input.userId,
+		draftId: input.draftId,
+		addedRows: 1,
+		newSizesByKey: plannedSizes,
+	});
 	await uploadFile(inputPath, input.input, "text/plain");
-	let outputPath: string | null = null;
-	if (input.output) {
-		outputPath = workshopDraftTestcasePath(input.problemId, input.userId, index, "output");
+	if (input.output && outputPath) {
 		await uploadFile(outputPath, input.output, "text/plain");
 	}
 	const [created] = await db
@@ -111,6 +166,26 @@ export async function updateTestcase(params: UpdateTestcaseInput): Promise<Works
 	}
 	if (params.newOutput && params.newOutput.byteLength > MAX_TESTCASE_BYTES) {
 		throw new Error("출력 파일은 최대 50MB까지 업로드 가능합니다");
+	}
+
+	if (params.newInput || params.newOutput instanceof Buffer) {
+		const plannedSizes = new Map<string, number>();
+		if (params.newInput) {
+			plannedSizes.set(existing.inputPath, params.newInput.byteLength);
+		}
+		if (params.newOutput instanceof Buffer) {
+			const targetOutputPath =
+				existing.outputPath ??
+				workshopDraftTestcasePath(params.problemId, params.userId, existing.index, "output");
+			plannedSizes.set(targetOutputPath, params.newOutput.byteLength);
+		}
+		await assertTestcaseCapacity({
+			problemId: params.problemId,
+			userId: params.userId,
+			draftId: params.draftId,
+			addedRows: 0,
+			newSizesByKey: plannedSizes,
+		});
 	}
 
 	if (params.newInput) {
@@ -327,6 +402,28 @@ export async function bulkCreateManualTestcases(params: {
 	}
 
 	const startIndex = await nextManualIndex(params.draftId);
+
+	const plannedSizes = new Map<string, number>();
+	for (let i = 0; i < params.pairs.length; i++) {
+		const assignedIndex = startIndex + i;
+		plannedSizes.set(
+			workshopDraftTestcasePath(params.problemId, params.userId, assignedIndex, "input"),
+			params.pairs[i].input.byteLength
+		);
+		if (params.pairs[i].output) {
+			plannedSizes.set(
+				workshopDraftTestcasePath(params.problemId, params.userId, assignedIndex, "output"),
+				(params.pairs[i].output as Buffer).byteLength
+			);
+		}
+	}
+	await assertTestcaseCapacity({
+		problemId: params.problemId,
+		userId: params.userId,
+		draftId: params.draftId,
+		addedRows: params.pairs.length,
+		newSizesByKey: plannedSizes,
+	});
 	const uploaded: WorkshopTestcase[] = [];
 	const uploadedPaths: string[] = [];
 	try {

@@ -15,22 +15,18 @@
  *   arg := literal | expr
  *   expr := "[" var (("*"|"+"|"-"|"/") int)? "]"
  *
- * `manual` is a distinguished keyword statement with no args.
- *
  * Output is a flat list of ParsedStep in the order they should be executed
  * (for blocks are expanded here — the runner sees only flat steps).
  */
 
-export type ParsedStep =
-	| { kind: "manual"; line: number }
-	| {
-			kind: "generated";
-			generatorName: string;
-			args: string[];
-			line: number; // original script line (1-based)
-			loopVar?: string; // for diagnostics only
-			loopValue?: number;
-	  };
+export type ParsedStep = {
+	kind: "generated";
+	generatorName: string;
+	args: string[];
+	line: number; // original script line (1-based)
+	loopVar?: string; // for diagnostics only
+	loopValue?: number;
+};
 
 export type ParseError = {
 	line: number; // 1-based
@@ -214,17 +210,6 @@ function parseStmt(
 	if (tokens.length === 0) return null;
 
 	const head = tokens[0];
-
-	if (head === "manual") {
-		if (tokens.length > 1) {
-			errors.push({
-				line: lineNo,
-				message: "`manual` does not accept arguments.",
-			});
-			return null;
-		}
-		return { kind: "manual", line: lineNo };
-	}
 
 	if (!IDENT_RE.test(head)) {
 		errors.push({ line: lineNo, message: `Invalid generator name: "${head}".` });

@@ -111,7 +111,7 @@ export function ScriptPanel({ problemId, initialScript }: Props) {
 					return;
 				}
 				setRunId(result.runId);
-				toast.success(`실행 시작: 생성 ${result.generatedCount}개, 수동 ${result.manualCount}개`);
+				toast.success(`실행 시작: 생성 ${result.generatedCount}개`);
 				if (result.generatedCount === 0) {
 					setDone(true);
 				} else {

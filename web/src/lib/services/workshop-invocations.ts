@@ -60,10 +60,36 @@ export type PreconditionFailure = {
 		| "missing_outputs"
 		| "invalid_selection"
 		| "no_solutions_selected"
-		| "no_testcases_selected";
+		| "no_testcases_selected"
+		| "matrix_too_large"
+		| "concurrent_invocation_running";
 	message: string;
 	missingTestcaseIds?: number[];
 };
+
+const MAX_INVOCATION_MATRIX_SIZE = 1000;
+const MAX_CONCURRENT_INVOCATIONS_PER_USER = 1;
+
+/**
+ * Throw a precondition error if the user already has a running invocation in
+ * any workshop draft. Workshop invocations enqueue up to NxM judge jobs, so
+ * one-at-a-time prevents a single user from saturating the judge queue.
+ */
+async function assertNoRunningInvocation(userId: number): Promise<void> {
+	const running = await db
+		.select({ id: workshopInvocations.id })
+		.from(workshopInvocations)
+		.where(
+			and(eq(workshopInvocations.createdBy, userId), eq(workshopInvocations.status, "running"))
+		)
+		.limit(MAX_CONCURRENT_INVOCATIONS_PER_USER);
+	if (running.length >= MAX_CONCURRENT_INVOCATIONS_PER_USER) {
+		throw new InvocationPreconditionError({
+			reason: "concurrent_invocation_running",
+			message: "이미 진행 중인 인보케이션이 있습니다. 완료된 후 다시 시도하세요",
+		});
+	}
+}
 
 export class InvocationPreconditionError extends Error {
 	public readonly failure: PreconditionFailure;
@@ -89,6 +115,13 @@ export async function checkInvocationPrecondition(params: {
 	}
 	if (selectedTestcaseIds.length === 0) {
 		return { reason: "no_testcases_selected", message: "실행할 테스트를 선택하세요" };
+	}
+	const matrixSize = selectedSolutionIds.length * selectedTestcaseIds.length;
+	if (matrixSize > MAX_INVOCATION_MATRIX_SIZE) {
+		return {
+			reason: "matrix_too_large",
+			message: `한 번에 실행할 수 있는 (솔루션 × 테스트케이스)는 최대 ${MAX_INVOCATION_MATRIX_SIZE}개입니다 (현재 ${matrixSize}개)`,
+		};
 	}
 
 	const [main] = await db
@@ -204,6 +237,8 @@ export async function createInvocation(params: {
 	selectedTestcaseIds: number[];
 }): Promise<CreateInvocationResult> {
 	const { problemId, userId, draftId, selectedSolutionIds, selectedTestcaseIds } = params;
+
+	await assertNoRunningInvocation(userId);
 
 	const failure = await checkInvocationPrecondition({
 		draftId,
@@ -337,6 +372,8 @@ export async function generateAnswers(params: {
 }): Promise<CreateInvocationResult> {
 	const { problemId, userId, draftId } = params;
 
+	await assertNoRunningInvocation(userId);
+
 	const [main] = await db
 		.select()
 		.from(workshopSolutions)
@@ -357,6 +394,12 @@ export async function generateAnswers(params: {
 		throw new InvocationPreconditionError({
 			reason: "no_testcases",
 			message: "테스트케이스가 없습니다",
+		});
+	}
+	if (testcases.length > MAX_INVOCATION_MATRIX_SIZE) {
+		throw new InvocationPreconditionError({
+			reason: "matrix_too_large",
+			message: `한 번에 정답 생성 가능한 테스트케이스는 최대 ${MAX_INVOCATION_MATRIX_SIZE}개입니다 (현재 ${testcases.length}개)`,
 		});
 	}
 

@@ -28,16 +28,35 @@ export async function createWorkshopManualTestcase(problemId: number, formData: 
 	const { userId, isAdmin } = await requireWorkshopAccess();
 	const draft = await getActiveDraftForUser(problemId, userId, isAdmin);
 
-	const inputFile = formData.get("inputFile");
-	const outputFile = formData.get("outputFile");
-	if (!(inputFile instanceof File)) {
-		throw new Error("입력 파일을 선택해주세요");
+	const inputMode = formData.get("inputMode");
+	let input: Buffer;
+	if (inputMode === "text") {
+		const inputText = formData.get("inputText");
+		if (typeof inputText !== "string") {
+			throw new Error("입력 내용을 입력해주세요");
+		}
+		input = Buffer.from(inputText, "utf-8");
+	} else {
+		const inputFile = formData.get("inputFile");
+		if (!(inputFile instanceof File) || inputFile.size === 0) {
+			throw new Error("입력 파일을 선택해주세요");
+		}
+		input = Buffer.from(await inputFile.arrayBuffer());
 	}
-	const input = Buffer.from(await inputFile.arrayBuffer());
-	const output =
-		outputFile instanceof File && outputFile.size > 0
-			? Buffer.from(await outputFile.arrayBuffer())
-			: null;
+
+	const outputMode = formData.get("outputMode");
+	let output: Buffer | null = null;
+	if (outputMode === "text") {
+		const outputText = formData.get("outputText");
+		if (typeof outputText === "string" && outputText.length > 0) {
+			output = Buffer.from(outputText, "utf-8");
+		}
+	} else {
+		const outputFile = formData.get("outputFile");
+		if (outputFile instanceof File && outputFile.size > 0) {
+			output = Buffer.from(await outputFile.arrayBuffer());
+		}
+	}
 
 	const created = await svc.createManualTestcase({
 		problemId,

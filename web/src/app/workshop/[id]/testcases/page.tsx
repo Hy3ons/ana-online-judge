@@ -1,10 +1,8 @@
 import { notFound, redirect } from "next/navigation";
-import { listWorkshopManualInbox } from "@/actions/workshop/manual-inbox";
 import { getWorkshopProblemWithDraft } from "@/actions/workshop/problems";
 import { getWorkshopScript } from "@/actions/workshop/script";
 import { listWorkshopTestcases } from "@/actions/workshop/testcases";
 import { WorkshopProblemNav } from "../nav";
-import { InboxPanel } from "./inbox-panel";
 import { ScriptPanel } from "./script-panel";
 import { TestcasesClient } from "./testcases-client";
 
@@ -25,10 +23,9 @@ export default async function WorkshopTestcasesPage({
 		notFound();
 	}
 	const { problem } = data;
-	const [{ testcases }, { script }, { files: inboxFiles }] = await Promise.all([
+	const [{ testcases }, { script }] = await Promise.all([
 		listWorkshopTestcases(problem.id),
 		getWorkshopScript(problem.id),
-		listWorkshopManualInbox(problem.id),
 	]);
 
 	return (
@@ -39,7 +36,6 @@ export default async function WorkshopTestcasesPage({
 			</div>
 			<WorkshopProblemNav problemId={problem.id} />
 			<ScriptPanel problemId={problem.id} initialScript={script} />
-			<InboxPanel problemId={problem.id} initial={inboxFiles} />
 			<section className="border rounded p-4">
 				<h2 className="text-lg font-semibold mb-3">테스트케이스 목록</h2>
 				<TestcasesClient

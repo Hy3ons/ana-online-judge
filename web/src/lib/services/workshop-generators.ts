@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, count, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { type WorkshopGenerator, workshopGenerators } from "@/db/schema";
 import { deleteFile, downloadFile, uploadFile } from "@/lib/storage/operations";
@@ -8,6 +8,7 @@ import {
 } from "@/lib/workshop/paths";
 
 const MAX_GENERATOR_BYTES = 2 * 1024 * 1024; // 2MB — more than enough for source
+const MAX_GENERATORS_PER_DRAFT = 30;
 const NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]{0,63}$/;
 const RESERVED_NAMES = new Set(["main", "checker", "validator"]);
 
@@ -101,6 +102,16 @@ export async function createGenerator(params: {
 		.limit(1);
 	if (collision) {
 		throw new Error("같은 이름의 제너레이터가 이미 존재합니다");
+	}
+
+	const [{ value: existingCount }] = await db
+		.select({ value: count() })
+		.from(workshopGenerators)
+		.where(eq(workshopGenerators.draftId, params.draftId));
+	if (existingCount >= MAX_GENERATORS_PER_DRAFT) {
+		throw new Error(
+			`제너레이터는 draft당 최대 ${MAX_GENERATORS_PER_DRAFT}개까지 등록할 수 있습니다`
+		);
 	}
 
 	const ext = langExt(params.language);

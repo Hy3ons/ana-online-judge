@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, count, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { type Language, type WorkshopSolution, workshopSolutions } from "@/db/schema";
 import { getFileExtension } from "@/lib/languages";
@@ -7,6 +7,7 @@ import type { WorkshopExpectedVerdict } from "@/lib/workshop/expected-verdict";
 import { workshopDraftSolutionPath } from "@/lib/workshop/paths";
 
 const MAX_SOLUTION_BYTES = 2 * 1024 * 1024; // 2MB source file cap
+const MAX_SOLUTIONS_PER_DRAFT = 30;
 const NAME_PATTERN = /^[\w\-.]{1,64}$/;
 
 function assertValidName(name: string): void {
@@ -86,6 +87,14 @@ export async function createSolution(input: CreateSolutionInput): Promise<Worksh
 			)
 			.limit(1);
 		if (dup) throw new Error("같은 이름의 솔루션이 이미 존재합니다");
+
+		const [{ value: existingCount }] = await tx
+			.select({ value: count() })
+			.from(workshopSolutions)
+			.where(eq(workshopSolutions.draftId, input.draftId));
+		if (existingCount >= MAX_SOLUTIONS_PER_DRAFT) {
+			throw new Error(`솔루션은 draft당 최대 ${MAX_SOLUTIONS_PER_DRAFT}개까지 등록할 수 있습니다`);
+		}
 
 		await uploadFile(sourcePath, Buffer.from(input.source, "utf-8"), "text/plain");
 

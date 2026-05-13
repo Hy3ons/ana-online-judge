@@ -29,7 +29,6 @@ import * as workshopCheckerSvc from "./workshop-checker";
 import * as workshopGeneratorsSvc from "./workshop-generators";
 import * as workshopGroupsSvc from "./workshop-groups";
 import * as workshopInvocationsSvc from "./workshop-invocations";
-import * as workshopInboxSvc from "./workshop-manual-inbox";
 import * as workshopMembersSvc from "./workshop-members";
 import * as workshopProblemsSvc from "./workshop-problems";
 import * as workshopPublishSvc from "./workshop-publish";
@@ -2288,88 +2287,6 @@ export const endpoints: Endpoint[] = [
 			const problemId = parseInt(pathParams.id, 10);
 			const draft = await getActiveDraftForUser(problemId, q.userId, true);
 			await workshopResourcesSvc.deleteResource(draft.id, parseInt(pathParams.resourceId, 10));
-			return { ok: true };
-		},
-	},
-
-	// ---------- Manual Inbox (specific paths first) ----------
-	{
-		type: "json",
-		method: "PUT",
-		path: "workshop/problems/:id/manual-inbox/rename",
-		description: "Rename an inbox file",
-		body: z.object({
-			userId: z.number().int(),
-			oldName: z.string().min(1),
-			newName: z.string().min(1),
-		}),
-		handler: async ({ pathParams, body }) => {
-			const b = body as { userId: number; oldName: string; newName: string };
-			await workshopInboxSvc.renameInboxFile({
-				problemId: parseInt(pathParams.id, 10),
-				userId: b.userId,
-				oldName: b.oldName,
-				newName: b.newName,
-			});
-			return { ok: true };
-		},
-	},
-	{
-		type: "json",
-		method: "GET",
-		path: "workshop/problems/:id/manual-inbox",
-		description: "List inbox files for a user",
-		query: z.object({ userId: z.coerce.number().int() }),
-		handler: async ({ pathParams, query }) => {
-			const q = query as { userId: number };
-			const files = await workshopInboxSvc.listInbox(parseInt(pathParams.id, 10), q.userId);
-			return { files };
-		},
-	},
-	{
-		type: "custom",
-		method: "POST",
-		path: "workshop/problems/:id/manual-inbox",
-		description: "Upload an inbox file (FormData: userId, file, name?)",
-		handler: async (request, pathParams) => {
-			const problemId = parseInt(pathParams.id, 10);
-			const formData = await request.formData();
-			const userIdRaw = formData.get("userId");
-			if (typeof userIdRaw !== "string") {
-				return Response.json({ error: "userId is required" }, { status: 400 });
-			}
-			const userId = parseInt(userIdRaw, 10);
-			if (!Number.isFinite(userId)) {
-				return Response.json({ error: "userId must be an integer" }, { status: 400 });
-			}
-			const file = formData.get("file");
-			if (!(file instanceof File) || file.size === 0) {
-				return Response.json({ error: "file is required" }, { status: 400 });
-			}
-			const nameRaw = formData.get("name");
-			const filename = typeof nameRaw === "string" && nameRaw.trim() ? nameRaw.trim() : file.name;
-			const created = await workshopInboxSvc.uploadInboxFile({
-				problemId,
-				userId,
-				filename,
-				content: Buffer.from(await file.arrayBuffer()),
-			});
-			return Response.json(created, { status: 201 });
-		},
-	},
-	{
-		type: "json",
-		method: "DELETE",
-		path: "workshop/problems/:id/manual-inbox",
-		description: "Delete an inbox file (filename in query)",
-		query: z.object({ userId: z.coerce.number().int(), filename: z.string().min(1) }),
-		handler: async ({ pathParams, query }) => {
-			const q = query as { userId: number; filename: string };
-			await workshopInboxSvc.deleteInboxFile({
-				problemId: parseInt(pathParams.id, 10),
-				userId: q.userId,
-				filename: q.filename,
-			});
 			return { ok: true };
 		},
 	},

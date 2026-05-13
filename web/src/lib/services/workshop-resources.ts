@@ -1,10 +1,11 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, count, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { type WorkshopResource, workshopResources } from "@/db/schema";
 import { deleteFile, downloadFile, uploadFile } from "@/lib/storage/operations";
 import { workshopDraftResourcePath } from "@/lib/workshop/paths";
 
 const MAX_RESOURCE_BYTES = 5 * 1024 * 1024; // 5MB per file
+const MAX_RESOURCES_PER_DRAFT = 30;
 
 const NAME_PATTERN = /^[\w\-. ]{1,128}$/;
 const RESERVED_BASENAMES = new Set(["main", "checker", "validator"]);
@@ -75,14 +76,26 @@ export async function uploadResource(params: {
 		throw new Error("리소스 파일은 최대 5MB까지 업로드 가능합니다");
 	}
 	assertTextContent(content, name);
-	const path = workshopDraftResourcePath(problemId, userId, name);
-	await uploadFile(path, content, "application/octet-stream");
 
 	const [existing] = await db
 		.select()
 		.from(workshopResources)
 		.where(and(eq(workshopResources.draftId, draftId), eq(workshopResources.name, name)))
 		.limit(1);
+	if (!existing) {
+		const [{ value: existingCount }] = await db
+			.select({ value: count() })
+			.from(workshopResources)
+			.where(eq(workshopResources.draftId, draftId));
+		if (existingCount >= MAX_RESOURCES_PER_DRAFT) {
+			throw new Error(
+				`리소스는 draft당 최대 ${MAX_RESOURCES_PER_DRAFT}개까지 업로드할 수 있습니다`
+			);
+		}
+	}
+
+	const path = workshopDraftResourcePath(problemId, userId, name);
+	await uploadFile(path, content, "application/octet-stream");
 	if (existing) {
 		const [updated] = await db
 			.update(workshopResources)
