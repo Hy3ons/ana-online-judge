@@ -21,7 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PaginationLinks } from "@/components/ui/pagination-links";
 import { Textarea } from "@/components/ui/textarea";
 import type { TagWithPath } from "@/lib/services/algorithm-tags";
-import { tierLabel } from "@/lib/tier";
+import { tierColor, tierLabel } from "@/lib/tier";
 
 interface TierVotePanelProps {
 	problemId: number;
@@ -42,8 +42,23 @@ const DEFAULT_SLIDER_POS = 15; // 미투표 사용자의 기본 슬라이더 위
 
 const MAX_TAGS_PER_VOTE = 10;
 
-// 슬라이더 그룹 표시용 라벨 (총 7구간: NR + 6 tier groups)
-const GROUP_LABELS = ["N/R", "B", "S", "G", "P", "D", "R"] as const;
+// 슬라이더 트랙용 티어 색상 그라데이션.
+const TIER_TRACK_GRADIENT = (() => {
+	const segments = [
+		{ start: 0, end: 1, color: tierColor(-1, "problem") }, // N/R
+		{ start: 1, end: 6, color: tierColor(1, "problem") }, // Bronze
+		{ start: 6, end: 11, color: tierColor(6, "problem") }, // Silver
+		{ start: 11, end: 16, color: tierColor(11, "problem") }, // Gold
+		{ start: 16, end: 21, color: tierColor(16, "problem") }, // Platinum
+		{ start: 21, end: 26, color: tierColor(21, "problem") }, // Diamond
+		{ start: 26, end: 31, color: tierColor(26, "problem") }, // Ruby
+	];
+	const stops = segments.flatMap((s) => [
+		`${s.color} ${((s.start - 0.3) / 30.5) * 100}%`,
+		`${s.color} ${((s.end + 0.3) / 30.5) * 100}%`,
+	]);
+	return `linear-gradient(to right, ${stops.join(", ")})`;
+})();
 
 export function TierVotePanel({ problemId, currentTier, tierUpdatedAt, data }: TierVotePanelProps) {
 	const [sliderValue, setSliderValue] = useState<number>(
@@ -191,7 +206,7 @@ export function TierVotePanel({ problemId, currentTier, tierUpdatedAt, data }: T
 							<span>{previewLabel}</span>
 						</div>
 
-						{/* 슬라이더 (0=N/R, 1~30=Bronze 5~Ruby 1) */}
+						{/* 슬라이더 (0=N/R, 1~30=Bronze 5~Ruby 1) — 트랙에 티어 그룹 색상 칠 */}
 						<Slider.Root
 							className="relative flex w-full touch-none select-none items-center py-2"
 							min={0}
@@ -201,20 +216,12 @@ export function TierVotePanel({ problemId, currentTier, tierUpdatedAt, data }: T
 							onValueChange={(v) => setSliderValue(v[0])}
 							aria-label="난이도 선택 슬라이더"
 						>
-							<Slider.Track className="relative h-2 w-full grow overflow-hidden rounded-full bg-muted">
-								<Slider.Range className="absolute h-full bg-primary" />
-							</Slider.Track>
+							<Slider.Track
+								className="relative h-3 w-full grow overflow-hidden rounded-full"
+								style={{ background: TIER_TRACK_GRADIENT }}
+							/>
 							<Slider.Thumb className="block h-5 w-5 rounded-full border-2 border-primary bg-background shadow transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" />
 						</Slider.Root>
-
-						{/* 그룹 레이블 (NR / B / S / G / P / D / R) */}
-						<div className="grid grid-cols-7 text-[10px] text-muted-foreground">
-							{GROUP_LABELS.map((label) => (
-								<span key={label} className="text-center">
-									{label}
-								</span>
-							))}
-						</div>
 
 						<Textarea
 							value={comment}
@@ -278,12 +285,6 @@ export function TierVotePanel({ problemId, currentTier, tierUpdatedAt, data }: T
 								</Button>
 							)}
 						</div>
-					</div>
-				)}
-
-				{!data.canViewVotes && totalVotes > 0 && (
-					<div className="rounded-md bg-muted px-4 py-3 text-sm text-muted-foreground">
-						이 문제를 푼 사용자만 다른 사용자의 의견을 볼 수 있습니다.
 					</div>
 				)}
 
