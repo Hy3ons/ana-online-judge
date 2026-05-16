@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 };
 
 type Sort = GetProblemsSort;
-type Filter = "all" | "unsolved" | "solved" | "wrong" | "new";
+type Filter = "all" | "unsolved" | "solved" | "wrong" | "new" | "favorite";
 
 export default async function ProblemsPage({
 	searchParams,

@@ -21,6 +21,7 @@ import {
 	users,
 } from "@/db/schema";
 import { col, tbl } from "@/lib/db-helpers";
+import { userFavoritedProblemFilterSql } from "@/lib/services/problem-favorites";
 import { PROBLEM_TABLE_SORT_KEYS, type SortOrder } from "@/lib/services/problem-list-sort";
 import { parseProblemSearchQuery } from "@/lib/services/problem-search-query";
 import {
@@ -358,7 +359,7 @@ export async function getProblems(
 				search?: string;
 				sort?: GetProblemsSort;
 				order?: SortOrder;
-				filter?: "all" | "unsolved" | "solved" | "wrong" | "new";
+				filter?: "all" | "unsolved" | "solved" | "wrong" | "new" | "favorite";
 				userId?: number;
 				includeUnavailable?: boolean;
 				sourceId?: number;
@@ -539,6 +540,8 @@ export async function getProblems(
 			conditions.push(sql`NOT ${userSolvedProblemFilterSql(userId)}`);
 		} else if (filter === "unsolved") {
 			conditions.push(sql`NOT ${userSolvedProblemFilterSql(userId)}`);
+		} else if (filter === "favorite") {
+			conditions.push(userFavoritedProblemFilterSql(userId));
 		}
 	}
 

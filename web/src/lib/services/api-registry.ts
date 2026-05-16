@@ -216,7 +216,7 @@ export const endpoints: Endpoint[] = [
 			search: z.string().optional(),
 			sort: z.enum(adminProblems.GET_PROBLEMS_SORT_KEYS).optional(),
 			order: z.enum(["asc", "desc"]).optional(),
-			filter: z.enum(["all", "unsolved", "solved", "wrong", "new"]).optional(),
+			filter: z.enum(["all", "unsolved", "solved", "wrong", "new", "favorite"]).optional(),
 			userId: z.coerce.number().int().optional(),
 			includeUnavailable: z.coerce.boolean().optional(),
 			isAdmin: z.coerce.boolean().default(false),

@@ -251,6 +251,25 @@ export const problemConfirmedTags = pgTable(
 	})
 );
 
+// Problem Favorites — 사용자가 즐겨찾기한 문제
+export const problemFavorites = pgTable(
+	"problem_favorites",
+	{
+		problemId: integer("problem_id")
+			.references(() => problems.id, { onDelete: "cascade" })
+			.notNull(),
+		userId: integer("user_id")
+			.references(() => users.id, { onDelete: "cascade" })
+			.notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+	},
+	(t) => ({
+		pk: primaryKey({ columns: [t.userId, t.problemId] }),
+		problemIdx: index("problem_favorites_problem_idx").on(t.problemId),
+		userCreatedIdx: index("problem_favorites_user_created_idx").on(t.userId, t.createdAt),
+	})
+);
+
 // Problem Authors (junction table) - 문제 출제자 (여러 명)
 export const problemAuthors = pgTable(
 	"problem_authors",
@@ -897,6 +916,8 @@ export type ProblemAuthor = typeof problemAuthors.$inferSelect;
 export type NewProblemAuthor = typeof problemAuthors.$inferInsert;
 export type ProblemReviewer = typeof problemReviewers.$inferSelect;
 export type NewProblemReviewer = typeof problemReviewers.$inferInsert;
+export type ProblemFavorite = typeof problemFavorites.$inferSelect;
+export type NewProblemFavorite = typeof problemFavorites.$inferInsert;
 export type ProblemVote = typeof problemVotes.$inferSelect;
 export type NewProblemVote = typeof problemVotes.$inferInsert;
 export type Testcase = typeof testcases.$inferSelect;

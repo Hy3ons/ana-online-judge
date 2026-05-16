@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-type FilterTab = "all" | "unsolved" | "solved" | "wrong" | "new";
+type FilterTab = "all" | "unsolved" | "solved" | "wrong" | "new" | "favorite";
 
 const tabs: { value: FilterTab; label: string; requiresAuth: boolean }[] = [
 	{ value: "all", label: "전체", requiresAuth: false },
@@ -11,6 +11,7 @@ const tabs: { value: FilterTab; label: string; requiresAuth: boolean }[] = [
 	{ value: "solved", label: "맞은 문제", requiresAuth: true },
 	{ value: "wrong", label: "틀린 문제", requiresAuth: true },
 	{ value: "new", label: "새로 추가된 문제", requiresAuth: false },
+	{ value: "favorite", label: "즐겨찾기한 문제", requiresAuth: true },
 ];
 
 const validFilters = new Set<string>(tabs.map((t) => t.value));

@@ -2,12 +2,14 @@ import { CheckCircle2, Download, Pencil } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { isProblemFavorited } from "@/actions/problem-favorites";
 import { getProblemRanking, getProblemStats } from "@/actions/problem-stats";
 import { getProblemVotesData } from "@/actions/problem-votes";
 import { getProblemById, getProblemTestcaseCount } from "@/actions/problems";
 import { getSubmissions, getUserProblemStatuses } from "@/actions/submissions";
 import { auth } from "@/auth";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
+import { FavoriteStarButton } from "@/components/problems/favorite-star-button";
 import { LanguageSwitcherClient } from "@/components/problems/language-switcher-client";
 import { ProblemTypeBadges } from "@/components/problems/problem-type-badges";
 import { TierBadge } from "@/components/tier/tier-badge";
@@ -73,6 +75,7 @@ export default async function ProblemDetailPage({ params, searchParams }: Props)
 		userStatus,
 		votePanelData,
 		testcaseCountResult,
+		favorited,
 	] = await Promise.all([
 		getProblemStats(problemId),
 		currentUserId
@@ -98,6 +101,7 @@ export default async function ProblemDetailPage({ params, searchParams }: Props)
 		currentUserId ? getUserProblemStatuses([problemId], currentUserId) : Promise.resolve(new Map()),
 		getProblemVotesData(problemId),
 		problem.useFullJudge ? getProblemTestcaseCount(problem.id) : Promise.resolve(0),
+		currentUserId ? isProblemFavorited(problemId) : Promise.resolve(false),
 	]);
 
 	const totalTestcases = testcaseCountResult;
@@ -152,6 +156,11 @@ export default async function ProblemDetailPage({ params, searchParams }: Props)
 						</Button>
 					)}
 				</div>
+				<FavoriteStarButton
+					problemId={problem.id}
+					initialFavorited={favorited}
+					isLoggedIn={currentUserId !== null}
+				/>
 			</div>
 			{problem.problemType === "anigma" && problem.referenceCodePath && (
 				<>
