@@ -1,4 +1,3 @@
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { type TierKind, tierIconFile, tierLabel } from "@/lib/tier";
 import { cn } from "@/lib/utils";
 
@@ -26,26 +25,16 @@ export function TierBadge({
 	const full = tierLabel(tier, kind);
 	const px = SIZE_PX[size];
 
-	const icon = (
+	return (
 		// biome-ignore lint/performance/noImgElement: SVG 정적 자산이라 next/image 최적화 효과 없음
 		<img
 			src={`/tier-icons/${file}.svg`}
 			alt={full}
+			title={showTooltip ? full : undefined}
 			width={px}
 			height={px}
 			className={cn("inline-block select-none", className)}
 			draggable={false}
 		/>
-	);
-
-	if (!showTooltip) return icon;
-
-	return (
-		<TooltipProvider>
-			<Tooltip>
-				<TooltipTrigger asChild>{icon}</TooltipTrigger>
-				<TooltipContent>{full}</TooltipContent>
-			</Tooltip>
-		</TooltipProvider>
 	);
 }
