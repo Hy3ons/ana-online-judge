@@ -31,7 +31,7 @@ export async function listPublicUsers(input: {
 	const sort = input.sort ?? "rating";
 	const order = input.order ?? "desc";
 
-	const conditions: SQL[] = [eq(users.isActive, true)];
+	const conditions: SQL[] = [eq(users.isActive, true), eq(users.contestAccountOnly, false)];
 	if (input.search) {
 		const term = `%${input.search.trim()}%`;
 		conditions.push(or(ilike(users.username, term), ilike(users.name, term))!);
