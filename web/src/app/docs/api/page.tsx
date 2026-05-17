@@ -1,10 +1,8 @@
-import { ChevronRight } from "lucide-react";
 import type { Metadata } from "next";
 import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
-import { Badge } from "@/components/ui/badge";
-import type { EndpointContract, ParamDef } from "@/lib/services/api-contract";
 import { generateContracts } from "@/lib/services/api-contract";
 import { publicEndpoints } from "@/lib/services/public-api-registry";
+import { EndpointCard } from "./endpoint-card";
 
 export const metadata: Metadata = {
 	title: "API 문서",
@@ -13,43 +11,8 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-type ParamRow = {
-	key: string;
-	name: string;
-	in: "path" | "query";
-	type: string;
-	required: boolean;
-	default?: unknown;
-};
-
 function buildAnchorId(method: string, path: string): string {
 	return `ep-${method.toLowerCase()}-${path.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "")}`;
-}
-
-function formatType(type: string, enumValues?: string[]): string {
-	if (enumValues && enumValues.length > 0) {
-		return enumValues.map((v) => `"${v}"`).join(" | ");
-	}
-	return type;
-}
-
-function buildCurlExample(ep: EndpointContract): string {
-	let pathPart = ep.path;
-	for (const name of ep.pathParams) {
-		pathPart = pathPart.replace(`:${name}`, `<${name}>`);
-	}
-	const base = `https://<host>/api/v1/public/${pathPart}`;
-	if (ep.queryParams.length === 0) {
-		return `curl -s "${base}"`;
-	}
-	const qs = ep.queryParams
-		.map((q: ParamDef) => {
-			const value =
-				q.default !== undefined && q.default !== null ? String(q.default) : `<${q.name}>`;
-			return `${q.name}=${value}`;
-		})
-		.join("&");
-	return `curl -s "${base}?${qs}"`;
 }
 
 const OPEN_HASH_TARGET_SCRIPT = `
@@ -123,102 +86,7 @@ export default function ApiDocsPage() {
 				<div className="space-y-3">
 					{contracts.map((ep) => {
 						const id = buildAnchorId(ep.method, ep.path);
-						const curl = buildCurlExample(ep);
-						const params: ParamRow[] = [
-							...ep.pathParams.map<ParamRow>((name) => ({
-								key: `path-${name}`,
-								name,
-								in: "path",
-								type: "string",
-								required: true,
-							})),
-							...ep.queryParams.map<ParamRow>((p) => ({
-								key: `query-${p.name}`,
-								name: p.name,
-								in: "query",
-								type: formatType(p.type, p.enum),
-								required: p.required,
-								default: p.default,
-							})),
-						];
-
-						return (
-							<details
-								key={id}
-								id={id}
-								className="group scroll-mt-4 border border-border bg-card transition-colors open:shadow-md"
-							>
-								<summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 hover:bg-muted/40 [&::-webkit-details-marker]:hidden">
-									<ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
-									<Badge variant="default" className="shrink-0">
-										{ep.method}
-									</Badge>
-									<code className="truncate font-mono text-sm">/api/v1/public/{ep.path}</code>
-									<span className="ml-auto hidden truncate text-sm text-muted-foreground md:block">
-										{ep.description}
-									</span>
-								</summary>
-
-								<div className="border-t border-border px-4 py-4 md:px-6">
-									<p className="mb-4 text-sm text-muted-foreground md:hidden">{ep.description}</p>
-
-									{params.length > 0 ? (
-										<section className="mb-4">
-											<h3 className="mb-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-												Parameters
-											</h3>
-											<div className="overflow-x-auto border border-border">
-												<table className="w-full text-sm">
-													<thead className="bg-primary text-left font-mono uppercase text-primary-foreground">
-														<tr>
-															<th className="px-3 py-2 text-xs font-medium">name</th>
-															<th className="px-3 py-2 text-xs font-medium">in</th>
-															<th className="px-3 py-2 text-xs font-medium">type</th>
-															<th className="px-3 py-2 text-xs font-medium">required</th>
-															<th className="px-3 py-2 text-xs font-medium">default</th>
-														</tr>
-													</thead>
-													<tbody>
-														{params.map((p) => (
-															<tr key={p.key} className="border-t border-border/60">
-																<td className="px-3 py-2 font-mono">{p.name}</td>
-																<td className="px-3 py-2 font-mono text-xs uppercase text-muted-foreground">
-																	{p.in}
-																</td>
-																<td className="px-3 py-2 font-mono text-xs text-muted-foreground">
-																	{p.type}
-																</td>
-																<td className="px-3 py-2 text-muted-foreground">
-																	{p.required ? (
-																		<span className="font-mono text-xs text-accent">required</span>
-																	) : (
-																		<span className="font-mono text-xs">optional</span>
-																	)}
-																</td>
-																<td className="px-3 py-2 font-mono text-xs text-muted-foreground">
-																	{p.default === undefined ? "—" : String(p.default)}
-																</td>
-															</tr>
-														))}
-													</tbody>
-												</table>
-											</div>
-										</section>
-									) : (
-										<p className="mb-4 text-sm text-muted-foreground">파라미터가 없습니다.</p>
-									)}
-
-									<section>
-										<h3 className="mb-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-											Example
-										</h3>
-										<pre className="overflow-x-auto border border-border bg-muted p-3 text-xs">
-											<code className="font-mono">{curl}</code>
-										</pre>
-									</section>
-								</div>
-							</details>
-						);
+						return <EndpointCard key={id} ep={ep} anchorId={id} />;
 					})}
 				</div>
 			</div>
