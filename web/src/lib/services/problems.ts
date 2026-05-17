@@ -347,7 +347,7 @@ export async function deleteProblem(id: number) {
 	return { success: true };
 }
 
-export const GET_PROBLEMS_SORT_KEYS = [...PROBLEM_TABLE_SORT_KEYS, "createdAt"] as const;
+export const GET_PROBLEMS_SORT_KEYS = [...PROBLEM_TABLE_SORT_KEYS, "createdAt", "tier"] as const;
 export type GetProblemsSort = (typeof GET_PROBLEMS_SORT_KEYS)[number];
 
 export async function getProblems(
@@ -573,6 +573,9 @@ export async function getProblems(
 					? sql`COALESCE(${solverStatsSq.solverCount}, 0) ASC`
 					: sql`COALESCE(${solverStatsSq.solverCount}, 0) DESC`;
 			break;
+		case "tier":
+			orderBy = order === "asc" ? asc(problems.tier) : desc(problems.tier);
+			break;
 		default:
 			orderBy = order === "asc" ? asc(problems.id) : desc(problems.id);
 			break;
@@ -656,6 +659,7 @@ export async function getProblemById(
 				}[]
 			>`COALESCE((SELECT json_agg(json_build_object('name', ${col(users, users.name)}, 'username', ${col(users, users.username)}, 'mainExternalSite', ${col(users, users.mainExternalSite)}, 'mainExternalRating', ${col(userExternalHandles, userExternalHandles.rating)})) FROM ${tbl(problemReviewers)} INNER JOIN ${tbl(users)} ON ${col(users, users.id)} = ${col(problemReviewers, problemReviewers.userId)} LEFT JOIN ${tbl(userExternalHandles)} ON ${col(userExternalHandles, userExternalHandles.userId)} = ${col(users, users.id)} AND ${col(userExternalHandles, userExternalHandles.provider)} = ${col(users, users.mainExternalSite)} WHERE ${col(problemReviewers, problemReviewers.problemId)} = ${col(problems, problems.id)}), '[]'::json)`,
 			referenceCodePath: problems.referenceCodePath,
+			maxScore: problems.maxScore,
 			createdAt: problems.createdAt,
 		})
 		.from(problems)

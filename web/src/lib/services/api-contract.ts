@@ -5,7 +5,7 @@
  */
 
 import type { z } from "zod";
-import { endpoints } from "./api-registry";
+import type { Endpoint } from "./api-types";
 
 export interface ParamDef {
 	name: string;
@@ -102,7 +102,7 @@ function zodShapeToParams(schema: z.ZodObject<z.ZodRawShape> | undefined): Param
 	return params;
 }
 
-export function generateContracts(): EndpointContract[] {
+export function generateContracts(endpoints: Endpoint[]): EndpointContract[] {
 	return endpoints.map((ep) => ({
 		method: ep.method,
 		path: ep.path,
