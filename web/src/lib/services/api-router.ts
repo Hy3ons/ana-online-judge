@@ -97,9 +97,7 @@ export async function dispatchApiRequest(
 		}
 
 		if (extraHeaders) {
-			for (const [k, v] of Object.entries(extraHeaders)) {
-				response.headers.set(k, v);
-			}
+			return mergeResponseHeaders(response, extraHeaders);
 		}
 		return response;
 	} catch (error) {
@@ -114,6 +112,26 @@ export async function dispatchApiRequest(
 		}
 		const message = error instanceof Error ? error.message : String(error);
 		return NextResponse.json({ error: message }, { status: 400 });
+	}
+}
+
+function mergeResponseHeaders(response: Response, extra: Record<string, string>): Response {
+	try {
+		for (const [k, v] of Object.entries(extra)) {
+			response.headers.set(k, v);
+		}
+		return response;
+	} catch {
+		// Headers are immutable (e.g., cloned from fetch). Rebuild the response.
+		const headers = new Headers(response.headers);
+		for (const [k, v] of Object.entries(extra)) {
+			headers.set(k, v);
+		}
+		return new Response(response.body, {
+			status: response.status,
+			statusText: response.statusText,
+			headers,
+		});
 	}
 }
 
