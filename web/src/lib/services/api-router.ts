@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { requireApiKey } from "./api-auth";
-import { type Endpoint, endpoints, NotFoundError } from "./api-registry";
+import type { Endpoint } from "./api-types";
+import { NotFoundError } from "./api-types";
 
-/** Match a path pattern (e.g., "problems/:id/testcases") against URL segments */
 function matchPath(pattern: string, segments: string[]): Record<string, string> | null {
 	const parts = pattern.split("/");
 	if (parts.length !== segments.length) return null;
@@ -18,7 +17,6 @@ function matchPath(pattern: string, segments: string[]): Record<string, string> 
 	return params;
 }
 
-/** Parse query params from URL using search params */
 function parseSearchParams(url: string): Record<string, string> {
 	const { searchParams } = new URL(url);
 	const result: Record<string, string> = {};
@@ -28,8 +26,8 @@ function parseSearchParams(url: string): Record<string, string> {
 	return result;
 }
 
-/** Find matching endpoint and extract path params */
 function findEndpoint(
+	endpoints: Endpoint[],
 	method: string,
 	segments: string[]
 ): { endpoint: Endpoint; pathParams: Record<string, string> } | null {
@@ -41,14 +39,27 @@ function findEndpoint(
 	return null;
 }
 
-/** Handle an API request by routing through the registry */
-export async function handleApiRequest(request: Request, segments: string[]): Promise<Response> {
-	// Auth check
-	const authError = await requireApiKey(request);
-	if (authError) return authError;
+export interface ApiHandlerOptions {
+	endpoints: Endpoint[];
+	authenticate?: (request: Request) => Promise<Response | null>;
+	beforeDispatch?: (
+		request: Request,
+		endpoint: Endpoint
+	) => Promise<{ response?: Response; headers?: Record<string, string> } | null>;
+}
+
+export async function dispatchApiRequest(
+	request: Request,
+	segments: string[],
+	options: ApiHandlerOptions
+): Promise<Response> {
+	if (options.authenticate) {
+		const authErr = await options.authenticate(request);
+		if (authErr) return authErr;
+	}
 
 	const method = request.method;
-	const match = findEndpoint(method, segments);
+	const match = findEndpoint(options.endpoints, method, segments);
 
 	if (!match) {
 		return NextResponse.json(
@@ -59,29 +70,42 @@ export async function handleApiRequest(request: Request, segments: string[]): Pr
 
 	const { endpoint, pathParams } = match;
 
+	let extraHeaders: Record<string, string> | undefined;
+	if (options.beforeDispatch) {
+		const hook = await options.beforeDispatch(request, endpoint);
+		if (hook?.response) return hook.response;
+		if (hook?.headers) extraHeaders = hook.headers;
+	}
+
 	try {
-		// Custom handler — gets the raw Request
+		let response: Response;
+
 		if (endpoint.type === "custom") {
-			return await endpoint.handler(request, pathParams);
+			response = await endpoint.handler(request, pathParams);
+		} else {
+			const rawQuery = parseSearchParams(request.url);
+			const query = endpoint.query ? endpoint.query.parse(rawQuery) : {};
+
+			let body = {};
+			if ((method === "POST" || method === "PUT") && endpoint.body) {
+				const rawBody = await request.json().catch(() => ({}));
+				body = endpoint.body.parse(rawBody);
+			}
+
+			const result = await endpoint.handler({ pathParams, query, body });
+			response = NextResponse.json(result);
 		}
 
-		// JSON handler — parse query/body with Zod, call handler, return JSON
-		const rawQuery = parseSearchParams(request.url);
-		const query = endpoint.query ? endpoint.query.parse(rawQuery) : {};
-
-		let body = {};
-		if ((method === "POST" || method === "PUT") && endpoint.body) {
-			const rawBody = await request.json().catch(() => ({}));
-			body = endpoint.body.parse(rawBody);
+		if (extraHeaders) {
+			for (const [k, v] of Object.entries(extraHeaders)) {
+				response.headers.set(k, v);
+			}
 		}
-
-		const result = await endpoint.handler({ pathParams, query, body });
-		return NextResponse.json(result);
+		return response;
 	} catch (error) {
 		if (error instanceof NotFoundError) {
 			return NextResponse.json({ error: error.message }, { status: 404 });
 		}
-		// Zod validation errors
 		if (error && typeof error === "object" && "issues" in error) {
 			return NextResponse.json(
 				{ error: "Validation error", details: (error as { issues: unknown }).issues },
@@ -91,4 +115,14 @@ export async function handleApiRequest(request: Request, segments: string[]): Pr
 		const message = error instanceof Error ? error.message : String(error);
 		return NextResponse.json({ error: message }, { status: 400 });
 	}
+}
+
+/** Backwards-compat wrapper used by admin route. */
+export async function handleApiRequest(request: Request, segments: string[]): Promise<Response> {
+	const { endpoints } = await import("./api-registry");
+	const { requireApiKey } = await import("./api-auth");
+	return dispatchApiRequest(request, segments, {
+		endpoints,
+		authenticate: requireApiKey,
+	});
 }

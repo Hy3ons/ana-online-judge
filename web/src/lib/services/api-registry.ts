@@ -9,6 +9,8 @@ import { ensureWorkshopDraft, getActiveDraftForUser } from "@/lib/workshop/draft
 import { ensureValidateSubscriberStarted } from "@/lib/workshop/validate-pubsub";
 import * as adminBulkSubmissions from "./admin-submissions";
 import * as adminAlgorithmTags from "./algorithm-tags";
+import type { Endpoint } from "./api-types";
+import { NotFoundError } from "./api-types";
 import * as adminContestParticipants from "./contest-participants";
 import * as adminContestProblems from "./contest-problems";
 import * as adminContests from "./contests";
@@ -43,31 +45,8 @@ import * as workshopValidatorSvc from "./workshop-validator";
 
 // --- Types ---
 
-interface HandlerContext {
-	pathParams: Record<string, string>;
-	query: Record<string, unknown>;
-	body: Record<string, unknown>;
-}
-
-interface JsonEndpoint {
-	type: "json";
-	method: "GET" | "POST" | "PUT" | "DELETE";
-	path: string;
-	description: string;
-	query?: z.ZodObject<z.ZodRawShape>;
-	body?: z.ZodObject<z.ZodRawShape>;
-	handler: (ctx: HandlerContext) => Promise<unknown>;
-}
-
-interface CustomEndpoint {
-	type: "custom";
-	method: "GET" | "POST" | "PUT" | "DELETE";
-	path: string;
-	description: string;
-	handler: (request: Request, pathParams: Record<string, string>) => Promise<Response>;
-}
-
-export type Endpoint = JsonEndpoint | CustomEndpoint;
+export type { CustomEndpoint, Endpoint, HandlerContext, JsonEndpoint } from "./api-types";
+export { NotFoundError } from "./api-types";
 
 // --- Schemas ---
 
@@ -2508,16 +2487,7 @@ export const endpoints: Endpoint[] = [
 		description: "List all API endpoints with schemas (for CLI auto-generation)",
 		handler: async () => {
 			const { generateContracts } = await import("./api-contract");
-			return generateContracts();
+			return generateContracts(endpoints);
 		},
 	},
 ];
-
-// --- Errors ---
-
-export class NotFoundError extends Error {
-	constructor(message: string) {
-		super(message);
-		this.name = "NotFoundError";
-	}
-}
