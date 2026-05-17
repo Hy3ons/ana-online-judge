@@ -32,6 +32,9 @@ export function Footer() {
 						<Link href="/tags" className="hover:text-foreground transition-colors">
 							알고리즘 분류
 						</Link>
+						<Link href="/docs/api" className="hover:text-foreground transition-colors">
+							API
+						</Link>
 						<Link
 							href="https://github.com/csh1668/ana-online-judge"
 							target="_blank"
