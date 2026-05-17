@@ -4,6 +4,7 @@ import { ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { publicEnv } from "@/lib/env/publicEnv";
 import type { EndpointContract } from "@/lib/services/api-contract";
 
 interface UnifiedParam {
@@ -59,7 +60,7 @@ export function EndpointCard({ ep, anchorId }: Props) {
 			const v = raw.trim();
 			pathPart = pathPart.replace(`:${pp}`, v.length > 0 ? v : `<${pp}>`);
 		}
-		const base = `https://<host>/api/v1/public/${pathPart}`;
+		const base = `${publicEnv.NEXT_PUBLIC_APP_URL}/api/v1/public/${pathPart}`;
 
 		const qs: string[] = [];
 		for (const q of ep.queryParams) {

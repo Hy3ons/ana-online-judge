@@ -71,8 +71,7 @@ export const publicEndpoints: Endpoint[] = [
 		type: "json",
 		method: "GET",
 		path: "submissions",
-		description:
-			"공개 제출 목록을 조회합니다. 코드 본문은 포함되지 않으며 visibility=public · 콘테스트 외 제출만 노출됩니다.",
+		description: "제출 목록을 조회합니다.",
 		query: paginationQuery.extend({
 			username: z.string().optional(),
 			problemId: z.coerce.number().int().optional(),
