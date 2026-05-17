@@ -2,7 +2,7 @@ import { ChevronRight } from "lucide-react";
 import type { Metadata } from "next";
 import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import type { EndpointContract, ParamDef } from "@/lib/services/api-contract";
 import { generateContracts } from "@/lib/services/api-contract";
 import { publicEndpoints } from "@/lib/services/public-api-registry";
 
@@ -20,20 +20,64 @@ type ParamRow = {
 	type: string;
 	required: boolean;
 	default?: unknown;
-	enum?: string[];
 };
 
 function buildAnchorId(method: string, path: string): string {
 	return `ep-${method.toLowerCase()}-${path.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "")}`;
 }
 
-function buildCurlExample(path: string, pathParams: string[]): string {
-	let p = path;
-	for (const name of pathParams) {
-		p = p.replace(`:${name}`, `<${name}>`);
+function formatType(type: string, enumValues?: string[]): string {
+	if (enumValues && enumValues.length > 0) {
+		return enumValues.map((v) => `"${v}"`).join(" | ");
 	}
-	return `curl -s "https://<host>/api/v1/public/${p}"`;
+	return type;
 }
+
+function buildCurlExample(ep: EndpointContract): string {
+	let pathPart = ep.path;
+	for (const name of ep.pathParams) {
+		pathPart = pathPart.replace(`:${name}`, `<${name}>`);
+	}
+	const base = `https://<host>/api/v1/public/${pathPart}`;
+	if (ep.queryParams.length === 0) {
+		return `curl -s "${base}"`;
+	}
+	const qs = ep.queryParams
+		.map((q: ParamDef) => {
+			const value =
+				q.default !== undefined && q.default !== null ? String(q.default) : `<${q.name}>`;
+			return `${q.name}=${value}`;
+		})
+		.join("&");
+	return `curl -s "${base}?${qs}"`;
+}
+
+const OPEN_HASH_TARGET_SCRIPT = `
+(function () {
+	function openTarget() {
+		var hash = window.location.hash.slice(1);
+		if (!hash) return;
+		var el = document.getElementById(hash);
+		if (el && el.tagName === 'DETAILS' && !el.open) {
+			el.open = true;
+		}
+	}
+	document.addEventListener('click', function (e) {
+		var target = e.target;
+		if (!(target instanceof Element)) return;
+		var anchor = target.closest('a[href^="#ep-"]');
+		if (!anchor) return;
+		var href = anchor.getAttribute('href');
+		if (!href) return;
+		var el = document.getElementById(href.slice(1));
+		if (el && el.tagName === 'DETAILS' && !el.open) {
+			el.open = true;
+		}
+	});
+	window.addEventListener('hashchange', openTarget);
+	openTarget();
+})();
+`;
 
 export default function ApiDocsPage() {
 	const contracts = generateContracts(publicEndpoints);
@@ -45,52 +89,6 @@ export default function ApiDocsPage() {
 			<div className="mb-6 space-y-3">
 				<h1 className="text-2xl font-bold tracking-tight">공용 API</h1>
 			</div>
-
-			<Card className="mb-6">
-				<CardContent className="py-4">
-					<dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-[max-content_1fr]">
-						<dt className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
-							Base URL
-						</dt>
-						<dd>
-							<code className="rounded-[2px] bg-muted px-1.5 py-0.5 font-mono">/api/v1/public</code>
-						</dd>
-
-						<dt className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
-							Authentication
-						</dt>
-						<dd className="text-muted-foreground">없음 — 모든 endpoint는 anonymous read.</dd>
-
-						<dt className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
-							Rate limit
-						</dt>
-						<dd className="text-muted-foreground">
-							IP 기준 분당 60회. 초과 시{" "}
-							<code className="rounded-[2px] bg-muted px-1 py-0.5 font-mono text-xs">429</code>와{" "}
-							<code className="rounded-[2px] bg-muted px-1 py-0.5 font-mono text-xs">
-								Retry-After
-							</code>{" "}
-							헤더 반환.
-						</dd>
-
-						<dt className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
-							Response headers
-						</dt>
-						<dd className="flex flex-wrap gap-x-3 gap-y-1 text-muted-foreground">
-							<code className="rounded-[2px] bg-muted px-1 py-0.5 font-mono text-xs">
-								X-RateLimit-Limit
-							</code>
-							<code className="rounded-[2px] bg-muted px-1 py-0.5 font-mono text-xs">
-								X-RateLimit-Remaining
-							</code>
-							<code className="rounded-[2px] bg-muted px-1 py-0.5 font-mono text-xs">
-								X-RateLimit-Reset
-							</code>
-							<span className="text-xs">(epoch 초)</span>
-						</dd>
-					</dl>
-				</CardContent>
-			</Card>
 
 			<div className="grid gap-8 lg:grid-cols-[220px_1fr]">
 				<aside className="hidden lg:block">
@@ -125,7 +123,7 @@ export default function ApiDocsPage() {
 				<div className="space-y-3">
 					{contracts.map((ep) => {
 						const id = buildAnchorId(ep.method, ep.path);
-						const curl = buildCurlExample(ep.path, ep.pathParams);
+						const curl = buildCurlExample(ep);
 						const params: ParamRow[] = [
 							...ep.pathParams.map<ParamRow>((name) => ({
 								key: `path-${name}`,
@@ -138,10 +136,9 @@ export default function ApiDocsPage() {
 								key: `query-${p.name}`,
 								name: p.name,
 								in: "query",
-								type: p.type,
+								type: formatType(p.type, p.enum),
 								required: p.required,
 								default: p.default,
-								enum: p.enum,
 							})),
 						];
 
@@ -179,7 +176,6 @@ export default function ApiDocsPage() {
 															<th className="px-3 py-2 text-xs font-medium">type</th>
 															<th className="px-3 py-2 text-xs font-medium">required</th>
 															<th className="px-3 py-2 text-xs font-medium">default</th>
-															<th className="px-3 py-2 text-xs font-medium">enum</th>
 														</tr>
 													</thead>
 													<tbody>
@@ -189,7 +185,9 @@ export default function ApiDocsPage() {
 																<td className="px-3 py-2 font-mono text-xs uppercase text-muted-foreground">
 																	{p.in}
 																</td>
-																<td className="px-3 py-2 text-muted-foreground">{p.type}</td>
+																<td className="px-3 py-2 font-mono text-xs text-muted-foreground">
+																	{p.type}
+																</td>
 																<td className="px-3 py-2 text-muted-foreground">
 																	{p.required ? (
 																		<span className="font-mono text-xs text-accent">required</span>
@@ -199,9 +197,6 @@ export default function ApiDocsPage() {
 																</td>
 																<td className="px-3 py-2 font-mono text-xs text-muted-foreground">
 																	{p.default === undefined ? "—" : String(p.default)}
-																</td>
-																<td className="px-3 py-2 font-mono text-xs text-muted-foreground">
-																	{p.enum ? p.enum.join(" | ") : "—"}
 																</td>
 															</tr>
 														))}
@@ -227,6 +222,8 @@ export default function ApiDocsPage() {
 					})}
 				</div>
 			</div>
+
+			<script dangerouslySetInnerHTML={{ __html: OPEN_HASH_TARGET_SCRIPT }} />
 		</div>
 	);
 }
