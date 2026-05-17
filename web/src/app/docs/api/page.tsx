@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 	description: "ANA Online Judge 공용 API 레퍼런스",
 };
 
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 
 function buildCurlExample(path: string, pathParams: string[]): string {
 	let p = path;
