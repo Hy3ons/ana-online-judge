@@ -128,8 +128,8 @@ export const authEndpoints: Endpoint[] = [
 		}),
 		handler: async ({ body }) => {
 			const { token } = body as { token: string };
-			const ok = await revokeToken(token);
-			return { revoked: ok };
+			await revokeToken(token); // ignore return — RFC 7009: response identical regardless
+			return { revoked: true };
 		},
 	},
 ];
