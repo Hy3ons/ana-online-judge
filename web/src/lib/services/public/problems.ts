@@ -1,5 +1,6 @@
 import "server-only";
 
+import { type Example, parseExamples } from "@/lib/services/parse-examples";
 import { getProblemById, getProblems } from "@/lib/services/problems";
 
 export interface PublicProblemListItem {
@@ -66,6 +67,7 @@ export interface PublicProblemDetail {
 	maxScore: number;
 	authors: { username: string; name: string }[];
 	createdAt: string;
+	examples: Example[];
 }
 
 export async function getPublicProblem(id: number): Promise<PublicProblemDetail | null> {
@@ -87,5 +89,6 @@ export async function getPublicProblem(id: number): Promise<PublicProblemDetail 
 		maxScore: p.maxScore,
 		authors: (p.authors ?? []).map((a) => ({ username: a.username, name: a.name })),
 		createdAt: p.createdAt.toISOString(),
+		examples: parseExamples(p.content ?? ""),
 	};
 }

@@ -1,6 +1,7 @@
 import type { z } from "zod";
 
 export interface HandlerContext {
+	request: Request;
 	pathParams: Record<string, string>;
 	query: Record<string, unknown>;
 	body: Record<string, unknown>;
@@ -32,5 +33,12 @@ export class NotFoundError extends Error {
 	constructor(message: string) {
 		super(message);
 		this.name = "NotFoundError";
+	}
+}
+
+export class ForbiddenError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = "ForbiddenError";
 	}
 }

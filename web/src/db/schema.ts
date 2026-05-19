@@ -52,6 +52,7 @@ export const submissionVisibilityEnum = pgEnum("submission_visibility", [
 ]);
 export const externalSiteEnum = pgEnum("external_site", ["codeforces", "atcoder"]);
 export type ExternalSite = (typeof externalSiteEnum.enumValues)[number];
+export const tokenTypeEnum = pgEnum("token_type", ["oauth_device", "pat"]);
 
 // Workshop enums
 export const workshopProblemTypeEnum = pgEnum("workshop_problem_type", ["icpc", "special_judge"]);
@@ -907,6 +908,31 @@ export const userExternalHandles = pgTable(
 	})
 );
 
+// User API Tokens (OAuth Device + PAT)
+export const userApiTokens = pgTable(
+	"user_api_tokens",
+	{
+		id: serial("id").primaryKey(),
+		userId: integer("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		tokenHash: text("token_hash").notNull().unique(),
+		refreshHash: text("refresh_hash").unique(),
+		type: tokenTypeEnum("type").notNull(),
+		scopes: text("scopes").array().notNull().default(sql`ARRAY['user']::text[]`),
+		label: text("label"),
+		expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+		refreshExpiresAt: timestamp("refresh_expires_at", { withTimezone: true }),
+		lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+		revokedAt: timestamp("revoked_at", { withTimezone: true }),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+	},
+	(t) => ({
+		userIdx: index("user_api_tokens_user_idx").on(t.userId),
+		tokenHashIdx: index("user_api_tokens_token_hash_idx").on(t.tokenHash),
+	})
+);
+
 // Type exports for insert/select
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -980,6 +1006,8 @@ export type ProblemConfirmedTag = typeof problemConfirmedTags.$inferSelect;
 export type NewProblemConfirmedTag = typeof problemConfirmedTags.$inferInsert;
 export type UserExternalHandle = typeof userExternalHandles.$inferSelect;
 export type NewUserExternalHandle = typeof userExternalHandles.$inferInsert;
+export type UserApiToken = typeof userApiTokens.$inferSelect;
+export type NewUserApiToken = typeof userApiTokens.$inferInsert;
 
 export type UserRole = (typeof userRoleEnum.enumValues)[number];
 export type Verdict = (typeof verdictEnum.enumValues)[number];
@@ -990,6 +1018,7 @@ export type InputMethod = (typeof inputMethodEnum.enumValues)[number];
 export type ContestVisibility = (typeof contestVisibilityEnum.enumValues)[number];
 export type ScoreboardType = (typeof scoreboardTypeEnum.enumValues)[number];
 export type SubmissionVisibility = (typeof submissionVisibilityEnum.enumValues)[number];
+export type TokenType = (typeof tokenTypeEnum.enumValues)[number];
 
 // Translation types (JSONB structure for problems.translations)
 export type LanguageCode = "ko" | "en" | "ja" | "pl" | "hr";

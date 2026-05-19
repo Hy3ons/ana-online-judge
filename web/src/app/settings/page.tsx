@@ -1,8 +1,10 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getMainExternalSite, getUserByUsername, getUserHandles } from "@/actions/profile";
 import { auth } from "@/auth";
 import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConnectedHandlesForm } from "./connected-handles-form";
 import { ProfileForm } from "./profile-form";
 import { VisibilityForm } from "./visibility-form";
@@ -47,6 +49,20 @@ export default async function SettingsPage() {
 				</CardHeader>
 				<CardContent>
 					<VisibilityForm initial={user.defaultSubmissionVisibility ?? "public"} />
+				</CardContent>
+			</Card>
+			<Card>
+				<CardHeader>
+					<CardTitle>연결된 디바이스</CardTitle>
+					<CardDescription>VS Code 확장 등에서 발급된 API 토큰을 관리합니다</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<p className="text-sm text-muted-foreground mb-4">
+						여러 디바이스에서 발급된 API 토큰을 확인하고 관리할 수 있습니다.
+					</p>
+					<Link href="/settings/devices">
+						<Button variant="outline">디바이스 관리</Button>
+					</Link>
 				</CardContent>
 			</Card>
 		</div>
