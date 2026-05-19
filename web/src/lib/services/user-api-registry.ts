@@ -3,7 +3,7 @@ import "server-only";
 import { z } from "zod";
 import { getUserAuth } from "./api-auth";
 import type { Endpoint } from "./api-types";
-import { NotFoundError } from "./api-types";
+import { ForbiddenError, NotFoundError } from "./api-types";
 import { listActiveContestsForUser } from "./contests";
 import { getSubmissionById, getSubmissions, submitCode } from "./submissions";
 import { getUserMe } from "./user-profile";
@@ -42,7 +42,25 @@ export const userEndpoints: Endpoint[] = [
 			};
 			const result = await submitCode({ ...data, userId });
 			if (result.error) {
-				throw new Error(result.error);
+				const msg = result.error;
+				// 404: 문제 또는 대회를 찾을 수 없음
+				if (msg.includes("문제를 찾을 수 없") || msg.includes("대회를 찾을 수 없")) {
+					throw new NotFoundError(msg);
+				}
+				// 404: 대회에 해당 문제가 없음
+				if (msg.includes("대회에 포함되어 있지 않")) {
+					throw new NotFoundError(msg);
+				}
+				// 403: 대회 참가 자격 / 대회 시간 외 제출
+				if (
+					msg.includes("등록된 참가자") ||
+					msg.includes("시작되지 않았") ||
+					msg.includes("종료되었습니다")
+				) {
+					throw new ForbiddenError(msg);
+				}
+				// 그 외 (언어 미지원, 코드 비어있음/너무 김 등) → 400
+				throw new Error(msg);
 			}
 			return { submissionId: result.submissionId };
 		},

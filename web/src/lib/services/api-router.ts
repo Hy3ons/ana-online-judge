@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { Endpoint } from "./api-types";
-import { NotFoundError } from "./api-types";
+import { ForbiddenError, NotFoundError } from "./api-types";
 
 function matchPath(pattern: string, segments: string[]): Record<string, string> | null {
 	const parts = pattern.split("/");
@@ -103,6 +103,9 @@ export async function dispatchApiRequest(
 	} catch (error) {
 		if (error instanceof NotFoundError) {
 			return NextResponse.json({ error: error.message }, { status: 404 });
+		}
+		if (error instanceof ForbiddenError) {
+			return NextResponse.json({ error: error.message }, { status: 403 });
 		}
 		if (error && typeof error === "object" && "issues" in error) {
 			return NextResponse.json(
