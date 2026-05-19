@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getUserAuth } from "./api-auth";
 import type { Endpoint } from "./api-types";
 import { NotFoundError } from "./api-types";
-import { submitCode } from "./submissions";
+import { getSubmissionById, getSubmissions, submitCode } from "./submissions";
 import { getUserMe } from "./user-profile";
 
 export const userEndpoints: Endpoint[] = [
@@ -46,5 +46,43 @@ export const userEndpoints: Endpoint[] = [
 			return { submissionId: result.submissionId };
 		},
 		rateLimit: { perMinute: 30 },
+	},
+	{
+		type: "json",
+		method: "GET",
+		path: "submissions",
+		description: "내 제출 목록 (paginated)",
+		query: z.object({
+			page: z.coerce.number().int().min(1).default(1),
+			limit: z.coerce.number().int().min(1).max(100).default(20),
+			contestId: z.coerce.number().int().optional(),
+			problemId: z.coerce.number().int().optional(),
+		}),
+		handler: async ({ request, query }) => {
+			const { userId } = getUserAuth(request);
+			const q = query as { page: number; limit: number; contestId?: number; problemId?: number };
+			const result = await getSubmissions({
+				userId,
+				page: q.page,
+				limit: q.limit,
+				contestId: q.contestId,
+				problemId: q.problemId,
+			});
+			return { items: result.submissions, total: result.total, page: q.page, limit: q.limit };
+		},
+	},
+	{
+		type: "json",
+		method: "GET",
+		path: "submissions/:id",
+		description: "내 제출 상세",
+		handler: async ({ request, pathParams }) => {
+			const { userId } = getUserAuth(request);
+			const id = Number.parseInt(pathParams.id, 10);
+			if (!Number.isFinite(id)) throw new NotFoundError("Invalid submission id");
+			const sub = await getSubmissionById(id);
+			if (!sub || sub.userId !== userId) throw new NotFoundError("Submission not found");
+			return sub;
+		},
 	},
 ];
