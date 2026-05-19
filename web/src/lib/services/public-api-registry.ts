@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod";
 import type { Endpoint } from "./api-types";
 import { NotFoundError } from "./api-types";
+import { getLanguagesMeta } from "./languages-meta";
 import { getPublicProblem, listPublicProblems } from "./public/problems";
 import { listPublicSubmissions } from "./public/submissions";
 import { getPublicUserByUsername, listPublicUsers } from "./public/users";
@@ -85,6 +86,13 @@ export const publicEndpoints: Endpoint[] = [
 	},
 
 	// ========== Meta ==========
+	{
+		type: "json",
+		method: "GET",
+		path: "meta/languages",
+		description: "지원 언어 목록과 컴파일/실행 명령 (클라이언트용 mirror)",
+		handler: async () => getLanguagesMeta(),
+	},
 	{
 		type: "custom",
 		method: "GET",
