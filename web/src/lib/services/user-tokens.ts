@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { userApiTokens, users } from "@/db/schema";
 import { generateAccessToken, generateRefreshToken, hashToken } from "@/lib/auth/token-utils";
@@ -144,7 +144,10 @@ export async function revokeTokenById(tokenId: number, userId: number): Promise<
 	return result.count > 0;
 }
 
-export async function listUserTokens(userId: number) {
+/**
+ * 활성 상태(미회수 + 미만료) 토큰만 반환. /settings/devices 등 사용자 UI용.
+ */
+export async function listUserActivatedTokens(userId: number) {
 	return db
 		.select({
 			id: userApiTokens.id,
@@ -154,9 +157,14 @@ export async function listUserTokens(userId: number) {
 			expiresAt: userApiTokens.expiresAt,
 			lastUsedAt: userApiTokens.lastUsedAt,
 			createdAt: userApiTokens.createdAt,
-			revokedAt: userApiTokens.revokedAt,
 		})
 		.from(userApiTokens)
-		.where(eq(userApiTokens.userId, userId))
+		.where(
+			and(
+				eq(userApiTokens.userId, userId),
+				isNull(userApiTokens.revokedAt),
+				gt(userApiTokens.expiresAt, new Date())
+			)
+		)
 		.orderBy(desc(userApiTokens.createdAt));
 }

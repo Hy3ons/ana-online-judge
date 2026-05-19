@@ -7,7 +7,7 @@ import { DevicesTable } from "./devices-table";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "연결된 디바이스 — AOJ" };
+export const metadata = { title: "연결된 앱 — AOJ" };
 
 export default async function DevicesPage() {
 	const session = await auth();
@@ -17,24 +17,22 @@ export default async function DevicesPage() {
 	const tokens = await listMyDevices();
 	return (
 		<div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-			<PageBreadcrumb
-				items={[{ label: "설정", href: "/settings" }, { label: "연결된 디바이스" }]}
-			/>
+			<PageBreadcrumb items={[{ label: "설정", href: "/settings" }, { label: "연결된 앱" }]} />
 			<div>
-				<h1 className="text-3xl font-bold">연결된 디바이스</h1>
+				<h1 className="text-3xl font-bold">연결된 앱</h1>
 				<p className="text-muted-foreground mt-2">
-					VS Code 확장 등에서 발급된 API 토큰 목록입니다. 의심스러운 활동이 있으면 즉시 회수하세요.
+					외부 앱에서 발급된 API 토큰 목록입니다. 의심스러운 활동이 있으면 즉시 회수하세요.
 				</p>
 			</div>
 			<Card>
 				<CardHeader>
 					<CardTitle>API 토큰</CardTitle>
-					<CardDescription>현재 발급된 토큰 목록입니다.</CardDescription>
+					<CardDescription>
+						활성 상태의 토큰만 표시됩니다. 회수 또는 만료된 토큰은 숨겨집니다.
+					</CardDescription>
 				</CardHeader>
-				<CardContent className="p-0 overflow-x-auto">
-					<div className="p-6 pt-0">
-						<DevicesTable tokens={tokens} />
-					</div>
+				<CardContent>
+					<DevicesTable tokens={tokens} />
 				</CardContent>
 			</Card>
 		</div>

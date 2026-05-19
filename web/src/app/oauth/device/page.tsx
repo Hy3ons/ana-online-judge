@@ -1,8 +1,14 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { DeviceForm } from "./device-form";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+	title: "앱 연결 승인",
+	description: "외부 앱을 AOJ 계정에 연결합니다.",
+};
 
 type SearchParams = Promise<{ user_code?: string }>;
 
@@ -18,9 +24,8 @@ export default async function OAuthDevicePage({ searchParams }: { searchParams: 
 	const displayName = session.user.username ?? session.user.name ?? "사용자";
 
 	return (
-		<main className="container max-w-md py-12">
-			<h1 className="mb-6 text-2xl font-bold tracking-tight">디바이스 인증</h1>
+		<div className="flex min-h-[calc(100vh-8rem)] items-center justify-center px-4 py-12">
 			<DeviceForm initialUserCode={initialUserCode} username={displayName} />
-		</main>
+		</div>
 	);
 }

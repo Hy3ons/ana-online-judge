@@ -52,11 +52,11 @@ export async function approveDeviceAction(
 	if (decision === "approve") {
 		const ok = await approveDeviceAuth(found.deviceCode, userId);
 		if (!ok) return { error: "승인 처리 실패. 코드가 만료되었을 수 있습니다." };
-		return { success: "디바이스가 승인되었습니다. VS Code로 돌아가서 확인하세요." };
+		return { success: "승인되었습니다. 이제 이 창을 닫으셔도 됩니다." };
 	}
 	if (decision === "deny") {
 		await denyDeviceAuth(found.deviceCode);
-		return { success: "디바이스 요청이 거부되었습니다." };
+		return { success: "요청이 거부되었습니다. 이제 이 창을 닫으셔도 됩니다." };
 	}
 
 	return { error: "잘못된 요청." };
