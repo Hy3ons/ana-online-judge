@@ -68,7 +68,7 @@ export const userEndpoints: Endpoint[] = [
 				contestId: q.contestId,
 				problemId: q.problemId,
 			});
-			return { items: result.submissions, total: result.total, page: q.page, limit: q.limit };
+			return { submissions: result.submissions, total: result.total, page: q.page, limit: q.limit };
 		},
 	},
 	{
