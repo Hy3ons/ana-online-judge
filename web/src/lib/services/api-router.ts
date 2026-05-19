@@ -92,7 +92,7 @@ export async function dispatchApiRequest(
 				body = endpoint.body.parse(rawBody);
 			}
 
-			const result = await endpoint.handler({ pathParams, query, body });
+			const result = await endpoint.handler({ request, pathParams, query, body });
 			response = NextResponse.json(result);
 		}
 
