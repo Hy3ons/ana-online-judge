@@ -79,43 +79,48 @@ export async function validateAccessToken(
 
 /**
  * Refresh token으로 새 토큰 쌍 발급. 기존 토큰은 즉시 revoke (rotation).
- * 트랜잭션으로 감싸서 원자성 보장.
+ * 조건부 UPDATE-RETURNING으로 row를 원자적으로 점유해 동시 rotation race를 방지.
+ * revokedAt IS NULL 인 row만 UPDATE되므로 두 번째 호출자는 0건 반환 → null.
  */
 export async function rotateRefreshToken(refreshToken: string): Promise<TokenPair | null> {
 	const refreshHash = hashToken(refreshToken);
 	return await db.transaction(async (tx) => {
-		const [row] = await tx
-			.select()
-			.from(userApiTokens)
+		// 원자적 점유: 이미 revoked면 row 0건 반환 → null
+		const [claimed] = await tx
+			.update(userApiTokens)
+			.set({ revokedAt: new Date() })
 			.where(and(eq(userApiTokens.refreshHash, refreshHash), isNull(userApiTokens.revokedAt)))
-			.limit(1);
-		if (!row) return null;
-		if (!row.refreshExpiresAt || row.refreshExpiresAt.getTime() <= Date.now()) return null;
+			.returning({
+				userId: userApiTokens.userId,
+				type: userApiTokens.type,
+				scopes: userApiTokens.scopes,
+				label: userApiTokens.label,
+				refreshExpiresAt: userApiTokens.refreshExpiresAt,
+			});
+		if (!claimed) return null;
+		if (!claimed.refreshExpiresAt || claimed.refreshExpiresAt.getTime() <= Date.now()) {
+			// 만료된 refresh를 우연히 점유 — 새 쌍은 발급하지 않음
+			return null;
+		}
 
 		// 새 토큰 쌍 생성 및 INSERT (트랜잭션 내)
 		const accessToken = generateAccessToken();
-		const refreshToken = generateRefreshToken();
+		const newRefreshToken = generateRefreshToken();
 		const now = new Date();
 		await tx.insert(userApiTokens).values({
-			userId: row.userId,
+			userId: claimed.userId,
 			tokenHash: hashToken(accessToken),
-			refreshHash: hashToken(refreshToken),
-			type: row.type,
-			scopes: row.scopes ?? ["user"],
-			label: row.label,
+			refreshHash: hashToken(newRefreshToken),
+			type: claimed.type,
+			scopes: claimed.scopes ?? ["user"],
+			label: claimed.label,
 			expiresAt: new Date(now.getTime() + ACCESS_TOKEN_TTL_SECONDS * 1000),
 			refreshExpiresAt: new Date(now.getTime() + REFRESH_TOKEN_TTL_SECONDS * 1000),
 		});
 
-		// 기존 토큰 revoke (트랜잭션 내)
-		await tx
-			.update(userApiTokens)
-			.set({ revokedAt: new Date() })
-			.where(eq(userApiTokens.id, row.id));
-
 		return {
 			accessToken,
-			refreshToken,
+			refreshToken: newRefreshToken,
 			accessExpiresIn: ACCESS_TOKEN_TTL_SECONDS,
 			refreshExpiresIn: REFRESH_TOKEN_TTL_SECONDS,
 		};
