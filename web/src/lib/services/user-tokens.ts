@@ -1,7 +1,7 @@
 import "server-only";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { userApiTokens } from "@/db/schema";
+import { userApiTokens, users } from "@/db/schema";
 import { generateAccessToken, generateRefreshToken, hashToken } from "@/lib/auth/token-utils";
 
 export const ACCESS_TOKEN_TTL_SECONDS = 3600; // 1시간
@@ -50,18 +50,31 @@ export async function validateAccessToken(
 ): Promise<{ userId: number; scopes: string[]; tokenId: number } | null> {
 	const tokenHash = hashToken(accessToken);
 	const [row] = await db
-		.select()
+		.select({
+			tokenId: userApiTokens.id,
+			userId: userApiTokens.userId,
+			scopes: userApiTokens.scopes,
+			expiresAt: userApiTokens.expiresAt,
+		})
 		.from(userApiTokens)
-		.where(and(eq(userApiTokens.tokenHash, tokenHash), isNull(userApiTokens.revokedAt)))
+		.innerJoin(users, eq(users.id, userApiTokens.userId))
+		.where(
+			and(
+				eq(userApiTokens.tokenHash, tokenHash),
+				isNull(userApiTokens.revokedAt),
+				eq(users.isActive, true),
+				eq(users.contestAccountOnly, false)
+			)
+		)
 		.limit(1);
 	if (!row) return null;
 	if (row.expiresAt.getTime() <= Date.now()) return null;
 	// async 갱신 (응답 대기 안 함, 오류 무시)
 	db.update(userApiTokens)
 		.set({ lastUsedAt: new Date() })
-		.where(eq(userApiTokens.id, row.id))
+		.where(eq(userApiTokens.id, row.tokenId))
 		.catch(() => {});
-	return { userId: row.userId, scopes: row.scopes, tokenId: row.id };
+	return { userId: row.userId, scopes: row.scopes, tokenId: row.tokenId };
 }
 
 /**

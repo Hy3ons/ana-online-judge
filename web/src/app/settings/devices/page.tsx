@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
+import { listMyDevices } from "@/actions/devices/queries";
 import { auth } from "@/auth";
 import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { listUserTokens } from "@/lib/services/user-tokens";
 import { DevicesTable } from "./devices-table";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +14,7 @@ export default async function DevicesPage() {
 	if (!session?.user?.id) {
 		redirect(`/login?callbackUrl=${encodeURIComponent("/settings/devices")}`);
 	}
-	const tokens = await listUserTokens(Number(session.user.id));
+	const tokens = await listMyDevices();
 	return (
 		<div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 			<PageBreadcrumb

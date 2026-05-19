@@ -265,16 +265,19 @@ export async function listActiveContestsForUser(userId: number) {
 
 	for (const { contest } of rows) {
 		const status = contest.startTime > now ? "upcoming" : "running";
-		const problemRows = await db
-			.select({
-				id: problems.id,
-				title: problems.displayTitle,
-				label: contestProblems.label,
-			})
-			.from(contestProblems)
-			.innerJoin(problems, eq(problems.id, contestProblems.problemId))
-			.where(eq(contestProblems.contestId, contest.id))
-			.orderBy(asc(contestProblems.order));
+		const problemRows =
+			status === "upcoming"
+				? []
+				: await db
+						.select({
+							id: problems.id,
+							title: problems.displayTitle,
+							label: contestProblems.label,
+						})
+						.from(contestProblems)
+						.innerJoin(problems, eq(problems.id, contestProblems.problemId))
+						.where(eq(contestProblems.contestId, contest.id))
+						.orderBy(asc(contestProblems.order));
 		result.push({
 			id: contest.id,
 			title: contest.title,
