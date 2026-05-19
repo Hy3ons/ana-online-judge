@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { checkRateLimit, extractClientIp, rateLimitHeaders } from "@/lib/rate-limit";
-import { requireUserToken } from "@/lib/services/api-auth";
+import { checkRateLimit, rateLimitHeaders } from "@/lib/rate-limit";
+import { getUserAuth, requireUserToken } from "@/lib/services/api-auth";
 import { dispatchApiRequest } from "@/lib/services/api-router";
 import { userEndpoints } from "@/lib/services/user-api-registry";
 
@@ -15,10 +15,9 @@ async function handle(request: Request, segments: string[]): Promise<Response> {
 		authenticate: requireUserToken,
 		beforeDispatch: async (req, endpoint) => {
 			const limit = endpoint.rateLimit?.perMinute ?? DEFAULT_PER_MINUTE;
-			const ip = extractClientIp(req);
-			const authHeader = req.headers.get("authorization") ?? "";
-			const tokenKey = authHeader ? `token:${authHeader.slice(-20)}` : `ip:${ip}`;
-			const result = checkRateLimit(`user:${tokenKey}`, limit, WINDOW_MS);
+			// authenticate (requireUserToken) has already run — __userAuth is attached
+			const auth = getUserAuth(req);
+			const result = checkRateLimit(`user:token:${auth.tokenId}`, limit, WINDOW_MS);
 			const headers = rateLimitHeaders(result);
 			if (!result.allowed) {
 				const retryAfter = Math.max(1, Math.ceil((result.resetAt - Date.now()) / 1000));
