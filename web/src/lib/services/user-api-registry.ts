@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getUserAuth } from "./api-auth";
 import type { Endpoint } from "./api-types";
 import { NotFoundError } from "./api-types";
+import { listActiveContestsForUser } from "./contests";
 import { getSubmissionById, getSubmissions, submitCode } from "./submissions";
 import { getUserMe } from "./user-profile";
 
@@ -69,6 +70,16 @@ export const userEndpoints: Endpoint[] = [
 				problemId: q.problemId,
 			});
 			return { submissions: result.submissions, total: result.total, page: q.page, limit: q.limit };
+		},
+	},
+	{
+		type: "json",
+		method: "GET",
+		path: "contests/active",
+		description: "참여 중이거나 예정된 대회 (now < endTime)",
+		handler: async ({ request }) => {
+			const { userId } = getUserAuth(request);
+			return listActiveContestsForUser(userId);
 		},
 	},
 	{

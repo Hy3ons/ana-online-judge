@@ -1,7 +1,8 @@
-import { and, asc, count, desc, eq, gte, lte, type SQL, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, gte, lte, type SQL, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
 	type ContestVisibility,
+	contestParticipants,
 	contestProblems,
 	contests,
 	problems,
@@ -240,6 +241,50 @@ export async function deleteContest(id: number) {
 	await db.delete(submissions).where(eq(submissions.contestId, id));
 	await db.delete(contests).where(eq(contests.id, id));
 	return { success: true };
+}
+
+export async function listActiveContestsForUser(userId: number) {
+	const now = new Date();
+	const rows = await db
+		.select({ contest: contests })
+		.from(contests)
+		.innerJoin(
+			contestParticipants,
+			and(eq(contestParticipants.contestId, contests.id), eq(contestParticipants.userId, userId))
+		)
+		.where(gt(contests.endTime, now));
+
+	const result: Array<{
+		id: number;
+		title: string;
+		startTime: Date;
+		endTime: Date;
+		status: "upcoming" | "running";
+		problems: Array<{ id: number; title: string; label: string }>;
+	}> = [];
+
+	for (const { contest } of rows) {
+		const status = contest.startTime > now ? "upcoming" : "running";
+		const problemRows = await db
+			.select({
+				id: problems.id,
+				title: problems.displayTitle,
+				label: contestProblems.label,
+			})
+			.from(contestProblems)
+			.innerJoin(problems, eq(problems.id, contestProblems.problemId))
+			.where(eq(contestProblems.contestId, contest.id))
+			.orderBy(asc(contestProblems.order));
+		result.push({
+			id: contest.id,
+			title: contest.title,
+			startTime: contest.startTime,
+			endTime: contest.endTime,
+			status,
+			problems: problemRows,
+		});
+	}
+	return { contests: result };
 }
 
 export async function toggleFreezeState(contestId: number) {
