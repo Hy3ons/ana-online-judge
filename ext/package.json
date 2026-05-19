@@ -1,0 +1,55 @@
+{
+  "name": "aoj-vscode",
+  "displayName": "ANA Online Judge",
+  "description": "Solve AOJ problems from VS Code: sync problems, run testcases locally, submit, watch verdicts live.",
+  "version": "0.1.0",
+  "publisher": "ana-online-judge",
+  "private": true,
+  "engines": {
+    "vscode": "^1.95.0",
+    "node": ">=20"
+  },
+  "categories": ["Education", "Other"],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onLanguage:cpp",
+    "onLanguage:c",
+    "onLanguage:python",
+    "onLanguage:rust",
+    "onLanguage:go",
+    "onLanguage:java",
+    "onLanguage:javascript",
+    "onAuthenticationRequest:aoj"
+  ],
+  "contributes": {},
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "watch": "node esbuild.config.mjs --watch",
+    "package": "node esbuild.config.mjs --production",
+    "lint": "biome check src test",
+    "lint:fix": "biome check --fix src test",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "node ./test/integration/runner.cjs",
+    "vsce:package": "vsce package --no-dependencies --out aoj-vscode.vsix",
+    "vsce:publish": "vsce publish --no-dependencies"
+  },
+  "dependencies": {
+    "highlight.js": "^11.10.0",
+    "markdown-it": "^14.1.0",
+    "markdown-it-highlightjs": "^4.2.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.8",
+    "@types/markdown-it": "^14.1.2",
+    "@types/node": "^20.14.0",
+    "@types/vscode": "^1.95.0",
+    "@vscode/test-electron": "^2.4.1",
+    "@vscode/vsce": "^3.2.1",
+    "esbuild": "^0.24.0",
+    "ovsx": "^0.10.1",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  }
+}
