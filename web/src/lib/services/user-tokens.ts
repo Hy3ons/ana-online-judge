@@ -56,32 +56,57 @@ export async function validateAccessToken(
 		.limit(1);
 	if (!row) return null;
 	if (row.expiresAt.getTime() <= Date.now()) return null;
-	// async 갱신 (응답 대기 안 함)
-	void db.update(userApiTokens).set({ lastUsedAt: new Date() }).where(eq(userApiTokens.id, row.id));
+	// async 갱신 (응답 대기 안 함, 오류 무시)
+	db.update(userApiTokens)
+		.set({ lastUsedAt: new Date() })
+		.where(eq(userApiTokens.id, row.id))
+		.catch(() => {});
 	return { userId: row.userId, scopes: row.scopes, tokenId: row.id };
 }
 
 /**
  * Refresh token으로 새 토큰 쌍 발급. 기존 토큰은 즉시 revoke (rotation).
+ * 트랜잭션으로 감싸서 원자성 보장.
  */
 export async function rotateRefreshToken(refreshToken: string): Promise<TokenPair | null> {
 	const refreshHash = hashToken(refreshToken);
-	const [row] = await db
-		.select()
-		.from(userApiTokens)
-		.where(and(eq(userApiTokens.refreshHash, refreshHash), isNull(userApiTokens.revokedAt)))
-		.limit(1);
-	if (!row) return null;
-	if (!row.refreshExpiresAt || row.refreshExpiresAt.getTime() <= Date.now()) return null;
+	return await db.transaction(async (tx) => {
+		const [row] = await tx
+			.select()
+			.from(userApiTokens)
+			.where(and(eq(userApiTokens.refreshHash, refreshHash), isNull(userApiTokens.revokedAt)))
+			.limit(1);
+		if (!row) return null;
+		if (!row.refreshExpiresAt || row.refreshExpiresAt.getTime() <= Date.now()) return null;
 
-	const pair = await issueTokenPair({
-		userId: row.userId,
-		type: row.type,
-		label: row.label ?? undefined,
-		scopes: row.scopes,
+		// 새 토큰 쌍 생성 및 INSERT (트랜잭션 내)
+		const accessToken = generateAccessToken();
+		const refreshToken = generateRefreshToken();
+		const now = new Date();
+		await tx.insert(userApiTokens).values({
+			userId: row.userId,
+			tokenHash: hashToken(accessToken),
+			refreshHash: hashToken(refreshToken),
+			type: row.type,
+			scopes: row.scopes ?? ["user"],
+			label: row.label,
+			expiresAt: new Date(now.getTime() + ACCESS_TOKEN_TTL_SECONDS * 1000),
+			refreshExpiresAt: new Date(now.getTime() + REFRESH_TOKEN_TTL_SECONDS * 1000),
+		});
+
+		// 기존 토큰 revoke (트랜잭션 내)
+		await tx
+			.update(userApiTokens)
+			.set({ revokedAt: new Date() })
+			.where(eq(userApiTokens.id, row.id));
+
+		return {
+			accessToken,
+			refreshToken,
+			accessExpiresIn: ACCESS_TOKEN_TTL_SECONDS,
+			refreshExpiresIn: REFRESH_TOKEN_TTL_SECONDS,
+		};
 	});
-	await db.update(userApiTokens).set({ revokedAt: new Date() }).where(eq(userApiTokens.id, row.id));
-	return pair;
 }
 
 export async function revokeToken(accessToken: string): Promise<boolean> {
