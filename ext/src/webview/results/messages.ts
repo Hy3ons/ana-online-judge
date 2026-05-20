@@ -1,17 +1,30 @@
 import type { CaseRun } from "../../runner/runner";
 
-export type WebToExt = { type: "ready" } | { type: "openDiff"; index: number };
+export type WebToExt =
+	| { type: "ready" }
+	| { type: "openDiff"; index: number }
+	| { type: "runAll" }
+	| { type: "submit" }
+	| { type: "openStatement" }
+	| { type: "addCase" }
+	| { type: "editCase"; index: number; input?: string; output?: string }
+	| { type: "removeCase"; index: number }
+	| { type: "undoRemove"; index: number };
 
 export type ExtToWeb =
-	| { type: "header"; title: string; problemId?: number }
+	| { type: "header"; title: string; problemId?: number; hasSidecar: boolean }
 	| { type: "case"; case: SerializedCase; index: number }
+	| { type: "cases"; cases: SerializedCase[] }
+	| { type: "removeCase"; index: number }
 	| { type: "done"; summary: { passed: number; total: number } }
 	| {
 			type: "submission";
 			verdict: string;
 			perTestcase?: Array<{ index: number; verdict: string; timeMs?: number }>;
 			finished: boolean;
-	  };
+	  }
+	| { type: "toast"; kind: "removed"; index: number; message: string }
+	| { type: "saveError"; index: number; message: string };
 
 export interface SerializedCase {
 	index: number;
@@ -21,6 +34,7 @@ export interface SerializedCase {
 	actual: string;
 	input: string;
 	elapsedMs?: number;
+	saving?: boolean;
 }
 
 export function serializeCase(c: CaseRun): SerializedCase {
@@ -76,4 +90,16 @@ export function serializeCase(c: CaseRun): SerializedCase {
 				input: c.input,
 			};
 	}
+}
+
+/** Build a SerializedCase from just file contents (no run results yet). */
+export function emptyCase(index: number, input: string, output: string): SerializedCase {
+	return {
+		index,
+		verdict: "",
+		detail: "",
+		expected: output,
+		actual: "",
+		input,
+	};
 }

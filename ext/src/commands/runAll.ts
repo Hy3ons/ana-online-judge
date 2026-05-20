@@ -48,7 +48,12 @@ export async function runAllCmd(
 	const baseTimeout = sc?.timeLimit ?? 2000;
 	const timeoutMs = Math.floor(baseTimeout * getTimeoutMultiplier());
 
-	beginRun(context, `Run All — ${vscode.workspace.asRelativePath(sourcePath)}`, sc?.problemId);
+	beginRun(
+		context,
+		`Run All — ${vscode.workspace.asRelativePath(sourcePath)}`,
+		sc?.problemId,
+		sourcePath
+	);
 
 	const overrides = {
 		compilerPaths: { [lang]: getCompilerPath(lang) ?? meta.compile?.command ?? meta.run.command },

@@ -41,7 +41,12 @@ export async function runOneCmd(
 	const sc = await readSidecar(sidecarPath(folder.uri.fsPath, sourcePath, getSidecarDir()));
 	const timeoutMs = Math.floor((sc?.timeLimit ?? 2000) * getTimeoutMultiplier());
 
-	beginRun(context, `Run #${idx} — ${vscode.workspace.asRelativePath(sourcePath)}`, sc?.problemId);
+	beginRun(
+		context,
+		`Run #${idx} — ${vscode.workspace.asRelativePath(sourcePath)}`,
+		sc?.problemId,
+		sourcePath
+	);
 	const compile = await compileIfNeeded(sourcePath, meta, {
 		timeoutMs,
 		overrides: {

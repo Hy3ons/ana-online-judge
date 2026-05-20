@@ -49,7 +49,12 @@ export async function submitCmd(
 		vscode.window.showErrorMessage(`제출 실패: ${(e as Error).message}`);
 		return;
 	}
-	beginSubmission(context, `Submission #${submissionId} — ${sc.problemTitle}`, sc.problemId);
+	beginSubmission(
+		context,
+		`Submission #${submissionId} — ${sc.problemTitle}`,
+		sc.problemId,
+		sourcePath
+	);
 	const ctrl = new AbortController();
 	try {
 		const res = await endpoints.submissionStream(submissionId, ctrl.signal);
