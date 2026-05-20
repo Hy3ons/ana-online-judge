@@ -93,7 +93,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		vscode.commands.registerCommand("aoj.syncProblemById", (id?: number, contestId?: number) =>
 			attachProblemCmd(endpoints, id, contestId)
 		),
-		vscode.commands.registerCommand("aoj.runAll", () => runAllCmd(context, catalog)),
+		vscode.commands.registerCommand("aoj.runAll", () => runAllCmd(sidebar)),
 		vscode.commands.registerCommand("aoj.runOne", (idx?: number) =>
 			runOneCmd(context, catalog, idx)
 		),
