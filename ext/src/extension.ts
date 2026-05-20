@@ -5,6 +5,7 @@ import { AojAuthProvider, AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL } from "./auth/a
 import { DeviceFlow } from "./auth/deviceFlow";
 import { TokenStore } from "./auth/tokenStore";
 import { addTestcaseCmd } from "./commands/addTestcase";
+import { attachProblemCmd } from "./commands/attachProblem";
 import { openInBrowserCmd } from "./commands/openInBrowser";
 import { openStatementCmd } from "./commands/openStatement";
 import { removeTestcaseCmd } from "./commands/removeTestcase";
@@ -12,14 +13,12 @@ import { runAllCmd } from "./commands/runAll";
 import { runOneCmd } from "./commands/runOne";
 import { searchProblemsCmd } from "./commands/searchProblems";
 import { submitCmd } from "./commands/submit";
-import { syncProblemByIdCmd } from "./commands/syncProblem";
 import { LanguageCatalog } from "./languages/catalog";
 import { ContestCountdown } from "./status/contestCountdown";
-import { CurrentFileTreeProvider } from "./views/currentFileView";
-import { SubmissionsTreeProvider } from "./views/submissionsView";
-import { SyncTreeProvider } from "./views/syncView";
+import { DashboardProvider } from "./views/dashboard/provider";
 
 let output: vscode.OutputChannel;
+let signedInUsername: string | null = null;
 
 function getEndpoint(): string {
 	return vscode.workspace
@@ -36,6 +35,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	const provider = new AojAuthProvider(tokens, deviceFlow, getEndpoint, output);
 
 	const existing = await tokens.load();
+	signedInUsername = existing?.username ?? null;
 	await vscode.commands.executeCommand("setContext", "aoj.signedIn", existing !== null);
 
 	const apiClient = new ApiClient({
@@ -46,29 +46,35 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		deviceFlow,
 	});
 	const endpoints = new Endpoints(apiClient);
-	const sync = new SyncTreeProvider(endpoints);
-	const currentFile = new CurrentFileTreeProvider(() =>
-		vscode.workspace.getConfiguration("aoj").get<string>("testcaseSidecarDir", ".aoj")
-	);
-	const subs = new SubmissionsTreeProvider(endpoints, getEndpoint);
 	const catalog = new LanguageCatalog(endpoints);
+
+	const dashboard = new DashboardProvider(context, endpoints, () => signedInUsername);
 	const countdown = new ContestCountdown(endpoints);
 	countdown.start();
 
+	provider.onDidChangeSessions(async () => {
+		const cur = await tokens.load();
+		signedInUsername = cur?.username ?? null;
+		await dashboard.refresh();
+		await countdown.refresh();
+	});
+
 	context.subscriptions.push(
-		countdown,
 		output,
 		provider,
+		dashboard,
+		countdown,
 		vscode.authentication.registerAuthenticationProvider(
 			AUTH_PROVIDER_ID,
 			AUTH_PROVIDER_LABEL,
 			provider,
-			{
-				supportsMultipleAccounts: false,
-			}
+			{ supportsMultipleAccounts: false }
 		),
+		vscode.window.registerWebviewViewProvider(DashboardProvider.viewId, dashboard),
 		vscode.commands.registerCommand("aoj.signIn", async () => {
-			await vscode.authentication.getSession(AUTH_PROVIDER_ID, ["user"], { createIfNone: true });
+			await vscode.authentication.getSession(AUTH_PROVIDER_ID, ["user"], {
+				createIfNone: true,
+			});
 		}),
 		vscode.commands.registerCommand("aoj.signOut", async () => {
 			const sessions = await provider.getSessions();
@@ -79,13 +85,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 			await provider.removeSession(sessions[0].id);
 			vscode.window.showInformationMessage("로그아웃되었습니다.");
 		}),
-		vscode.window.registerTreeDataProvider("aoj.sync", sync),
-		vscode.window.registerTreeDataProvider("aoj.currentFile", currentFile),
-		vscode.window.registerTreeDataProvider("aoj.submissions", subs),
-		vscode.commands.registerCommand("aoj.refreshContests", () => sync.refresh()),
 		vscode.commands.registerCommand("aoj.searchProblems", () => searchProblemsCmd(endpoints)),
+		vscode.commands.registerCommand("aoj.attachProblemById", (id?: number, contestId?: number) =>
+			attachProblemCmd(endpoints, id, contestId)
+		),
+		// Back-compat: keep aoj.syncProblemById ID as alias.
 		vscode.commands.registerCommand("aoj.syncProblemById", (id?: number, contestId?: number) =>
-			syncProblemByIdCmd(endpoints, id, contestId)
+			attachProblemCmd(endpoints, id, contestId)
 		),
 		vscode.commands.registerCommand("aoj.runAll", () => runAllCmd(context, catalog)),
 		vscode.commands.registerCommand("aoj.runOne", (idx?: number) =>
@@ -98,12 +104,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 			openStatementCmd(context, endpoints)
 		),
 		vscode.commands.registerCommand("aoj.openInBrowser", () => openInBrowserCmd()),
-		vscode.commands.registerCommand("aoj.currentFile.refresh", () => currentFile.refresh())
+		vscode.commands.registerCommand("aoj.dashboard.refresh", () => dashboard.refresh())
 	);
-
-	provider.onDidChangeSessions(() => sync.refresh());
-	provider.onDidChangeSessions(() => subs.refresh());
-	provider.onDidChangeSessions(() => void countdown.refresh());
 }
 
 export function deactivate(): void {

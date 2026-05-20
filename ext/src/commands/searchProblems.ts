@@ -23,5 +23,5 @@ export async function searchProblemsCmd(endpoints: Endpoints): Promise<void> {
 		items.map((it) => ({ label: `#${it.id} ${it.title}`, id: it.id })),
 		{ title: `${items.length}개 결과 — 클릭해 sync` }
 	);
-	if (pick) await vscode.commands.executeCommand("aoj.syncProblemById", pick.id);
+	if (pick) await vscode.commands.executeCommand("aoj.attachProblemById", pick.id);
 }

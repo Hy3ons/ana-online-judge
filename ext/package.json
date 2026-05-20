@@ -59,7 +59,17 @@
       },
       {
         "command": "aoj.syncProblemById",
-        "title": "AOJ: Sync Problem by ID...",
+        "title": "AOJ: Attach Problem (legacy alias)",
+        "category": "AOJ"
+      },
+      {
+        "command": "aoj.attachProblemById",
+        "title": "AOJ: Attach Problem by ID...",
+        "category": "AOJ"
+      },
+      {
+        "command": "aoj.dashboard.refresh",
+        "title": "AOJ: Refresh Dashboard",
         "category": "AOJ"
       },
       {
