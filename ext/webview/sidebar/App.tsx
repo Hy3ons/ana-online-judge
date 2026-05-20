@@ -44,7 +44,7 @@ export function App({ vscode }: { vscode: { postMessage: (m: WebToHost) => void 
 				signedIn={state.signedIn}
 				username={state.username}
 				onSignIn={() => cmd("aoj.signIn")}
-				onSignOut={() => cmd("aoj.signIn")}
+				onSignOut={() => cmd("aoj.signOut")}
 				onRefresh={() => cmd("aoj.sidebar.refresh")}
 			/>
 			{showSignInBanner && (

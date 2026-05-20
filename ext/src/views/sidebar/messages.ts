@@ -99,6 +99,7 @@ export type WebToHost =
 				| "aoj.addTestcase"
 				| "aoj.searchProblems"
 				| "aoj.signIn"
+				| "aoj.signOut"
 				| "aoj.attachProblemById"
 				| "aoj.openInBrowser"
 				| "aoj.sidebar.refresh";
