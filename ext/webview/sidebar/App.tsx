@@ -7,6 +7,7 @@ import { FileRow } from "./components/FileRow";
 import { Header } from "./components/Header";
 import { LinkedProblemCard } from "./components/LinkedProblemCard";
 import { SignInBanner } from "./components/SignInBanner";
+import { TestList } from "./components/TestList";
 
 const INITIAL: SidebarState = {
 	root: "no-editor",
@@ -90,6 +91,14 @@ export function App({ vscode }: { vscode: { postMessage: (m: WebToHost) => void 
 						onSubmit={() => cmd("aoj.submit")}
 						onAdd={() => cmd("aoj.addTestcase")}
 						onSearch={() => cmd("aoj.searchProblems")}
+					/>
+					<TestList
+						cases={state.cases}
+						onRunCase={(index) => bridge.post({ type: "runCase", index })}
+						onRemoveCase={(index) => bridge.post({ type: "removeCase", index })}
+						onEditCase={(index, input, expected) =>
+							bridge.post({ type: "editCase", index, input, expected })
+						}
 					/>
 				</>
 			)}
