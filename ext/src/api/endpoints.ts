@@ -57,9 +57,21 @@ export interface SubmissionSummary {
 	createdAt: string; // ISO from JSON serialization of Date
 }
 
+export interface TestcaseResult {
+	id: number;
+	submissionId: number;
+	testcaseId: number;
+	verdict: string;
+	executionTime: number | null; // ms
+	memoryUsed: number | null; // KB
+	checkerMessage: string | null;
+	createdAt: string;
+	subtaskGroup: string | null;
+	score: number | null;
+}
+
 export interface SubmissionDetail extends SubmissionSummary {
-	perTestcase?: Array<{ index: number; verdict: string; timeMs?: number; memoryKb?: number }>;
-	compileMessage?: string;
+	testcaseResults: TestcaseResult[];
 }
 
 export interface ContestActiveItem {
