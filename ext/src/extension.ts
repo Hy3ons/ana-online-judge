@@ -4,6 +4,7 @@ import { Endpoints } from "./api/endpoints";
 import { AojAuthProvider, AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL } from "./auth/authProvider";
 import { DeviceFlow } from "./auth/deviceFlow";
 import { TokenStore } from "./auth/tokenStore";
+import { CurrentFileTreeProvider } from "./views/currentFileView";
 import { SyncTreeProvider } from "./views/syncView";
 
 let output: vscode.OutputChannel;
@@ -34,6 +35,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	});
 	const endpoints = new Endpoints(apiClient);
 	const sync = new SyncTreeProvider(endpoints);
+	const currentFile = new CurrentFileTreeProvider(() =>
+		vscode.workspace.getConfiguration("aoj").get<string>("testcaseSidecarDir", ".aoj")
+	);
 
 	context.subscriptions.push(
 		output,
@@ -59,6 +63,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 			vscode.window.showInformationMessage("로그아웃되었습니다.");
 		}),
 		vscode.window.registerTreeDataProvider("aoj.sync", sync),
+		vscode.window.registerTreeDataProvider("aoj.currentFile", currentFile),
 		vscode.commands.registerCommand("aoj.refreshContests", () => sync.refresh())
 	);
 
