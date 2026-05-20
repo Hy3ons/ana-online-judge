@@ -208,39 +208,46 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 
 		const slot = this.ensureSlot(sourcePath);
 
-		await runStream(
-			{
-				sourcePath,
-				lang,
-				meta,
-				pairs,
-				indices,
-				options: { timeoutMs, overrides },
-				cache: this.compileCache,
-			},
-			{
-				compile: (state, message) => {
-					slot.compile = { state, message };
-					void this.post({ type: "compile", state, message });
+		try {
+			await runStream(
+				{
+					sourcePath,
+					lang,
+					meta,
+					pairs,
+					indices,
+					options: { timeoutMs, overrides },
+					cache: this.compileCache,
 				},
-				caseStart: (index) => {
-					this.updateCase(slot, index, { verdict: "RUNNING" });
-					void this.post({ type: "caseStart", index });
-				},
-				caseDone: (args) => {
-					this.updateCase(slot, args.index, {
-						verdict: args.verdict,
-						actual: args.actual,
-						timeMs: args.timeMs,
-						memoryKb: args.memoryKb,
-						detail: args.detail,
-					});
-					void this.post({ type: "caseDone", ...args });
-				},
-			}
-		);
-
-		if (slot.compile.state !== "error") slot.compile = { state: "idle" };
+				{
+					compile: (state, message) => {
+						slot.compile = { state, message };
+						void this.post({ type: "compile", state, message });
+					},
+					caseStart: (index) => {
+						this.updateCase(slot, index, { verdict: "RUNNING" });
+						void this.post({ type: "caseStart", index });
+					},
+					caseDone: (args) => {
+						this.updateCase(slot, args.index, {
+							verdict: args.verdict,
+							actual: args.actual,
+							timeMs: args.timeMs,
+							memoryKb: args.memoryKb,
+							detail: args.detail,
+						});
+						void this.post({ type: "caseDone", ...args });
+					},
+				}
+			);
+		} catch (e) {
+			const message = (e as Error).message;
+			slot.compile = { state: "error", message };
+			void this.post({ type: "compile", state: "error", message });
+			vscode.window.showErrorMessage(`Run failed: ${message}`);
+		} finally {
+			if (slot.compile.state !== "error") slot.compile = { state: "idle" };
+		}
 	}
 
 	private ensureSlot(sourcePath: string) {
