@@ -1,7 +1,10 @@
 import * as vscode from "vscode";
+import { ApiClient } from "./api/client";
+import { Endpoints } from "./api/endpoints";
 import { AojAuthProvider, AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL } from "./auth/authProvider";
 import { DeviceFlow } from "./auth/deviceFlow";
 import { TokenStore } from "./auth/tokenStore";
+import { SyncTreeProvider } from "./views/syncView";
 
 let output: vscode.OutputChannel;
 
@@ -21,6 +24,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
 	const existing = await tokens.load();
 	await vscode.commands.executeCommand("setContext", "aoj.signedIn", existing !== null);
+
+	const apiClient = new ApiClient({
+		endpoint: getEndpoint(),
+		getSession: () => tokens.load(),
+		saveSession: (s) => tokens.save(s),
+		clearSession: () => tokens.clear(),
+		deviceFlow,
+	});
+	const endpoints = new Endpoints(apiClient);
+	const sync = new SyncTreeProvider(endpoints);
 
 	context.subscriptions.push(
 		output,
@@ -44,8 +57,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 			}
 			await provider.removeSession(sessions[0].id);
 			vscode.window.showInformationMessage("로그아웃되었습니다.");
-		})
+		}),
+		vscode.window.registerTreeDataProvider("aoj.sync", sync),
+		vscode.commands.registerCommand("aoj.refreshContests", () => sync.refresh())
 	);
+
+	provider.onDidChangeSessions(() => sync.refresh());
 }
 
 export function deactivate(): void {
