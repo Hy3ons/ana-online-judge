@@ -5,6 +5,7 @@ import type {
 	SerializedCase,
 	WebToExt,
 } from "../../src/webview/results/messages";
+import { TestcaseCard } from "./components/TestcaseCard";
 import { Toolbar } from "./components/Toolbar";
 
 interface HeaderState {
@@ -71,9 +72,12 @@ export function App({ vscode }: { vscode: { postMessage: (m: WebToExt) => void }
 					</p>
 				) : (
 					sorted.map((c) => (
-						<div key={c.index} class="border border-border rounded">
-							#{c.index} {c.verdict}
-						</div>
+						<TestcaseCard
+							key={c.index}
+							c={c}
+							onRemove={() => bridge.post({ type: "removeCase", index: c.index })}
+							onOpenDiff={() => bridge.post({ type: "openDiff", index: c.index })}
+						/>
 					))
 				)}
 			</main>
