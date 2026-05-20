@@ -96,11 +96,6 @@
         "command": "aoj.removeTestcase",
         "title": "AOJ: Remove Testcase",
         "category": "AOJ"
-      },
-      {
-        "command": "aoj.refreshContests",
-        "title": "AOJ: Refresh Active Contests",
-        "category": "AOJ"
       }
     ],
     "keybindings": [
@@ -135,37 +130,22 @@
     "views": {
       "aoj": [
         {
-          "id": "aoj.sync",
-          "name": "Sync",
-          "icon": "media/sidebar.svg"
-        },
-        {
-          "id": "aoj.currentFile",
-          "name": "Current File",
-          "icon": "media/sidebar.svg"
-        },
-        {
-          "id": "aoj.submissions",
-          "name": "My Submissions",
-          "icon": "media/sidebar.svg"
+          "id": "aoj.dashboard",
+          "name": "AOJ",
+          "type": "webview"
         }
       ]
     },
     "menus": {
       "view/title": [
         {
-          "command": "aoj.refreshContests",
-          "when": "view == aoj.sync",
-          "group": "navigation"
-        },
-        {
           "command": "aoj.signIn",
-          "when": "view == aoj.sync && !aoj.signedIn",
+          "when": "view == aoj.dashboard && !aoj.signedIn",
           "group": "navigation"
         },
         {
           "command": "aoj.signOut",
-          "when": "view == aoj.sync && aoj.signedIn",
+          "when": "view == aoj.dashboard && aoj.signedIn",
           "group": "1_overflow"
         }
       ]
