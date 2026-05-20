@@ -15,6 +15,7 @@ suite("extension smoke", () => {
 			"aoj.signIn",
 			"aoj.signOut",
 			"aoj.searchProblems",
+			"aoj.attachProblemById",
 			"aoj.syncProblemById",
 			"aoj.runAll",
 			"aoj.runOne",
@@ -23,7 +24,7 @@ suite("extension smoke", () => {
 			"aoj.removeTestcase",
 			"aoj.openStatement",
 			"aoj.openInBrowser",
-			"aoj.refreshContests",
+			"aoj.dashboard.refresh",
 		];
 		const all = await vscode.commands.getCommands(true);
 		for (const c of expected) assert.ok(all.includes(c), `missing command: ${c}`);
