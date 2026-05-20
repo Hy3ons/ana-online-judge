@@ -2,7 +2,7 @@
   "name": "aoj-vscode",
   "displayName": "ANA Online Judge",
   "description": "Solve AOJ problems from VS Code: sync problems, run testcases locally, submit, watch verdicts live.",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "publisher": "ana-online-judge",
   "private": true,
   "engines": {
