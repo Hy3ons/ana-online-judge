@@ -22,7 +22,6 @@ suite("extension smoke", () => {
 			"aoj.submit",
 			"aoj.addTestcase",
 			"aoj.removeTestcase",
-			"aoj.openStatement",
 			"aoj.openInBrowser",
 			"aoj.dashboard.refresh",
 		];

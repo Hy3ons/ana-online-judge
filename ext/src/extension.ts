@@ -7,7 +7,6 @@ import { TokenStore } from "./auth/tokenStore";
 import { addTestcaseCmd } from "./commands/addTestcase";
 import { attachProblemCmd } from "./commands/attachProblem";
 import { openInBrowserCmd } from "./commands/openInBrowser";
-import { openStatementCmd } from "./commands/openStatement";
 import { removeTestcaseCmd } from "./commands/removeTestcase";
 import { runAllCmd } from "./commands/runAll";
 import { runOneCmd } from "./commands/runOne";
@@ -98,9 +97,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		vscode.commands.registerCommand("aoj.submit", () => submitCmd(sidebar)),
 		vscode.commands.registerCommand("aoj.addTestcase", () => addTestcaseCmd()),
 		vscode.commands.registerCommand("aoj.removeTestcase", (idx?: number) => removeTestcaseCmd(idx)),
-		vscode.commands.registerCommand("aoj.openStatement", () =>
-			openStatementCmd(context, endpoints)
-		),
 		vscode.commands.registerCommand("aoj.openInBrowser", () => openInBrowserCmd()),
 		vscode.commands.registerCommand("aoj.sidebar.refresh", () => sidebar.refresh()),
 		vscode.commands.registerCommand("aoj.sidebar.undoRemove", (sourcePath: string, index: number) =>

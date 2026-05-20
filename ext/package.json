@@ -88,11 +88,6 @@
         "category": "AOJ"
       },
       {
-        "command": "aoj.openStatement",
-        "title": "AOJ: Open Problem Statement",
-        "category": "AOJ"
-      },
-      {
         "command": "aoj.openInBrowser",
         "title": "AOJ: Open in Browser",
         "category": "AOJ"
@@ -119,12 +114,6 @@
         "command": "aoj.submit",
         "key": "ctrl+alt+s",
         "mac": "cmd+alt+s",
-        "when": "editorTextFocus"
-      },
-      {
-        "command": "aoj.openStatement",
-        "key": "ctrl+alt+d",
-        "mac": "cmd+alt+d",
         "when": "editorTextFocus"
       }
     ],

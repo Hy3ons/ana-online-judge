@@ -36,14 +36,9 @@ const sidebarConfig = {
 	entryPoints: ["webview/sidebar/index.tsx"],
 	outfile: "dist/webview/sidebar.js",
 };
-const statementConfig = {
-	...sharedWebviewOpts,
-	entryPoints: ["webview/statement/index.tsx"],
-	outfile: "dist/webview/statement.js",
-};
 
 async function run() {
-	const configs = [extensionConfig, sidebarConfig, statementConfig];
+	const configs = [extensionConfig, sidebarConfig];
 	if (isWatch) {
 		const ctxs = await Promise.all(configs.map((c) => context(c)));
 		await Promise.all(ctxs.map((c) => c.watch()));
