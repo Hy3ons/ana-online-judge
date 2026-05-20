@@ -5,24 +5,42 @@ const config: Config = {
 	theme: {
 		extend: {
 			colors: {
-				// Map to VSCode theme variables (Aligned style — D4)
+				// Chrome: theme-aware (follows user's VSCode theme)
 				bg: "var(--vscode-editor-background)",
 				"bg-elev": "var(--vscode-sideBar-background, var(--vscode-editor-background))",
 				"bg-card": "var(--vscode-input-background, var(--vscode-editor-background))",
 				fg: "var(--vscode-foreground)",
 				"fg-muted": "var(--vscode-descriptionForeground)",
 				border: "var(--vscode-panel-border, var(--vscode-widget-border, #2d2d2d))",
-				accent: "var(--vscode-textLink-foreground)",
-				"accent-bg": "var(--vscode-button-background)",
-				"accent-fg": "var(--vscode-button-foreground)",
-				"accent-hover": "var(--vscode-button-hoverBackground)",
-				ok: "var(--vscode-testing-iconPassed, #2ea043)",
-				bad: "var(--vscode-testing-iconFailed, #cf222e)",
-				warn: "var(--vscode-editorWarning-foreground, #cca700)",
-				info: "var(--vscode-charts-blue, #3794ff)",
 				code: "var(--vscode-textCodeBlock-background, rgba(127,127,127,0.1))",
-				badge: "var(--vscode-badge-background)",
-				"badge-fg": "var(--vscode-badge-foreground)",
+
+				// Actions: AOJ palette
+				primary: "var(--aoj-primary)",
+				"primary-fg": "var(--aoj-primary-fg)",
+				accent: "var(--aoj-accent)",
+				"accent-fg": "var(--aoj-accent-fg)",
+				ok: "var(--verdict-accepted)",
+				"ok-bg": "var(--verdict-accepted-bg)",
+				bad: "var(--verdict-wrong)",
+				"bad-bg": "var(--verdict-wrong-bg)",
+
+				// Verdict palette (full)
+				"verdict-ac": "var(--verdict-accepted)",
+				"verdict-ac-bg": "var(--verdict-accepted-bg)",
+				"verdict-wa": "var(--verdict-wrong)",
+				"verdict-wa-bg": "var(--verdict-wrong-bg)",
+				"verdict-tle": "var(--verdict-tle)",
+				"verdict-tle-bg": "var(--verdict-tle-bg)",
+				"verdict-mle": "var(--verdict-mle)",
+				"verdict-mle-bg": "var(--verdict-mle-bg)",
+				"verdict-re": "var(--verdict-runtime)",
+				"verdict-re-bg": "var(--verdict-runtime-bg)",
+				"verdict-ce": "var(--verdict-compile)",
+				"verdict-ce-bg": "var(--verdict-compile-bg)",
+				"verdict-pending": "var(--verdict-pending)",
+				"verdict-pending-bg": "var(--verdict-pending-bg)",
+				"verdict-skipped": "var(--verdict-skipped)",
+				"verdict-skipped-bg": "var(--verdict-skipped-bg)",
 			},
 			fontFamily: {
 				sans: ["var(--vscode-font-family)"],
@@ -35,6 +53,7 @@ const config: Config = {
 				lg: ["14px", "1.4"],
 				xl: ["16px", "1.3"],
 			},
+			borderWidth: { 4: "4px" },
 		},
 	},
 	plugins: [],

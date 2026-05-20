@@ -1,0 +1,32 @@
+/* AOJ color tokens copied from web/src/app/globals.css.
+ * Action buttons (Run/Submit) and verdict colors use these,
+ * regardless of the VSCode theme. Chrome (bg/fg/borders)
+ * still uses --vscode-* so it adapts to the editor theme. */
+:root {
+	--aoj-primary: #112D4E;
+	--aoj-primary-fg: #F9F7F7;
+	--aoj-accent: #3F72AF;
+	--aoj-accent-fg: #F9F7F7;
+	--aoj-destructive: #B83A3A;
+
+	--verdict-accepted: #2E7D5B;
+	--verdict-accepted-bg: #EAF3EE;
+	--verdict-wrong: #B83A3A;
+	--verdict-wrong-bg: #F6E9E9;
+	--verdict-tle: #C77A00;
+	--verdict-tle-bg: #FAF0DF;
+	--verdict-mle: #C65D17;
+	--verdict-mle-bg: #F9ECE0;
+	--verdict-runtime: #6B4C9A;
+	--verdict-runtime-bg: #EEE9F5;
+	--verdict-compile: #A64D79;
+	--verdict-compile-bg: #F5E9EF;
+	--verdict-presentation: #B86C2C;
+	--verdict-presentation-bg: #F8EDDF;
+	--verdict-partial: #B89020;
+	--verdict-partial-bg: #F8F1D9;
+	--verdict-pending: #3F72AF;
+	--verdict-pending-bg: #E5ECF5;
+	--verdict-skipped: #6B7687;
+	--verdict-skipped-bg: #EDEFF3;
+}
