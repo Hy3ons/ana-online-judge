@@ -1,0 +1,48 @@
+name: ext-release
+on:
+  push:
+    tags:
+      - 'ext-v*'
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install system deps for headless VS Code
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libpango-1.0-0 libcairo2 libasound2t64
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        run: pnpm --filter aoj-vscode lint
+      - name: Typecheck
+        run: pnpm --filter aoj-vscode typecheck
+      - name: Unit tests
+        run: pnpm --filter aoj-vscode test
+      - name: Build
+        run: pnpm --filter aoj-vscode package
+      - name: Integration tests (headless)
+        run: xvfb-run -a pnpm --filter aoj-vscode test:integration
+      - name: Package VSIX
+        working-directory: ext
+        run: pnpm exec vsce package --no-dependencies --out aoj-vscode.vsix
+      - name: Publish to Marketplace
+        working-directory: ext
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: pnpm exec vsce publish --no-dependencies --pat "$VSCE_PAT"
+      - name: Publish to Open VSX
+        working-directory: ext
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+        run: pnpm exec ovsx publish --no-dependencies --pat "$OVSX_PAT"

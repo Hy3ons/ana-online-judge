@@ -10,6 +10,16 @@
     "node": ">=20"
   },
   "categories": ["Education", "Other"],
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/csh1668/ana-online-judge"
+  },
+  "bugs": {
+    "url": "https://github.com/csh1668/ana-online-judge/issues"
+  },
+  "homepage": "https://github.com/csh1668/ana-online-judge#readme",
+  "license": "MIT",
   "main": "./dist/extension.js",
   "activationEvents": [
     "onLanguage:cpp",
