@@ -26,3 +26,37 @@
 		font-size: 12px;
 	}
 }
+
+@layer components {
+	.aoj-md h1, .aoj-md h2, .aoj-md h3, .aoj-md h4 {
+		color: var(--vscode-foreground);
+		border-bottom: 1px solid var(--vscode-panel-border);
+		padding-bottom: 0.2em;
+		margin: 1.5em 0 0.5em;
+	}
+	.aoj-md h1 { font-size: 1.6em; }
+	.aoj-md h2 { font-size: 1.3em; }
+	.aoj-md h3 { font-size: 1.1em; }
+	.aoj-md pre {
+		background: var(--vscode-textCodeBlock-background, rgba(127,127,127,0.1));
+		padding: 12px;
+		border-radius: 4px;
+		overflow-x: auto;
+	}
+	.aoj-md :not(pre) > code {
+		background: var(--vscode-textCodeBlock-background, rgba(127,127,127,0.1));
+		padding: 0 4px;
+		border-radius: 3px;
+	}
+	.aoj-md table { border-collapse: collapse; }
+	.aoj-md th, .aoj-md td {
+		border: 1px solid var(--vscode-panel-border);
+		padding: 6px 10px;
+	}
+	.aoj-md a { color: var(--vscode-textLink-foreground); }
+	.aoj-md .hljs-keyword { color: var(--vscode-symbolIcon-keywordForeground, #c586c0); }
+	.aoj-md .hljs-string  { color: var(--vscode-symbolIcon-stringForeground, #ce9178); }
+	.aoj-md .hljs-number  { color: var(--vscode-symbolIcon-numberForeground, #b5cea8); }
+	.aoj-md .hljs-comment { color: var(--vscode-editorLineNumber-foreground, #6a9955); font-style: italic; }
+	.aoj-md .hljs-title   { color: var(--vscode-symbolIcon-functionForeground, #dcdcaa); }
+}
