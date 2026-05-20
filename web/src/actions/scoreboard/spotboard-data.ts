@@ -214,6 +214,7 @@ export async function getSpotboardData(contestId: number): Promise<SpotboardConf
 		contestTitle: contest.title,
 		systemName: "Ana Online Judge",
 		systemVersion: "1.0",
+		penaltyMinutes: contest.penaltyMinutes,
 		problems: spotboardProblems,
 		teams: spotboardTeams,
 		runs: spotboardRuns,

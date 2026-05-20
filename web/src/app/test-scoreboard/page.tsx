@@ -12,6 +12,7 @@ export default function TestScoreboardPage() {
 		contestTitle: "Test Contest 2025",
 		systemName: "Ana Online Judge",
 		systemVersion: "v1.0",
+		penaltyMinutes: 20,
 		problems: [
 			{ id: 0, title: "A", problemType: "icpc" },
 			{ id: 1, title: "B", problemType: "icpc" },

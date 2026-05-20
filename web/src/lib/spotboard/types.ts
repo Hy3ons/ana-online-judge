@@ -34,6 +34,7 @@ export interface SpotboardConfig {
 	contestTitle: string;
 	systemName: string;
 	systemVersion: string;
+	penaltyMinutes: number;
 	problems: SpotboardProblem[];
 	teams: SpotboardTeam[];
 	runs: SpotboardRun[];

@@ -29,7 +29,7 @@ export function Spotboard({ config, isAwardMode = false }: SpotboardProps) {
 
 	// Initialize logic
 	useEffect(() => {
-		const l = new ContestLogic(config.teams, config.problems);
+		const l = new ContestLogic(config.teams, config.problems, config.penaltyMinutes);
 
 		let initialRuns = config.runs;
 		let hidden: SpotboardRun[] = [];

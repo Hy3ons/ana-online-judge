@@ -49,6 +49,7 @@ export class TeamProblemStatus {
 
 	constructor(
 		public problemId: number,
+		private penaltyMinutes: number,
 		public problemType?: "icpc" | "special_judge" | "anigma" | "interactive"
 	) {}
 
@@ -127,7 +128,7 @@ export class TeamProblemStatus {
 
 	getPenalty(): number {
 		if (this.isAccepted()) {
-			return this.getFailedAttempts() * 20 + (this.getSolvedTime() || 0);
+			return this.getFailedAttempts() * this.penaltyMinutes * 60 + (this.getSolvedTime() || 0);
 		}
 		return 0;
 	}
@@ -165,14 +166,20 @@ export class TeamStatus {
 	problemStatuses: Map<number, TeamProblemStatus> = new Map();
 	rank = 1;
 
-	constructor(public teamId: number) {}
+	constructor(
+		public teamId: number,
+		private penaltyMinutes: number
+	) {}
 
 	getProblemStatus(
 		problemId: number,
 		problemType?: "icpc" | "special_judge" | "anigma" | "interactive"
 	): TeamProblemStatus {
 		if (!this.problemStatuses.has(problemId)) {
-			this.problemStatuses.set(problemId, new TeamProblemStatus(problemId, problemType));
+			this.problemStatuses.set(
+				problemId,
+				new TeamProblemStatus(problemId, this.penaltyMinutes, problemType)
+			);
 		}
 		return this.problemStatuses.get(problemId)!;
 	}
@@ -230,10 +237,14 @@ export class ContestLogic {
 	teamStatuses: Map<number, TeamStatus> = new Map();
 	runs: Run[] = [];
 
-	constructor(teams: SpotboardTeam[], problems: SpotboardProblem[]) {
+	constructor(
+		teams: SpotboardTeam[],
+		problems: SpotboardProblem[],
+		private penaltyMinutes: number
+	) {
 		for (const t of teams) {
 			this.teams.set(t.id, t);
-			this.teamStatuses.set(t.id, new TeamStatus(t.id));
+			this.teamStatuses.set(t.id, new TeamStatus(t.id, this.penaltyMinutes));
 		}
 		for (const p of problems) {
 			this.problems.set(p.id, p);
