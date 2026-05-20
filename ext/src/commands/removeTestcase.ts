@@ -18,5 +18,5 @@ export async function removeTestcaseCmd(idxArg?: number): Promise<void> {
 	const tc = tcs.find((t) => t.index === idx);
 	if (!tc) return;
 	await removeTestcase(tc);
-	await vscode.commands.executeCommand("aoj.currentFile.refresh");
+	await vscode.commands.executeCommand("aoj.dashboard.refresh");
 }
