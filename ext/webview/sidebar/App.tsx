@@ -3,10 +3,12 @@ import type { HostToWeb, SidebarState, WebToHost } from "../../src/views/sidebar
 import { EmptyState } from "../shared/components/EmptyState";
 import { createBridge } from "../shared/postMessage";
 import { ActionBar } from "./components/ActionBar";
+import { CompileBanner } from "./components/CompileBanner";
 import { FileRow } from "./components/FileRow";
 import { Header } from "./components/Header";
 import { LinkedProblemCard } from "./components/LinkedProblemCard";
 import { SignInBanner } from "./components/SignInBanner";
+import { SubmissionStrip } from "./components/SubmissionStrip";
 import { TestList } from "./components/TestList";
 
 const INITIAL: SidebarState = {
@@ -92,6 +94,9 @@ export function App({ vscode }: { vscode: { postMessage: (m: WebToHost) => void 
 						onAdd={() => cmd("aoj.addTestcase")}
 						onSearch={() => cmd("aoj.searchProblems")}
 					/>
+					{(state.compile.state === "running" || state.compile.state === "error") && (
+						<CompileBanner state={state.compile.state} message={state.compile.message} />
+					)}
 					<TestList
 						cases={state.cases}
 						onRunCase={(index) => bridge.post({ type: "runCase", index })}
@@ -100,6 +105,15 @@ export function App({ vscode }: { vscode: { postMessage: (m: WebToHost) => void 
 							bridge.post({ type: "editCase", index, input, expected })
 						}
 					/>
+					{state.submission && (
+						<SubmissionStrip
+							submission={state.submission}
+							onOpen={() =>
+								// biome-ignore lint/style/noNonNullAssertion: guarded by the truthy check above
+								bridge.post({ type: "openSubmission", submissionId: state.submission!.submissionId })
+							}
+						/>
+					)}
 				</>
 			)}
 		</div>
