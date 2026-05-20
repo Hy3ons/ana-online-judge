@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+@layer base {
+	html, body {
+		font-family: var(--vscode-font-family);
+		color: var(--vscode-foreground);
+		background: var(--vscode-editor-background);
+		font-size: 13px;
+		line-height: 1.5;
+		margin: 0;
+		padding: 0;
+	}
+	button {
+		font-family: inherit;
+		font-size: inherit;
+	}
+	textarea, input {
+		font-family: var(--vscode-editor-font-family);
+		font-size: 12px;
+		background: var(--vscode-input-background);
+		color: var(--vscode-input-foreground);
+		border: 1px solid var(--vscode-input-border, transparent);
+	}
+	pre, code {
+		font-family: var(--vscode-editor-font-family);
+		font-size: 12px;
+	}
+}
