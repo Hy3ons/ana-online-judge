@@ -31,10 +31,10 @@ const sharedWebviewOpts = {
 	loader: { ".css": "empty" },
 };
 
-const dashboardConfig = {
+const sidebarConfig = {
 	...sharedWebviewOpts,
-	entryPoints: ["webview/dashboard/index.tsx"],
-	outfile: "dist/webview/dashboard.js",
+	entryPoints: ["webview/sidebar/index.tsx"],
+	outfile: "dist/webview/sidebar.js",
 };
 const resultsConfig = {
 	...sharedWebviewOpts,
@@ -48,7 +48,7 @@ const statementConfig = {
 };
 
 async function run() {
-	const configs = [extensionConfig, dashboardConfig, resultsConfig, statementConfig];
+	const configs = [extensionConfig, sidebarConfig, resultsConfig, statementConfig];
 	if (isWatch) {
 		const ctxs = await Promise.all(configs.map((c) => context(c)));
 		await Promise.all(ctxs.map((c) => c.watch()));

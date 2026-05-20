@@ -15,7 +15,7 @@ import { searchProblemsCmd } from "./commands/searchProblems";
 import { submitCmd } from "./commands/submit";
 import { LanguageCatalog } from "./languages/catalog";
 import { ContestCountdown } from "./status/contestCountdown";
-import { DashboardProvider } from "./views/dashboard/provider";
+import { AojSidebarProvider } from "./views/sidebar/provider";
 
 let output: vscode.OutputChannel;
 let signedInUsername: string | null = null;
@@ -48,21 +48,21 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	const endpoints = new Endpoints(apiClient);
 	const catalog = new LanguageCatalog(endpoints);
 
-	const dashboard = new DashboardProvider(context, endpoints, () => signedInUsername);
+	const sidebar = new AojSidebarProvider(context, endpoints, catalog, () => signedInUsername);
 	const countdown = new ContestCountdown(endpoints);
 	countdown.start();
 
 	provider.onDidChangeSessions(async () => {
 		const cur = await tokens.load();
 		signedInUsername = cur?.username ?? null;
-		await dashboard.refresh();
+		await sidebar.refresh();
 		await countdown.refresh();
 	});
 
 	context.subscriptions.push(
 		output,
 		provider,
-		dashboard,
+		sidebar,
 		countdown,
 		vscode.authentication.registerAuthenticationProvider(
 			AUTH_PROVIDER_ID,
@@ -70,7 +70,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 			provider,
 			{ supportsMultipleAccounts: false }
 		),
-		vscode.window.registerWebviewViewProvider(DashboardProvider.viewId, dashboard),
+		vscode.window.registerWebviewViewProvider(AojSidebarProvider.viewId, sidebar),
 		vscode.commands.registerCommand("aoj.signIn", async () => {
 			await vscode.authentication.getSession(AUTH_PROVIDER_ID, ["user"], {
 				createIfNone: true,
@@ -104,7 +104,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 			openStatementCmd(context, endpoints)
 		),
 		vscode.commands.registerCommand("aoj.openInBrowser", () => openInBrowserCmd()),
-		vscode.commands.registerCommand("aoj.dashboard.refresh", () => dashboard.refresh())
+		vscode.commands.registerCommand("aoj.sidebar.refresh", () => sidebar.refresh())
 	);
 }
 

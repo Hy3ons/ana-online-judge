@@ -68,8 +68,8 @@
         "category": "AOJ"
       },
       {
-        "command": "aoj.dashboard.refresh",
-        "title": "AOJ: Refresh Dashboard",
+        "command": "aoj.sidebar.refresh",
+        "title": "AOJ: Refresh Sidebar",
         "category": "AOJ"
       },
       {
@@ -140,7 +140,7 @@
     "views": {
       "aoj": [
         {
-          "id": "aoj.dashboard",
+          "id": "aoj.sidebar",
           "name": "AOJ",
           "type": "webview"
         }
@@ -150,12 +150,12 @@
       "view/title": [
         {
           "command": "aoj.signIn",
-          "when": "view == aoj.dashboard && !aoj.signedIn",
+          "when": "view == aoj.sidebar && !aoj.signedIn",
           "group": "navigation"
         },
         {
           "command": "aoj.signOut",
-          "when": "view == aoj.dashboard && aoj.signedIn",
+          "when": "view == aoj.sidebar && aoj.signedIn",
           "group": "1_overflow"
         }
       ]
