@@ -18,5 +18,5 @@ export async function addTestcaseCmd(): Promise<void> {
 	const idx = nextIndex(await listTestcases(sourcePath));
 	await writeTestcase(sourcePath, idx, input.replace(/\\n/g, "\n"), output.replace(/\\n/g, "\n"));
 	vscode.window.showInformationMessage(`Added testcase #${idx}`);
-	await vscode.commands.executeCommand("aoj.dashboard.refresh");
+	await vscode.commands.executeCommand("aoj.sidebar.refresh");
 }

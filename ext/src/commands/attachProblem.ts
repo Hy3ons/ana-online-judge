@@ -75,6 +75,5 @@ export async function attachProblemCmd(
 		syncedAt: new Date().toISOString(),
 	});
 
-	await vscode.commands.executeCommand("aoj.openStatement");
-	await vscode.commands.executeCommand("aoj.dashboard.refresh");
+	await vscode.commands.executeCommand("aoj.sidebar.refresh");
 }

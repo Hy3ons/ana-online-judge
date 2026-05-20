@@ -2,6 +2,7 @@ import { useEffect, useState } from "preact/hooks";
 import type { HostToWeb, SidebarState, WebToHost } from "../../src/views/sidebar/messages";
 import { EmptyState } from "../shared/components/EmptyState";
 import { createBridge } from "../shared/postMessage";
+import { ActionBar } from "./components/ActionBar";
 import { FileRow } from "./components/FileRow";
 import { Header } from "./components/Header";
 import { LinkedProblemCard } from "./components/LinkedProblemCard";
@@ -79,7 +80,17 @@ export function App({ vscode }: { vscode: { postMessage: (m: WebToHost) => void 
 							onOpenInBrowser={() => cmd("aoj.openInBrowser")}
 						/>
 					)}
-					{/* ActionBar + TestList added in next tasks */}
+					<ActionBar
+						signedIn={state.signedIn}
+						linked={state.linked !== null}
+						caseCount={state.cases.length}
+						compileRunning={state.compile.state === "running"}
+						submissionRunning={state.submission?.state === "running"}
+						onRun={() => cmd("aoj.runAll")}
+						onSubmit={() => cmd("aoj.submit")}
+						onAdd={() => cmd("aoj.addTestcase")}
+						onSearch={() => cmd("aoj.searchProblems")}
+					/>
 				</>
 			)}
 		</div>
