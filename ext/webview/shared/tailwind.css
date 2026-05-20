@@ -1,5 +1,6 @@
 @import "./tokens.css";
 @import "tailwindcss";
+@config "../../tailwind.config.ts";
 
 @layer base {
 	html, body {
