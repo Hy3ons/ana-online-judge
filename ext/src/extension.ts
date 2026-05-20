@@ -4,6 +4,16 @@ import { Endpoints } from "./api/endpoints";
 import { AojAuthProvider, AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL } from "./auth/authProvider";
 import { DeviceFlow } from "./auth/deviceFlow";
 import { TokenStore } from "./auth/tokenStore";
+import { addTestcaseCmd } from "./commands/addTestcase";
+import { openInBrowserCmd } from "./commands/openInBrowser";
+import { openStatementCmd } from "./commands/openStatement";
+import { removeTestcaseCmd } from "./commands/removeTestcase";
+import { runAllCmd } from "./commands/runAll";
+import { runOneCmd } from "./commands/runOne";
+import { searchProblemsCmd } from "./commands/searchProblems";
+import { submitCmd } from "./commands/submit";
+import { syncProblemByIdCmd } from "./commands/syncProblem";
+import { LanguageCatalog } from "./languages/catalog";
 import { CurrentFileTreeProvider } from "./views/currentFileView";
 import { SubmissionsTreeProvider } from "./views/submissionsView";
 import { SyncTreeProvider } from "./views/syncView";
@@ -40,6 +50,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		vscode.workspace.getConfiguration("aoj").get<string>("testcaseSidecarDir", ".aoj")
 	);
 	const subs = new SubmissionsTreeProvider(endpoints, getEndpoint);
+	const catalog = new LanguageCatalog(endpoints);
 
 	context.subscriptions.push(
 		output,
@@ -67,7 +78,23 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		vscode.window.registerTreeDataProvider("aoj.sync", sync),
 		vscode.window.registerTreeDataProvider("aoj.currentFile", currentFile),
 		vscode.window.registerTreeDataProvider("aoj.submissions", subs),
-		vscode.commands.registerCommand("aoj.refreshContests", () => sync.refresh())
+		vscode.commands.registerCommand("aoj.refreshContests", () => sync.refresh()),
+		vscode.commands.registerCommand("aoj.searchProblems", () => searchProblemsCmd(endpoints)),
+		vscode.commands.registerCommand("aoj.syncProblemById", (id?: number, contestId?: number) =>
+			syncProblemByIdCmd(endpoints, id, contestId)
+		),
+		vscode.commands.registerCommand("aoj.runAll", () => runAllCmd(context, catalog)),
+		vscode.commands.registerCommand("aoj.runOne", (idx?: number) =>
+			runOneCmd(context, catalog, idx)
+		),
+		vscode.commands.registerCommand("aoj.submit", () => submitCmd(context, endpoints)),
+		vscode.commands.registerCommand("aoj.addTestcase", () => addTestcaseCmd()),
+		vscode.commands.registerCommand("aoj.removeTestcase", (idx?: number) => removeTestcaseCmd(idx)),
+		vscode.commands.registerCommand("aoj.openStatement", () =>
+			openStatementCmd(context, endpoints)
+		),
+		vscode.commands.registerCommand("aoj.openInBrowser", () => openInBrowserCmd()),
+		vscode.commands.registerCommand("aoj.currentFile.refresh", () => currentFile.refresh())
 	);
 
 	provider.onDidChangeSessions(() => sync.refresh());
