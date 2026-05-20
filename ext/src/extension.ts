@@ -104,7 +104,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 			openStatementCmd(context, endpoints)
 		),
 		vscode.commands.registerCommand("aoj.openInBrowser", () => openInBrowserCmd()),
-		vscode.commands.registerCommand("aoj.sidebar.refresh", () => sidebar.refresh())
+		vscode.commands.registerCommand("aoj.sidebar.refresh", () => sidebar.refresh()),
+		vscode.commands.registerCommand("aoj.sidebar.undoRemove", (sourcePath: string, index: number) =>
+			sidebar.handleUndoRemove(sourcePath, index)
+		)
 	);
 }
 

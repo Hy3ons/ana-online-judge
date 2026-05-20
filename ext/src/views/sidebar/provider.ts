@@ -1,6 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as vscode from "vscode";
+import { restoreSnapshot, type Snapshot, takeSnapshot } from "../../../webview/shared/undoSnapshot";
 import { UnauthorizedError } from "../../api/client";
 import type { Endpoints } from "../../api/endpoints";
 import {
@@ -12,8 +13,13 @@ import {
 } from "../../config/settings";
 import type { LanguageCatalog } from "../../languages/catalog";
 import { extToLang } from "../../languages/extToLang";
-import { readSidecar, sidecarPath } from "../../mapping/sidecar";
-import { listTestcases, readTestcase } from "../../mapping/testcases";
+import { readSidecar, removeSidecar, sidecarPath } from "../../mapping/sidecar";
+import {
+	removeTestcase as fsRemoveTestcase,
+	listTestcases,
+	readTestcase,
+	writeTestcase,
+} from "../../mapping/testcases";
 import { CompileCache } from "../../runner/compileCache";
 import { type ComputeInputs, computeSidebarState } from "./compute";
 import type { HostToWeb, SidebarState, TestcaseView, WebToHost } from "./messages";
@@ -39,6 +45,16 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 
 	private readonly compileCache = new CompileCache();
 	private submitController: AbortController | null = null;
+	private readonly pendingRemoves = new Map<string, Map<number, Snapshot>>();
+
+	private pendingFor(sourcePath: string): Map<number, Snapshot> {
+		let m = this.pendingRemoves.get(sourcePath);
+		if (!m) {
+			m = new Map();
+			this.pendingRemoves.set(sourcePath, m);
+		}
+		return m;
+	}
 
 	constructor(
 		private readonly context: vscode.ExtensionContext,
@@ -81,6 +97,8 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 	}
 
 	private async handle(m: WebToHost): Promise<void> {
+		const editor = vscode.window.activeTextEditor;
+		const sourcePath = editor?.document.uri.fsPath ?? null;
 		switch (m.type) {
 			case "ready":
 				await this.refresh();
@@ -92,8 +110,29 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 				await this.context.globalState.update("aoj.dismissSignInBanner", true);
 				await this.refresh();
 				return;
-			default:
+			case "runCase":
+				if (sourcePath) await this.runOne(sourcePath, m.index);
 				return;
+			case "editCase":
+				if (sourcePath) await this.editCase(sourcePath, m.index, m.input, m.expected);
+				return;
+			case "removeCase":
+				if (sourcePath) await this.removeCaseWithUndo(sourcePath, m.index);
+				return;
+			case "undoRemove":
+				if (sourcePath) await this.undoRemove(sourcePath, m.index);
+				return;
+			case "unlink":
+				if (sourcePath) await this.unlinkProblem(sourcePath);
+				return;
+			case "openSubmission": {
+				const endpoint = vscode.workspace
+					.getConfiguration("aoj")
+					.get<string>("endpoint", "https://aoj.example.com");
+				const url = `${endpoint.replace(/\/$/, "")}/submissions/${m.submissionId}`;
+				await vscode.env.openExternal(vscode.Uri.parse(url));
+				return;
+			}
 		}
 	}
 
@@ -250,6 +289,74 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 		} finally {
 			this.submitController = null;
 		}
+	}
+
+	private async editCase(
+		sourcePath: string,
+		index: number,
+		input: string,
+		expected: string
+	): Promise<void> {
+		try {
+			await writeTestcase(sourcePath, index, input, expected);
+			const slot = this.ensureSlot(sourcePath);
+			this.updateCase(slot, index, { input, expected });
+			await this.refresh();
+		} catch (e) {
+			vscode.window.showErrorMessage(`Save failed: ${(e as Error).message}`);
+		}
+	}
+
+	private async removeCaseWithUndo(sourcePath: string, index: number): Promise<void> {
+		const pairs = await listTestcases(sourcePath);
+		const pair = pairs.find((p) => p.index === index);
+		if (!pair) return;
+		const content = await readTestcase(pair);
+		this.pendingFor(sourcePath).set(index, takeSnapshot(index, content.input, content.output));
+		await fsRemoveTestcase(pair);
+		const slot = this.ensureSlot(sourcePath);
+		slot.cases = slot.cases.filter((c) => c.index !== index);
+		await this.post({ type: "caseRemoved", index });
+		await this.post({
+			type: "toast",
+			level: "info",
+			text: `#${index} 삭제됨`,
+			action: { label: "Undo", cmd: "aoj.sidebar.undoRemove", args: [sourcePath, index] },
+		});
+		setTimeout(() => this.pendingFor(sourcePath).delete(index), 5000);
+	}
+
+	private async undoRemove(sourcePath: string, index: number): Promise<void> {
+		const snap = this.pendingFor(sourcePath).get(index);
+		if (!snap) return;
+		await restoreSnapshot(snap, (i, inp, out) =>
+			writeTestcase(sourcePath, i, inp, out).then(() => undefined)
+		);
+		this.pendingFor(sourcePath).delete(index);
+		const slot = this.ensureSlot(sourcePath);
+		const pairs = await listTestcases(sourcePath);
+		const pair = pairs.find((p) => p.index === index);
+		if (pair) {
+			const tc = await readTestcase(pair);
+			slot.cases.push({ index, input: tc.input, expected: tc.output });
+			slot.cases.sort((a, b) => a.index - b.index);
+			const appended = slot.cases.find((c) => c.index === index);
+			if (appended) await this.post({ type: "caseAppended", tc: appended });
+		}
+	}
+
+	async handleUndoRemove(sourcePath: string, index: number): Promise<void> {
+		await this.undoRemove(sourcePath, index);
+	}
+
+	private async unlinkProblem(sourcePath: string): Promise<void> {
+		const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(sourcePath));
+		if (!folder) return;
+		const p = sidecarPath(folder.uri.fsPath, sourcePath, getSidecarDir());
+		await removeSidecar(p);
+		const slot = this.ensureSlot(sourcePath);
+		slot.submission = null;
+		await this.refresh();
 	}
 
 	private async runInternal(sourcePath: string, indices: number[] | undefined): Promise<void> {
