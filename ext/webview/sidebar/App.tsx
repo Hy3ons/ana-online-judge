@@ -1,6 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
 import type { HostToWeb, SidebarState, WebToHost } from "../../src/views/sidebar/messages";
 import { EmptyState } from "../shared/components/EmptyState";
+import { Toast } from "../shared/components/Toast";
 import { createBridge } from "../shared/postMessage";
 import { ActionBar } from "./components/ActionBar";
 import { CompileBanner } from "./components/CompileBanner";
@@ -11,6 +12,12 @@ import { SignInBanner } from "./components/SignInBanner";
 import { SubmissionStrip } from "./components/SubmissionStrip";
 import { TestList } from "./components/TestList";
 import { applyEvent } from "./state";
+
+interface ToastUi {
+	text: string;
+	actionLabel?: string;
+	undoIndex?: number;
+}
 
 const INITIAL: SidebarState = {
 	root: "no-editor",
@@ -28,10 +35,21 @@ const INITIAL: SidebarState = {
 
 export function App({ vscode }: { vscode: { postMessage: (m: WebToHost) => void } }) {
 	const [state, setState] = useState<SidebarState>(INITIAL);
+	const [toast, setToast] = useState<ToastUi | null>(null);
 	const bridge = createBridge<WebToHost, HostToWeb>(vscode);
 
 	useEffect(() => {
-		const off = bridge.on((m) => setState((prev) => applyEvent(prev, m)));
+		const off = bridge.on((m) => {
+			if (m.type === "toast") {
+				const undoIndex =
+					m.action?.cmd === "aoj.sidebar.undoRemove" && typeof m.action.args?.[0] === "number"
+						? (m.action.args[0] as number)
+						: undefined;
+				setToast({ text: m.text, actionLabel: m.action?.label, undoIndex });
+				return;
+			}
+			setState((prev) => applyEvent(prev, m));
+		});
 		bridge.post({ type: "ready" });
 		return off;
 	}, []);
@@ -114,6 +132,18 @@ export function App({ vscode }: { vscode: { postMessage: (m: WebToHost) => void 
 						/>
 					)}
 				</>
+			)}
+			{toast && (
+				<Toast
+					message={toast.text}
+					actionLabel={toast.actionLabel}
+					onAction={
+						toast.undoIndex !== undefined
+							? () => bridge.post({ type: "undoRemove", index: toast.undoIndex as number })
+							: undefined
+					}
+					onDismiss={() => setToast(null)}
+				/>
 			)}
 		</div>
 	);

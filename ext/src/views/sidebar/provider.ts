@@ -321,7 +321,7 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 			type: "toast",
 			level: "info",
 			text: `#${index} 삭제됨`,
-			action: { label: "Undo", cmd: "aoj.sidebar.undoRemove", args: [sourcePath, index] },
+			action: { label: "Undo", cmd: "aoj.sidebar.undoRemove", args: [index] },
 		});
 		setTimeout(() => this.pendingFor(sourcePath).delete(index), 5000);
 	}
@@ -347,6 +347,10 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 
 	async handleUndoRemove(sourcePath: string, index: number): Promise<void> {
 		await this.undoRemove(sourcePath, index);
+	}
+
+	async handleRemoveTestcase(sourcePath: string, index: number): Promise<void> {
+		await this.removeCaseWithUndo(sourcePath, index);
 	}
 
 	private async unlinkProblem(sourcePath: string): Promise<void> {

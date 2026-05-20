@@ -96,7 +96,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		vscode.commands.registerCommand("aoj.runOne", (idx?: number) => runOneCmd(sidebar, idx)),
 		vscode.commands.registerCommand("aoj.submit", () => submitCmd(sidebar)),
 		vscode.commands.registerCommand("aoj.addTestcase", () => addTestcaseCmd()),
-		vscode.commands.registerCommand("aoj.removeTestcase", (idx?: number) => removeTestcaseCmd(idx)),
+		vscode.commands.registerCommand("aoj.removeTestcase", (idx?: number) =>
+			removeTestcaseCmd(sidebar, idx)
+		),
 		vscode.commands.registerCommand("aoj.openInBrowser", () => openInBrowserCmd()),
 		vscode.commands.registerCommand("aoj.sidebar.refresh", () => sidebar.refresh()),
 		vscode.commands.registerCommand("aoj.sidebar.undoRemove", (sourcePath: string, index: number) =>

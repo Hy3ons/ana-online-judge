@@ -1,10 +1,15 @@
 import * as vscode from "vscode";
-import { listTestcases, removeTestcase } from "../mapping/testcases";
+import { listTestcases } from "../mapping/testcases";
+import type { AojSidebarProvider } from "../views/sidebar/provider";
 
-export async function removeTestcaseCmd(idxArg?: number): Promise<void> {
+export async function removeTestcaseCmd(
+	sidebar: AojSidebarProvider,
+	idxArg?: number
+): Promise<void> {
 	const editor = vscode.window.activeTextEditor;
 	if (!editor) return;
-	const tcs = await listTestcases(editor.document.uri.fsPath);
+	const sourcePath = editor.document.uri.fsPath;
+	const tcs = await listTestcases(sourcePath);
 	if (tcs.length === 0) return;
 	let idx = idxArg;
 	if (idx == null) {
@@ -15,8 +20,6 @@ export async function removeTestcaseCmd(idxArg?: number): Promise<void> {
 		if (!pick) return;
 		idx = pick.idx;
 	}
-	const tc = tcs.find((t) => t.index === idx);
-	if (!tc) return;
-	await removeTestcase(tc);
+	await sidebar.handleRemoveTestcase(sourcePath, idx);
 	await vscode.commands.executeCommand("aoj.sidebar.refresh");
 }
