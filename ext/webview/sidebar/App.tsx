@@ -1,6 +1,11 @@
 import { useEffect, useState } from "preact/hooks";
 import type { HostToWeb, SidebarState, WebToHost } from "../../src/views/sidebar/messages";
+import { EmptyState } from "../shared/components/EmptyState";
 import { createBridge } from "../shared/postMessage";
+import { FileRow } from "./components/FileRow";
+import { Header } from "./components/Header";
+import { LinkedProblemCard } from "./components/LinkedProblemCard";
+import { SignInBanner } from "./components/SignInBanner";
 
 const INITIAL: SidebarState = {
 	root: "no-editor",
@@ -28,9 +33,55 @@ export function App({ vscode }: { vscode: { postMessage: (m: WebToHost) => void 
 		return off;
 	}, []);
 
+	const cmd = (c: Extract<WebToHost, { type: "command" }>["cmd"]) =>
+		bridge.post({ type: "command", cmd: c });
+
+	const showSignInBanner = !state.signedIn && !state.dismissSignInBanner;
+
 	return (
-		<div class="min-h-screen p-3 text-fg">
-			<p class="text-sm text-fg-muted">AOJ Sidebar — state: {state.root}</p>
+		<div class="min-h-screen flex flex-col">
+			<Header
+				signedIn={state.signedIn}
+				username={state.username}
+				onSignIn={() => cmd("aoj.signIn")}
+				onSignOut={() => cmd("aoj.signIn")}
+				onRefresh={() => cmd("aoj.sidebar.refresh")}
+			/>
+			{showSignInBanner && (
+				<SignInBanner
+					onSignIn={() => cmd("aoj.signIn")}
+					onDismiss={() => bridge.post({ type: "dismissSignInBanner" })}
+				/>
+			)}
+			{state.root === "no-editor" && (
+				<div class="flex-1 flex items-center justify-center p-4">
+					<EmptyState
+						title="Open a source file to start"
+						hint={`Supported: ${state.supportedExtensions.join(", ")}`}
+					/>
+				</div>
+			)}
+			{state.root === "unsupported" && state.fileName && (
+				<div class="flex-1 flex items-center justify-center p-4">
+					<EmptyState
+						title="This file type isn't supported"
+						hint={`${state.fileName} — supported: ${state.supportedExtensions.join(", ")}`}
+					/>
+				</div>
+			)}
+			{state.root === "ready" && state.fileName && state.languageLabel && (
+				<>
+					<FileRow fileName={state.fileName} languageLabel={state.languageLabel} />
+					{state.linked && (
+						<LinkedProblemCard
+							problem={state.linked}
+							onUnlink={() => bridge.post({ type: "unlink" })}
+							onOpenInBrowser={() => cmd("aoj.openInBrowser")}
+						/>
+					)}
+					{/* ActionBar + TestList added in next tasks */}
+				</>
+			)}
 		</div>
 	);
 }
