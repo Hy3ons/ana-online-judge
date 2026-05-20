@@ -94,9 +94,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 			attachProblemCmd(endpoints, id, contestId)
 		),
 		vscode.commands.registerCommand("aoj.runAll", () => runAllCmd(sidebar)),
-		vscode.commands.registerCommand("aoj.runOne", (idx?: number) =>
-			runOneCmd(context, catalog, idx)
-		),
+		vscode.commands.registerCommand("aoj.runOne", (idx?: number) => runOneCmd(sidebar, idx)),
 		vscode.commands.registerCommand("aoj.submit", () => submitCmd(context, endpoints)),
 		vscode.commands.registerCommand("aoj.addTestcase", () => addTestcaseCmd()),
 		vscode.commands.registerCommand("aoj.removeTestcase", (idx?: number) => removeTestcaseCmd(idx)),
