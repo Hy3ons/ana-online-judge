@@ -88,6 +88,7 @@ export interface LanguageMeta {
 	displayName: string;
 	fileExtensions: string[];
 	defaultExtension: string;
+	sourceFile: string; // e.g., "Main.cpp", "Main.java" — canonical staged filename
 	compile?: { command: string; args: string[] };
 	run: { command: string; args: string[] };
 	timeMultiplier: number;
