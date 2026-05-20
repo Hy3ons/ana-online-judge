@@ -1,0 +1,169 @@
+{
+  "name": "aoj-vscode",
+  "displayName": "ANA Online Judge",
+  "description": "Solve AOJ problems from VS Code: sync problems, run testcases locally, submit, watch verdicts live.",
+  "version": "0.1.0",
+  "publisher": "ana-online-judge",
+  "private": true,
+  "engines": {
+    "vscode": "^1.95.0",
+    "node": ">=20"
+  },
+  "categories": ["Education", "Other"],
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/csh1668/ana-online-judge"
+  },
+  "bugs": {
+    "url": "https://github.com/csh1668/ana-online-judge/issues"
+  },
+  "homepage": "https://github.com/csh1668/ana-online-judge#readme",
+  "license": "MIT",
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onLanguage:cpp",
+    "onLanguage:c",
+    "onLanguage:python",
+    "onLanguage:rust",
+    "onLanguage:go",
+    "onLanguage:java",
+    "onLanguage:javascript",
+    "onAuthenticationRequest:aoj"
+  ],
+  "contributes": {
+    "authentication": [
+      {
+        "id": "aoj",
+        "label": "ANA Online Judge"
+      }
+    ],
+    "commands": [
+      { "command": "aoj.signIn", "title": "AOJ: Sign in", "category": "AOJ" },
+      { "command": "aoj.signOut", "title": "AOJ: Sign out", "category": "AOJ" },
+      { "command": "aoj.searchProblems", "title": "AOJ: Search Problems", "category": "AOJ" },
+      { "command": "aoj.syncProblemById", "title": "AOJ: Sync Problem by ID...", "category": "AOJ" },
+      { "command": "aoj.runAll", "title": "AOJ: Run All Testcases", "category": "AOJ" },
+      { "command": "aoj.runOne", "title": "AOJ: Run This Testcase", "category": "AOJ" },
+      { "command": "aoj.submit", "title": "AOJ: Submit Current File", "category": "AOJ" },
+      { "command": "aoj.openStatement", "title": "AOJ: Open Problem Statement", "category": "AOJ" },
+      { "command": "aoj.openInBrowser", "title": "AOJ: Open in Browser", "category": "AOJ" },
+      { "command": "aoj.addTestcase", "title": "AOJ: Add Testcase", "category": "AOJ" },
+      { "command": "aoj.removeTestcase", "title": "AOJ: Remove Testcase", "category": "AOJ" },
+      { "command": "aoj.refreshContests", "title": "AOJ: Refresh Active Contests", "category": "AOJ" }
+    ],
+    "keybindings": [
+      { "command": "aoj.runAll", "key": "ctrl+alt+b", "mac": "cmd+alt+b", "when": "editorTextFocus" },
+      { "command": "aoj.submit", "key": "ctrl+alt+s", "mac": "cmd+alt+s", "when": "editorTextFocus" },
+      { "command": "aoj.openStatement", "key": "ctrl+alt+d", "mac": "cmd+alt+d", "when": "editorTextFocus" }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "aoj",
+          "title": "ANA Online Judge",
+          "icon": "media/sidebar.svg"
+        }
+      ]
+    },
+    "views": {
+      "aoj": [
+        { "id": "aoj.sync", "name": "Sync", "icon": "media/sidebar.svg" },
+        { "id": "aoj.currentFile", "name": "Current File", "icon": "media/sidebar.svg" },
+        { "id": "aoj.submissions", "name": "My Submissions", "icon": "media/sidebar.svg" }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        { "command": "aoj.refreshContests", "when": "view == aoj.sync", "group": "navigation" },
+        { "command": "aoj.signIn", "when": "view == aoj.sync && !aoj.signedIn", "group": "navigation" },
+        { "command": "aoj.signOut", "when": "view == aoj.sync && aoj.signedIn", "group": "1_overflow" }
+      ]
+    },
+    "configuration": {
+      "title": "ANA Online Judge",
+      "properties": {
+        "aoj.endpoint": {
+          "type": "string",
+          "default": "https://aoj.example.com",
+          "description": "AOJ 웹 base URL"
+        },
+        "aoj.compilerPaths": {
+          "type": "object",
+          "default": {
+            "cpp": "g++",
+            "c": "gcc",
+            "python": "python3",
+            "rust": "rustc",
+            "go": "go",
+            "java": "javac",
+            "javascript": "node"
+          },
+          "description": "언어별 컴파일러/런타임 경로"
+        },
+        "aoj.compileFlags": {
+          "type": "object",
+          "default": {
+            "cpp": ["-O2", "-std=c++20"],
+            "c": ["-O2", "-std=c17"],
+            "rust": ["-O"],
+            "go": [],
+            "java": ["-encoding", "UTF-8"]
+          },
+          "description": "언어별 컴파일 플래그"
+        },
+        "aoj.timeoutMultiplier": {
+          "type": "number",
+          "default": 2.0,
+          "minimum": 0.5,
+          "maximum": 10,
+          "description": "로컬 실행 timeout = 문제 시간제한 × 이 값"
+        },
+        "aoj.confirmSubmit": {
+          "type": "boolean",
+          "default": true,
+          "description": "제출 전 확인 대화상자 표시"
+        },
+        "aoj.testcaseSidecarDir": {
+          "type": "string",
+          "default": ".aoj",
+          "description": "사이드카(.json) 디렉토리 이름"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "watch": "node esbuild.config.mjs --watch",
+    "package": "node esbuild.config.mjs --production",
+    "lint": "biome check src test",
+    "lint:fix": "biome check --fix src test",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build:integration": "tsc -p test/integration/tsconfig.json",
+    "test:integration": "pnpm build && pnpm build:integration && node ./test/integration/runner.cjs",
+    "vsce:package": "vsce package --no-dependencies --out aoj-vscode.vsix",
+    "vsce:publish": "vsce publish --no-dependencies"
+  },
+  "dependencies": {
+    "highlight.js": "^11.10.0",
+    "markdown-it": "^14.1.0",
+    "markdown-it-highlightjs": "^4.2.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.8",
+    "@types/markdown-it": "^14.1.2",
+    "@types/mocha": "^10.0.9",
+    "@types/node": "^20.14.0",
+    "@types/vscode": "^1.95.0",
+    "@vscode/test-electron": "^2.4.1",
+    "@vscode/vsce": "^3.2.1",
+    "esbuild": "^0.24.0",
+    "glob": "^11.0.0",
+    "mocha": "^11.0.0",
+    "ovsx": "^0.10.1",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  }
+}

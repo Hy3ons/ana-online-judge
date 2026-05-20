@@ -1,0 +1,58 @@
+body {
+  font-family: var(--vscode-font-family);
+  color: var(--vscode-foreground);
+  background: var(--vscode-editor-background);
+  line-height: 1.6;
+  padding: 24px;
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+h1, h2, h3, h4 {
+  color: var(--vscode-foreground);
+  border-bottom: 1px solid var(--vscode-panel-border);
+  padding-bottom: 0.2em;
+  margin-top: 1.5em;
+}
+h1 { font-size: 1.8em; }
+h2 { font-size: 1.4em; }
+h3 { font-size: 1.15em; }
+
+pre {
+  background: var(--vscode-textCodeBlock-background, rgba(127,127,127,0.1));
+  padding: 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-family: var(--vscode-editor-font-family, monospace);
+}
+
+code {
+  background: var(--vscode-textCodeBlock-background, rgba(127,127,127,0.1));
+  padding: 0 4px;
+  border-radius: 3px;
+  font-family: var(--vscode-editor-font-family, monospace);
+}
+pre code { background: transparent; padding: 0; }
+
+table { border-collapse: collapse; }
+th, td { border: 1px solid var(--vscode-panel-border); padding: 6px 10px; }
+
+a { color: var(--vscode-textLink-foreground); }
+
+.meta { font-size: 0.9em; color: var(--vscode-descriptionForeground); }
+.meta .badge { background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); padding: 2px 6px; border-radius: 3px; margin-right: 8px; }
+
+footer {
+  margin-top: 32px;
+  padding-top: 12px;
+  border-top: 1px solid var(--vscode-panel-border);
+  font-size: 0.85em;
+  color: var(--vscode-descriptionForeground);
+}
+
+.hljs-keyword, .hljs-selector-tag { color: var(--vscode-symbolIcon-keywordForeground, #c586c0); }
+.hljs-string, .hljs-attr { color: var(--vscode-symbolIcon-stringForeground, #ce9178); }
+.hljs-number, .hljs-literal { color: var(--vscode-symbolIcon-numberForeground, #b5cea8); }
+.hljs-comment { color: var(--vscode-editorLineNumber-foreground, #6a9955); font-style: italic; }
+.hljs-title, .hljs-name { color: var(--vscode-symbolIcon-functionForeground, #dcdcaa); }
+.hljs-type, .hljs-built_in { color: var(--vscode-symbolIcon-classForeground, #4ec9b0); }
