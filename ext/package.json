@@ -208,6 +208,16 @@
           "type": "string",
           "default": ".aoj",
           "description": "사이드카(.json) 디렉토리 이름"
+        },
+        "aoj.defaultRunTimeoutMs": {
+          "type": "number",
+          "default": 2000,
+          "description": "Per-case run timeout (ms) when the active file is not linked to a problem."
+        },
+        "aoj.dismissSignInBanner": {
+          "type": "boolean",
+          "default": false,
+          "description": "Hide the 'Sign in' banner shown at the top of the AOJ sidebar."
         }
       }
     }
