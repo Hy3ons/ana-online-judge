@@ -9,7 +9,10 @@
     "vscode": "^1.95.0",
     "node": ">=20"
   },
-  "categories": ["Education", "Other"],
+  "categories": [
+    "Education",
+    "Other"
+  ],
   "icon": "icon.png",
   "repository": {
     "type": "git",
@@ -39,23 +42,86 @@
       }
     ],
     "commands": [
-      { "command": "aoj.signIn", "title": "AOJ: Sign in", "category": "AOJ" },
-      { "command": "aoj.signOut", "title": "AOJ: Sign out", "category": "AOJ" },
-      { "command": "aoj.searchProblems", "title": "AOJ: Search Problems", "category": "AOJ" },
-      { "command": "aoj.syncProblemById", "title": "AOJ: Sync Problem by ID...", "category": "AOJ" },
-      { "command": "aoj.runAll", "title": "AOJ: Run All Testcases", "category": "AOJ" },
-      { "command": "aoj.runOne", "title": "AOJ: Run This Testcase", "category": "AOJ" },
-      { "command": "aoj.submit", "title": "AOJ: Submit Current File", "category": "AOJ" },
-      { "command": "aoj.openStatement", "title": "AOJ: Open Problem Statement", "category": "AOJ" },
-      { "command": "aoj.openInBrowser", "title": "AOJ: Open in Browser", "category": "AOJ" },
-      { "command": "aoj.addTestcase", "title": "AOJ: Add Testcase", "category": "AOJ" },
-      { "command": "aoj.removeTestcase", "title": "AOJ: Remove Testcase", "category": "AOJ" },
-      { "command": "aoj.refreshContests", "title": "AOJ: Refresh Active Contests", "category": "AOJ" }
+      {
+        "command": "aoj.signIn",
+        "title": "AOJ: Sign in",
+        "category": "AOJ"
+      },
+      {
+        "command": "aoj.signOut",
+        "title": "AOJ: Sign out",
+        "category": "AOJ"
+      },
+      {
+        "command": "aoj.searchProblems",
+        "title": "AOJ: Search Problems",
+        "category": "AOJ"
+      },
+      {
+        "command": "aoj.syncProblemById",
+        "title": "AOJ: Sync Problem by ID...",
+        "category": "AOJ"
+      },
+      {
+        "command": "aoj.runAll",
+        "title": "AOJ: Run All Testcases",
+        "category": "AOJ"
+      },
+      {
+        "command": "aoj.runOne",
+        "title": "AOJ: Run This Testcase",
+        "category": "AOJ"
+      },
+      {
+        "command": "aoj.submit",
+        "title": "AOJ: Submit Current File",
+        "category": "AOJ"
+      },
+      {
+        "command": "aoj.openStatement",
+        "title": "AOJ: Open Problem Statement",
+        "category": "AOJ"
+      },
+      {
+        "command": "aoj.openInBrowser",
+        "title": "AOJ: Open in Browser",
+        "category": "AOJ"
+      },
+      {
+        "command": "aoj.addTestcase",
+        "title": "AOJ: Add Testcase",
+        "category": "AOJ"
+      },
+      {
+        "command": "aoj.removeTestcase",
+        "title": "AOJ: Remove Testcase",
+        "category": "AOJ"
+      },
+      {
+        "command": "aoj.refreshContests",
+        "title": "AOJ: Refresh Active Contests",
+        "category": "AOJ"
+      }
     ],
     "keybindings": [
-      { "command": "aoj.runAll", "key": "ctrl+alt+b", "mac": "cmd+alt+b", "when": "editorTextFocus" },
-      { "command": "aoj.submit", "key": "ctrl+alt+s", "mac": "cmd+alt+s", "when": "editorTextFocus" },
-      { "command": "aoj.openStatement", "key": "ctrl+alt+d", "mac": "cmd+alt+d", "when": "editorTextFocus" }
+      {
+        "command": "aoj.runAll",
+        "key": "ctrl+alt+b",
+        "mac": "cmd+alt+b",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "aoj.submit",
+        "key": "ctrl+alt+s",
+        "mac": "cmd+alt+s",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "aoj.openStatement",
+        "key": "ctrl+alt+d",
+        "mac": "cmd+alt+d",
+        "when": "editorTextFocus"
+      }
     ],
     "viewsContainers": {
       "activitybar": [
@@ -68,16 +134,40 @@
     },
     "views": {
       "aoj": [
-        { "id": "aoj.sync", "name": "Sync", "icon": "media/sidebar.svg" },
-        { "id": "aoj.currentFile", "name": "Current File", "icon": "media/sidebar.svg" },
-        { "id": "aoj.submissions", "name": "My Submissions", "icon": "media/sidebar.svg" }
+        {
+          "id": "aoj.sync",
+          "name": "Sync",
+          "icon": "media/sidebar.svg"
+        },
+        {
+          "id": "aoj.currentFile",
+          "name": "Current File",
+          "icon": "media/sidebar.svg"
+        },
+        {
+          "id": "aoj.submissions",
+          "name": "My Submissions",
+          "icon": "media/sidebar.svg"
+        }
       ]
     },
     "menus": {
       "view/title": [
-        { "command": "aoj.refreshContests", "when": "view == aoj.sync", "group": "navigation" },
-        { "command": "aoj.signIn", "when": "view == aoj.sync && !aoj.signedIn", "group": "navigation" },
-        { "command": "aoj.signOut", "when": "view == aoj.sync && aoj.signedIn", "group": "1_overflow" }
+        {
+          "command": "aoj.refreshContests",
+          "when": "view == aoj.sync",
+          "group": "navigation"
+        },
+        {
+          "command": "aoj.signIn",
+          "when": "view == aoj.sync && !aoj.signedIn",
+          "group": "navigation"
+        },
+        {
+          "command": "aoj.signOut",
+          "when": "view == aoj.sync && aoj.signedIn",
+          "group": "1_overflow"
+        }
       ]
     },
     "configuration": {
@@ -104,17 +194,28 @@
         "aoj.compileFlags": {
           "type": "object",
           "default": {
-            "cpp": ["-O2", "-std=c++20"],
-            "c": ["-O2", "-std=c17"],
-            "rust": ["-O"],
+            "cpp": [
+              "-O2",
+              "-std=c++20"
+            ],
+            "c": [
+              "-O2",
+              "-std=c17"
+            ],
+            "rust": [
+              "-O"
+            ],
             "go": [],
-            "java": ["-encoding", "UTF-8"]
+            "java": [
+              "-encoding",
+              "UTF-8"
+            ]
           },
           "description": "언어별 컴파일 플래그"
         },
         "aoj.timeoutMultiplier": {
           "type": "number",
-          "default": 2.0,
+          "default": 2,
           "minimum": 0.5,
           "maximum": 10,
           "description": "로컬 실행 timeout = 문제 시간제한 × 이 값"
@@ -133,26 +234,30 @@
     }
   },
   "scripts": {
-    "build": "node esbuild.config.mjs",
-    "watch": "node esbuild.config.mjs --watch",
-    "package": "node esbuild.config.mjs --production",
-    "lint": "biome check src test",
-    "lint:fix": "biome check --fix src test",
-    "typecheck": "tsc --noEmit",
+    "build": "pnpm build:css && node esbuild.config.mjs",
+    "watch": "pnpm build:css && node esbuild.config.mjs --watch",
+    "package": "pnpm build:css && node esbuild.config.mjs --production",
+    "build:css": "tailwindcss -i webview/shared/tailwind.css -o dist/webview/styles.css --minify",
+    "watch:css": "tailwindcss -i webview/shared/tailwind.css -o dist/webview/styles.css --watch",
+    "lint": "biome check src test webview",
+    "lint:fix": "biome check --fix src test webview",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p webview/tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build:integration": "tsc -p test/integration/tsconfig.json",
     "test:integration": "pnpm build && pnpm build:integration && node ./test/integration/runner.cjs",
+    "build:integration": "tsc -p test/integration/tsconfig.json",
     "vsce:package": "vsce package --no-dependencies --out aoj-vscode.vsix",
     "vsce:publish": "vsce publish --no-dependencies"
   },
   "dependencies": {
     "highlight.js": "^11.10.0",
     "markdown-it": "^14.1.0",
-    "markdown-it-highlightjs": "^4.2.0"
+    "markdown-it-highlightjs": "^4.2.0",
+    "preact": "^10.29.2"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.8",
+    "@tailwindcss/cli": "^4.3.0",
     "@types/markdown-it": "^14.1.2",
     "@types/mocha": "^10.0.9",
     "@types/node": "^20.14.0",
@@ -163,6 +268,7 @@
     "glob": "^11.0.0",
     "mocha": "^11.0.0",
     "ovsx": "^0.10.1",
+    "tailwindcss": "^4.1.17",
     "typescript": "^5.6.3",
     "vitest": "^2.1.4"
   }

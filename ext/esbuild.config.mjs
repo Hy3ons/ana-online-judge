@@ -18,27 +18,43 @@ const extensionConfig = {
 };
 
 /** @type {import('esbuild').BuildOptions} */
-const webviewConfig = {
-	entryPoints: ["media/results.js"],
+const sharedWebviewOpts = {
 	bundle: true,
-	outfile: "dist/webview/results.js",
 	platform: "browser",
 	target: "es2022",
 	format: "iife",
 	sourcemap: !isProd,
 	minify: isProd,
 	logLevel: "info",
+	jsx: "automatic",
+	jsxImportSource: "preact",
+	loader: { ".css": "empty" },
+};
+
+const dashboardConfig = {
+	...sharedWebviewOpts,
+	entryPoints: ["webview/dashboard/index.tsx"],
+	outfile: "dist/webview/dashboard.js",
+};
+const resultsConfig = {
+	...sharedWebviewOpts,
+	entryPoints: ["webview/results/index.tsx"],
+	outfile: "dist/webview/results.js",
+};
+const statementConfig = {
+	...sharedWebviewOpts,
+	entryPoints: ["webview/statement/index.tsx"],
+	outfile: "dist/webview/statement.js",
 };
 
 async function run() {
+	const configs = [extensionConfig, dashboardConfig, resultsConfig, statementConfig];
 	if (isWatch) {
-		const ext = await context(extensionConfig);
-		const web = await context(webviewConfig);
-		await Promise.all([ext.watch(), web.watch()]);
+		const ctxs = await Promise.all(configs.map((c) => context(c)));
+		await Promise.all(ctxs.map((c) => c.watch()));
 		console.log("watching...");
 	} else {
-		await build(extensionConfig);
-		await build(webviewConfig);
+		for (const c of configs) await build(c);
 	}
 }
 
