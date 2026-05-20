@@ -14,6 +14,7 @@ import { searchProblemsCmd } from "./commands/searchProblems";
 import { submitCmd } from "./commands/submit";
 import { syncProblemByIdCmd } from "./commands/syncProblem";
 import { LanguageCatalog } from "./languages/catalog";
+import { ContestCountdown } from "./status/contestCountdown";
 import { CurrentFileTreeProvider } from "./views/currentFileView";
 import { SubmissionsTreeProvider } from "./views/submissionsView";
 import { SyncTreeProvider } from "./views/syncView";
@@ -51,8 +52,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	);
 	const subs = new SubmissionsTreeProvider(endpoints, getEndpoint);
 	const catalog = new LanguageCatalog(endpoints);
+	const countdown = new ContestCountdown(endpoints);
+	countdown.start();
 
 	context.subscriptions.push(
+		countdown,
 		output,
 		provider,
 		vscode.authentication.registerAuthenticationProvider(
@@ -99,6 +103,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
 	provider.onDidChangeSessions(() => sync.refresh());
 	provider.onDidChangeSessions(() => subs.refresh());
+	provider.onDidChangeSessions(() => void countdown.refresh());
 }
 
 export function deactivate(): void {
