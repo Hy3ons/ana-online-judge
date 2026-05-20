@@ -1,9 +1,12 @@
+import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as vscode from "vscode";
+import { UnauthorizedError } from "../../api/client";
 import type { Endpoints } from "../../api/endpoints";
 import {
 	getCompileFlags,
 	getCompilerPath,
+	getConfirmSubmit,
 	getSidecarDir,
 	getTimeoutMultiplier,
 } from "../../config/settings";
@@ -15,6 +18,7 @@ import { CompileCache } from "../../runner/compileCache";
 import { type ComputeInputs, computeSidebarState } from "./compute";
 import type { HostToWeb, SidebarState, TestcaseView, WebToHost } from "./messages";
 import { runStream } from "./runStream";
+import { submitStream } from "./submitStream";
 
 const SUPPORTED_EXTS = [".c", ".cpp", ".cc", ".cxx", ".h", ".py", ".java", ".go", ".rs", ".js"];
 
@@ -34,17 +38,14 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 	>();
 
 	private readonly compileCache = new CompileCache();
+	private submitController: AbortController | null = null;
 
 	constructor(
 		private readonly context: vscode.ExtensionContext,
 		private readonly endpoints: Endpoints,
 		private readonly catalog: LanguageCatalog,
 		private readonly getUsername: () => string | null
-	) {
-		// endpoints is used by Tasks 8-10 (run/submit). Reference here keeps the
-		// field from being flagged as unused while scaffolding.
-		void this.endpoints;
-	}
+	) {}
 
 	dispose(): void {
 		for (const d of this.subs) d.dispose();
@@ -171,6 +172,84 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 
 	async runOne(sourcePath: string, index: number): Promise<void> {
 		await this.runInternal(sourcePath, [index]);
+	}
+
+	async startSubmit(sourcePath: string): Promise<void> {
+		const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(sourcePath));
+		if (!folder) {
+			vscode.window.showErrorMessage("파일이 워크스페이스 밖에 있습니다.");
+			return;
+		}
+		const sc = await readSidecar(sidecarPath(folder.uri.fsPath, sourcePath, getSidecarDir()));
+		if (!sc) {
+			vscode.window.showErrorMessage("이 파일은 AOJ 문제와 연결되지 않았습니다. Attach 먼저.");
+			return;
+		}
+		if (getConfirmSubmit()) {
+			const pick = await vscode.window.showInformationMessage(
+				`#${sc.problemId} ${sc.problemTitle} 에 ${sc.language} 로 제출할까요?`,
+				{ modal: true },
+				"제출"
+			);
+			if (pick !== "제출") return;
+		}
+		const code = await fs.readFile(sourcePath, "utf-8");
+		let submissionId: number;
+		try {
+			const r = await this.endpoints.submit({
+				problemId: sc.problemId,
+				code,
+				language: sc.language,
+				contestId: sc.contestId,
+			});
+			submissionId = r.submissionId;
+		} catch (e) {
+			if (e instanceof UnauthorizedError) {
+				vscode.window.showErrorMessage("로그인이 필요합니다.");
+				return;
+			}
+			vscode.window.showErrorMessage(`제출 실패: ${(e as Error).message}`);
+			return;
+		}
+
+		const slot = this.ensureSlot(sourcePath);
+		slot.submission = {
+			submissionId,
+			problemId: sc.problemId,
+			state: "running",
+			pass: 0,
+			total: 0,
+		};
+		await this.post({ type: "submissionStart", submissionId, problemId: sc.problemId });
+
+		this.submitController = new AbortController();
+		try {
+			const res = await this.endpoints.submissionStream(submissionId, this.submitController.signal);
+			await submitStream(res, this.submitController.signal, {
+				progress: ({ verdict, pass, total }) => {
+					if (slot.submission) {
+						slot.submission.verdict = verdict;
+						slot.submission.pass = pass;
+						slot.submission.total = total;
+					}
+					void this.post({ type: "submissionProgress", verdict, pass, total });
+				},
+				done: ({ verdict, pass, total }) => {
+					const iso = new Date().toISOString();
+					if (slot.submission) {
+						slot.submission.state = "done";
+						slot.submission.verdict = verdict;
+						slot.submission.pass = pass;
+						slot.submission.total = total;
+						slot.submission.finishedAtIso = iso;
+					}
+					void this.post({ type: "submissionDone", verdict, pass, total, finishedAtIso: iso });
+				},
+				error: (m) => vscode.window.showErrorMessage(`Submission stream error: ${m}`),
+			});
+		} finally {
+			this.submitController = null;
+		}
 	}
 
 	private async runInternal(sourcePath: string, indices: number[] | undefined): Promise<void> {
