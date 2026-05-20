@@ -10,6 +10,7 @@ import { LinkedProblemCard } from "./components/LinkedProblemCard";
 import { SignInBanner } from "./components/SignInBanner";
 import { SubmissionStrip } from "./components/SubmissionStrip";
 import { TestList } from "./components/TestList";
+import { applyEvent } from "./state";
 
 const INITIAL: SidebarState = {
 	root: "no-editor",
@@ -30,9 +31,7 @@ export function App({ vscode }: { vscode: { postMessage: (m: WebToHost) => void 
 	const bridge = createBridge<WebToHost, HostToWeb>(vscode);
 
 	useEffect(() => {
-		const off = bridge.on((m) => {
-			if (m.type === "state") setState(m.payload);
-		});
+		const off = bridge.on((m) => setState((prev) => applyEvent(prev, m)));
 		bridge.post({ type: "ready" });
 		return off;
 	}, []);
