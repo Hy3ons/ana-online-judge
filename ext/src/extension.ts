@@ -5,6 +5,7 @@ import { AojAuthProvider, AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL } from "./auth/a
 import { DeviceFlow } from "./auth/deviceFlow";
 import { TokenStore } from "./auth/tokenStore";
 import { CurrentFileTreeProvider } from "./views/currentFileView";
+import { SubmissionsTreeProvider } from "./views/submissionsView";
 import { SyncTreeProvider } from "./views/syncView";
 
 let output: vscode.OutputChannel;
@@ -38,6 +39,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	const currentFile = new CurrentFileTreeProvider(() =>
 		vscode.workspace.getConfiguration("aoj").get<string>("testcaseSidecarDir", ".aoj")
 	);
+	const subs = new SubmissionsTreeProvider(endpoints, getEndpoint);
 
 	context.subscriptions.push(
 		output,
@@ -64,10 +66,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		}),
 		vscode.window.registerTreeDataProvider("aoj.sync", sync),
 		vscode.window.registerTreeDataProvider("aoj.currentFile", currentFile),
+		vscode.window.registerTreeDataProvider("aoj.submissions", subs),
 		vscode.commands.registerCommand("aoj.refreshContests", () => sync.refresh())
 	);
 
 	provider.onDidChangeSessions(() => sync.refresh());
+	provider.onDidChangeSessions(() => subs.refresh());
 }
 
 export function deactivate(): void {
