@@ -7,6 +7,7 @@ import type {
 } from "../../src/webview/results/messages";
 import { TestcaseCard } from "./components/TestcaseCard";
 import { Toolbar } from "./components/Toolbar";
+import { UndoToast } from "./components/UndoToast";
 
 interface HeaderState {
 	title: string;
@@ -18,6 +19,7 @@ interface HeaderState {
 export function App({ vscode }: { vscode: { postMessage: (m: WebToExt) => void } }) {
 	const [header, setHeader] = useState<HeaderState>({ title: "AOJ — Results", hasSidecar: false });
 	const [cases, setCases] = useState<Map<number, SerializedCase>>(new Map());
+	const [undoToast, setUndoToast] = useState<{ index: number; message: string } | null>(null);
 	const bridge = createBridge<WebToExt, ExtToWeb>(vscode);
 
 	useEffect(() => {
@@ -45,6 +47,8 @@ export function App({ vscode }: { vscode: { postMessage: (m: WebToExt) => void }
 				setHeader((h) => ({ ...h, summary: m.summary }));
 			} else if (m.type === "submission") {
 				setHeader((h) => ({ ...h, submission: { verdict: m.verdict, finished: m.finished } }));
+			} else if (m.type === "toast" && m.kind === "removed") {
+				setUndoToast({ index: m.index, message: m.message });
 			}
 		});
 		bridge.post({ type: "ready" });
@@ -83,6 +87,14 @@ export function App({ vscode }: { vscode: { postMessage: (m: WebToExt) => void }
 					))
 				)}
 			</main>
+			{undoToast && (
+				<UndoToast
+					index={undoToast.index}
+					message={undoToast.message}
+					onUndo={() => bridge.post({ type: "undoRemove", index: undoToast.index })}
+					onDismiss={() => setUndoToast(null)}
+				/>
+			)}
 		</div>
 	);
 }
