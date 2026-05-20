@@ -7,10 +7,14 @@ export function TestcaseCard({
 	c,
 	onRemove,
 	onOpenDiff,
+	onEditInput,
+	onEditOutput,
 }: {
 	c: SerializedCase;
 	onRemove: () => void;
 	onOpenDiff: () => void;
+	onEditInput: (next: string) => void;
+	onEditOutput: (next: string) => void;
 }) {
 	const isWrong = c.verdict === "Wrong Answer";
 	const showOpenDiff = isWrong && c.actual && c.expected;
@@ -40,8 +44,8 @@ export function TestcaseCard({
 				</IconButton>
 			</header>
 			<div class="flex">
-				<IoColumn label="Input" value={c.input} />
-				<IoColumn label="Expected" value={c.expected} />
+				<IoColumn label="Input" value={c.input} editable onCommit={onEditInput} />
+				<IoColumn label="Expected" value={c.expected} editable onCommit={onEditOutput} />
 				<IoColumn label="Actual" value={c.actual} diff={isWrong} />
 			</div>
 		</section>

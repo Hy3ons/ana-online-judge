@@ -77,6 +77,8 @@ export function App({ vscode }: { vscode: { postMessage: (m: WebToExt) => void }
 							c={c}
 							onRemove={() => bridge.post({ type: "removeCase", index: c.index })}
 							onOpenDiff={() => bridge.post({ type: "openDiff", index: c.index })}
+							onEditInput={(next) => bridge.post({ type: "editCase", index: c.index, input: next })}
+							onEditOutput={(next) => bridge.post({ type: "editCase", index: c.index, output: next })}
 						/>
 					))
 				)}
