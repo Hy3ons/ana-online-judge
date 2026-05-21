@@ -1,15 +1,31 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 interface RefreshProgressProps {
 	lastUpdate: Date;
 	intervalMs: number;
 	isRefreshing: boolean;
 }
 
-// Top-right progress bar showing how close the next auto-refresh is.
-// The fill bar is driven by a CSS animation keyed off `lastUpdate` so each refresh
-// restarts the animation from 0% — no per-frame timers needed.
+// Top-right header element showing how much time is left until the next auto-refresh.
+// The fill bar is a CSS animation keyed off `lastUpdate` so each refresh restarts it
+// from 0% — the numeric countdown ticks via a 200ms interval for sub-second smoothness.
 export function RefreshProgress({ lastUpdate, intervalMs, isRefreshing }: RefreshProgressProps) {
+	const [remainingMs, setRemainingMs] = useState(intervalMs);
+
+	useEffect(() => {
+		const tick = () => {
+			const elapsed = Date.now() - lastUpdate.getTime();
+			setRemainingMs(Math.max(0, intervalMs - elapsed));
+		};
+		tick();
+		const id = setInterval(tick, 200);
+		return () => clearInterval(id);
+	}, [lastUpdate, intervalMs]);
+
+	const remainingSec = Math.ceil(remainingMs / 1000);
+
 	return (
 		<div className="spotboard-refresh-progress">
 			<div className="spotboard-refresh-progress-label">
@@ -21,9 +37,7 @@ export function RefreshProgress({ lastUpdate, intervalMs, isRefreshing }: Refres
 				) : (
 					<>
 						<span>다음 갱신까지</span>
-						<span className="spotboard-refresh-time">
-							{lastUpdate.toLocaleTimeString("ko-KR", { hour12: false })}
-						</span>
+						<span className="spotboard-refresh-time">{remainingSec}초</span>
 					</>
 				)}
 			</div>

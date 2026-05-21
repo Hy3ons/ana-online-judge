@@ -272,12 +272,19 @@
     transition: background-color 1000ms ease-in-out;
 }
 
-/* Admin badge (always visible at top-left when admin views the spotboard) */
+/* Header layout: left/right groups so badges flow inline with the title/system info
+   instead of overlapping them as fixed overlays */
+.spotboard-container .spotboard-header-left,
+.spotboard-container .spotboard-header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.7em;
+    min-width: 0;
+}
+
+/* Admin badge — sits to the LEFT of the contest title */
 .spotboard-container .spotboard-admin-badge {
-    position: fixed;
-    top: 0.5em;
-    left: 0.5em;
-    z-index: 100000;
+    flex-shrink: 0;
     padding: 0.2em 0.6em;
     background-color: rgba(220, 38, 38, 0.95);
     color: white;
@@ -295,18 +302,14 @@
     letter-spacing: 0.02em;
 }
 
-/* Auto-refresh progress indicator (top-right, fixed) */
+/* Auto-refresh progress indicator — sits to the RIGHT of the system-information text */
 .spotboard-container .spotboard-refresh-progress {
-    position: fixed;
-    top: 0.5em;
-    right: 0.5em;
-    z-index: 100000;
-    width: 14em;
-    padding: 0.45em 0.7em 0.55em;
-    background-color: rgba(255, 255, 255, 0.95);
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+    width: 12em;
+    padding: 0.35em 0.6em 0.45em;
+    background-color: rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.08);
     border-radius: 0.3em;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
     font-family: 'Open Sans', 'Nanum Gothic', sans-serif;
     color: #333;
     pointer-events: none;

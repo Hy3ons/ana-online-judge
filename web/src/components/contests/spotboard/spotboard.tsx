@@ -313,21 +313,25 @@ export function Spotboard({
 
 	return (
 		<div className="spotboard-container">
-			{isAdmin && <div className="spotboard-admin-badge">(admin)</div>}
-			{showRefreshProgress && (
-				<RefreshProgress
-					lastUpdate={lastUpdate as Date}
-					intervalMs={refreshIntervalMs as number}
-					isRefreshing={isRefreshing}
-				/>
-			)}
 			<div id="header">
-				<div id="contest-title">
-					{config.contestTitle}
-					{hiddenRuns.length > 0 && <span className="text-yellow-600 ml-2">(Frozen)</span>}
+				<div className="spotboard-header-left">
+					{isAdmin && <div className="spotboard-admin-badge">(admin)</div>}
+					<div id="contest-title">
+						{config.contestTitle}
+						{hiddenRuns.length > 0 && <span className="text-yellow-600 ml-2">(Frozen)</span>}
+					</div>
 				</div>
-				<div id="system-information">
-					{config.systemName} {config.systemVersion}
+				<div className="spotboard-header-right">
+					<div id="system-information">
+						{config.systemName} {config.systemVersion}
+					</div>
+					{showRefreshProgress && (
+						<RefreshProgress
+							lastUpdate={lastUpdate as Date}
+							intervalMs={refreshIntervalMs as number}
+							isRefreshing={isRefreshing}
+						/>
+					)}
 				</div>
 			</div>
 
