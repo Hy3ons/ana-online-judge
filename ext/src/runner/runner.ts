@@ -126,7 +126,7 @@ export async function runCase(
 		className: path.basename(compile.sourceFile, path.extname(compile.sourceFile)),
 	};
 	if (!lang.run) {
-		// Special runtimes (text, csharp) should not reach runCase via the standard flow.
+		// Special runtimes (text) should not reach runCase via the standard flow.
 		return {
 			testcase: tc,
 			verdict: {

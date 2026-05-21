@@ -137,7 +137,7 @@ async function runOnePair(
 	const expected = await fs.readFile(p.outputPath, "utf-8");
 
 	if (!meta.run) {
-		// Special runtimes (text, csharp) should not reach here via runStream.
+		// Special runtimes (text) should not reach here via runStream.
 		ev.caseDone({
 			index: p.index,
 			verdict: "RE",

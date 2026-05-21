@@ -163,7 +163,7 @@ export const LANGUAGES: LanguageDef[] = [
 		defaultExtension: "rs",
 		sourceFile: "Main.rs",
 		judgeVersion: "Rust 1.91.1",
-		// --edition=2021 — judge/files/languages.toml update lands in plan Task 11
+		// --edition=2021 kept in sync with judge/files/languages.toml
 		compile: {
 			command: "rustc",
 			args: ["-O", "--edition=2021", "-o", "{exe}", "{src}"],
