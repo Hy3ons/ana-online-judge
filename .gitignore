@@ -56,3 +56,5 @@ docs
 
 # CLI translate character pool (사적인 부원 이름 — 커밋 금지)
 cli/translate-characters.txt
+# Git worktrees
+.worktrees/

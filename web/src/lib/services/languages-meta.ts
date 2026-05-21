@@ -168,7 +168,7 @@ export const LANGUAGES_META: LanguageMeta[] = [
 		// TOML uses absolute toolchain path — abstracted to `rustc` on $PATH.
 		compile: {
 			command: "rustc",
-			args: ["-O", "-o", "{exe}", "{src}"],
+			args: ["-O", "--edition=2021", "-o", "{exe}", "{src}"],
 		},
 		run: { command: "{exe}", args: [] },
 		timeMultiplier: 1,

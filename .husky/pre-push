@@ -30,5 +30,13 @@ if [ -d "web" ]; then
   cd ..
 fi
 
+# Ext: build
+if [ -d "ext" ]; then
+  echo "🧩 Building extension..."
+  cd ext
+  pnpm build || { echo "❌ pnpm build failed in ext/"; exit 1; }
+  cd ..
+fi
+
 echo "✨ Pre-push checks passed!"
 

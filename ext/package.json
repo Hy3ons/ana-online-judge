@@ -1,0 +1,260 @@
+{
+  "name": "aoj-vscode",
+  "displayName": "ANA Online Judge",
+  "description": "VS Code에서 ANA Online Judge 문제를 풀어보세요. 문제 연결, 로컬 테스트 실행, 제출, 채점 결과 실시간 확인까지.",
+  "version": "0.1.0",
+  "publisher": "ana-online-judge",
+  "private": true,
+  "engines": {
+    "vscode": "^1.95.0",
+    "node": ">=20"
+  },
+  "categories": [
+    "Education",
+    "Other"
+  ],
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/csh1668/ana-online-judge"
+  },
+  "bugs": {
+    "url": "https://github.com/csh1668/ana-online-judge/issues"
+  },
+  "homepage": "https://github.com/csh1668/ana-online-judge#readme",
+  "license": "MIT",
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onLanguage:cpp",
+    "onLanguage:c",
+    "onLanguage:python",
+    "onLanguage:rust",
+    "onLanguage:go",
+    "onLanguage:java",
+    "onLanguage:javascript",
+    "onAuthenticationRequest:aoj"
+  ],
+  "contributes": {
+    "authentication": [
+      {
+        "id": "aoj",
+        "label": "ANA Online Judge"
+      }
+    ],
+    "commands": [
+      {
+        "command": "aoj.signIn",
+        "title": "AOJ: 로그인",
+        "category": "AOJ"
+      },
+      {
+        "command": "aoj.signOut",
+        "title": "AOJ: 로그아웃",
+        "category": "AOJ"
+      },
+      {
+        "command": "aoj.searchProblems",
+        "title": "AOJ: 문제 검색",
+        "category": "AOJ"
+      },
+      {
+        "command": "aoj.syncProblemById",
+        "title": "AOJ: 문제 연결 (legacy alias)",
+        "category": "AOJ"
+      },
+      {
+        "command": "aoj.attachProblemById",
+        "title": "AOJ: 문제 번호로 연결…",
+        "category": "AOJ"
+      },
+      {
+        "command": "aoj.sidebar.refresh",
+        "title": "AOJ: 사이드바 새로고침",
+        "category": "AOJ"
+      },
+      {
+        "command": "aoj.runAll",
+        "title": "AOJ: 모든 테스트케이스 실행",
+        "category": "AOJ"
+      },
+      {
+        "command": "aoj.runOne",
+        "title": "AOJ: 이 테스트케이스 실행",
+        "category": "AOJ"
+      },
+      {
+        "command": "aoj.submit",
+        "title": "AOJ: 현재 파일 제출",
+        "category": "AOJ"
+      },
+      {
+        "command": "aoj.openInBrowser",
+        "title": "AOJ: 브라우저에서 열기",
+        "category": "AOJ"
+      },
+      {
+        "command": "aoj.addTestcase",
+        "title": "AOJ: 테스트케이스 추가",
+        "category": "AOJ"
+      },
+      {
+        "command": "aoj.removeTestcase",
+        "title": "AOJ: 테스트케이스 삭제",
+        "category": "AOJ"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "aoj.runAll",
+        "key": "ctrl+alt+b",
+        "mac": "cmd+alt+b",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "aoj.submit",
+        "key": "ctrl+alt+s",
+        "mac": "cmd+alt+s",
+        "when": "editorTextFocus"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "aoj",
+          "title": "ANA Online Judge",
+          "icon": "media/sidebar.svg"
+        }
+      ]
+    },
+    "views": {
+      "aoj": [
+        {
+          "id": "aoj.sidebar",
+          "name": "AOJ",
+          "type": "webview"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "aoj.signIn",
+          "when": "view == aoj.sidebar && !aoj.signedIn",
+          "group": "navigation"
+        },
+        {
+          "command": "aoj.signOut",
+          "when": "view == aoj.sidebar && aoj.signedIn",
+          "group": "1_overflow"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "ANA Online Judge",
+      "properties": {
+        "aoj.endpoint": {
+          "type": "string",
+          "default": "https://aoj.anacnu.kr",
+          "description": "AOJ 웹 base URL"
+        },
+        "aoj.compilerPaths": {
+          "type": "object",
+          "default": {
+            "cpp": "g++",
+            "c": "gcc",
+            "python": "python3",
+            "rust": "rustc",
+            "go": "go",
+            "java": "javac",
+            "javascript": "node"
+          },
+          "description": "언어별 컴파일러/런타임 경로"
+        },
+        "aoj.compileFlags": {
+          "type": "object",
+          "default": {
+            "cpp": [
+              "-O2",
+              "-std=c++20"
+            ],
+            "c": [
+              "-O2",
+              "-std=c17"
+            ],
+            "rust": [
+              "-O"
+            ],
+            "go": [],
+            "java": [
+              "-encoding",
+              "UTF-8"
+            ]
+          },
+          "description": "언어별 컴파일 플래그"
+        },
+        "aoj.timeoutMultiplier": {
+          "type": "number",
+          "default": 2,
+          "minimum": 0.5,
+          "maximum": 10,
+          "description": "로컬 실행 timeout = 문제 시간제한 × 이 값"
+        },
+        "aoj.confirmSubmit": {
+          "type": "boolean",
+          "default": true,
+          "description": "제출 전 확인 대화상자 표시"
+        },
+        "aoj.testcaseSidecarDir": {
+          "type": "string",
+          "default": ".aoj",
+          "description": "사이드카(.json) 디렉토리 이름"
+        },
+        "aoj.defaultRunTimeoutMs": {
+          "type": "number",
+          "default": 10000,
+          "description": "문제 연결이 없을 때 적용되는 케이스당 실행 timeout (ms)"
+        },
+        "aoj.dismissSignInBanner": {
+          "type": "boolean",
+          "default": false,
+          "description": "(deprecated) 사이드바 상단의 로그인 배너 숨기기"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "pnpm build:css && node esbuild.config.mjs",
+    "watch": "pnpm build:css && node esbuild.config.mjs --watch",
+    "package": "pnpm build:css && node esbuild.config.mjs --production",
+    "build:css": "tailwindcss -i webview/shared/tailwind.css -o dist/webview/styles.css --minify",
+    "watch:css": "tailwindcss -i webview/shared/tailwind.css -o dist/webview/styles.css --watch",
+    "lint": "biome check src test webview",
+    "lint:fix": "biome check --fix src test webview",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p webview/tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "pnpm build && pnpm build:integration && node ./test/integration/runner.cjs",
+    "build:integration": "tsc -p test/integration/tsconfig.json",
+    "vsce:package": "vsce package --no-dependencies --out aoj-vscode.vsix",
+    "vsce:publish": "vsce publish --no-dependencies"
+  },
+  "dependencies": {
+    "preact": "^10.29.2"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.8",
+    "@tailwindcss/cli": "^4.3.0",
+    "@types/mocha": "^10.0.9",
+    "@types/node": "^20.14.0",
+    "@types/vscode": "^1.95.0",
+    "@vscode/test-electron": "^2.4.1",
+    "@vscode/vsce": "^3.2.1",
+    "esbuild": "^0.24.0",
+    "glob": "^11.0.0",
+    "mocha": "^11.0.0",
+    "ovsx": "^0.10.1",
+    "tailwindcss": "^4.1.17",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  }
+}
