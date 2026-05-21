@@ -3,6 +3,7 @@
 import { UserNameDisplay } from "@/components/user-name-display";
 import type { TeamStatus } from "@/lib/spotboard/contest";
 import type { SpotboardConfig, SpotboardRun, SpotboardTeam } from "@/lib/spotboard/types";
+import type { FlipAnimationState } from "./spotboard";
 import { formatTime } from "./utils";
 
 interface TeamRowProps {
@@ -13,6 +14,10 @@ interface TeamRowProps {
 	hiddenRuns: SpotboardRun[];
 	isFinalized: boolean;
 	isFocused: boolean;
+	isAwardMode: boolean;
+	isRevealed: boolean;
+	anonymousId: number;
+	animating: FlipAnimationState | null;
 	rankedTeams: { teamId: number; status: TeamStatus }[];
 }
 
@@ -24,6 +29,10 @@ export function TeamRow({
 	hiddenRuns,
 	isFinalized,
 	isFocused,
+	isAwardMode,
+	isRevealed,
+	anonymousId,
+	animating,
 	rankedTeams,
 }: TeamRowProps) {
 	const solved = status.getTotalSolved();
@@ -51,6 +60,8 @@ export function TeamRow({
 	) {
 		solvedCountClass += solvedCountClass ? " last" : "last";
 	}
+
+	const showAnonymous = isAwardMode && !isRevealed;
 
 	return (
 		<div
@@ -87,6 +98,11 @@ export function TeamRow({
 					const hasHidden = hiddenRuns.some((r) => r.teamId === team.id && r.problemId === prob.id);
 					if (hasHidden && !isAccepted) {
 						className += " pending";
+					}
+
+					// Flip animation classes for award-mode reveal
+					if (animating && animating.teamId === team.id && animating.problemId === prob.id) {
+						className += ` ${animating.phase}`;
 					}
 
 					// ANIGMA 점수 또는 ICPC 시도 횟수 표시
@@ -186,14 +202,18 @@ export function TeamRow({
 
 			<div className="team-name" style={{ float: "left", width: "300px" }}>
 				<div className="team-title">
-					<UserNameDisplay
-						user={{
-							name: team.name,
-							username: team.username,
-							mainExternalSite: team.mainExternalSite,
-							mainExternalRating: team.mainExternalRating,
-						}}
-					/>
+					{showAnonymous ? (
+						<span className="team-anonymous">User {anonymousId}</span>
+					) : (
+						<UserNameDisplay
+							user={{
+								name: team.name,
+								username: team.username,
+								mainExternalSite: team.mainExternalSite,
+								mainExternalRating: team.mainExternalRating,
+							}}
+						/>
+					)}
 				</div>
 			</div>
 		</div>

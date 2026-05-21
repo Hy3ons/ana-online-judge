@@ -4,7 +4,6 @@ import { getContestById } from "@/actions/contests";
 import { getScoreboard, getSpotboardData } from "@/actions/scoreboard";
 import { auth } from "@/auth";
 import { ScoreboardPageClient } from "@/components/contests/scoreboard-page-client";
-import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
 
 export async function generateMetadata({
 	params,
@@ -55,44 +54,47 @@ export default async function ScoreboardPage({
 		? await getSpotboardData(contestId)
 		: await getScoreboard(contestId);
 
-	// If award mode is requested but scoreboard is frozen and user is not admin, deny access
-	if (
-		isAwardMode &&
-		!isSpotboard &&
-		"isFrozen" in initialData &&
-		initialData.isFrozen &&
-		!isAdmin
-	) {
-		return (
-			<div className="flex items-center justify-center min-h-screen">
-				<div className="text-center">
-					<p className="text-lg text-muted-foreground">
-						시상 모드는 스코어보드가 공개된 후에만 접근할 수 있습니다.
-					</p>
+	// Award mode is admin-only until the contest is over AND the scoreboard is unfrozen.
+	// Non-admins requesting ?award=true before that point get a friendly denial.
+	if (isAwardMode && !isAdmin) {
+		const now = new Date();
+		const isFinished = now > new Date(contest.endTime);
+
+		// Frozen-state check — basic scoreboard exposes it directly; spotboard derives it
+		// from contest.isFrozen + freezeMinutes so non-admins can't peek while results are
+		// still masked server-side.
+		let isStillFrozen = false;
+		if (!isSpotboard && "isFrozen" in initialData) {
+			isStillFrozen = initialData.isFrozen === true;
+		} else if (isSpotboard && contest.isFrozen && contest.freezeMinutes) {
+			const freezeStart = new Date(
+				new Date(contest.endTime).getTime() - contest.freezeMinutes * 60 * 1000
+			);
+			isStillFrozen = now >= freezeStart;
+		}
+
+		if (!isFinished || isStillFrozen) {
+			return (
+				<div className="flex items-center justify-center min-h-screen">
+					<div className="text-center">
+						<p className="text-lg text-muted-foreground">
+							시상 모드는 대회가 종료되고 스코어보드가 공개된 후에만 접근할 수 있습니다.
+						</p>
+					</div>
 				</div>
-			</div>
-		);
+			);
+		}
 	}
 
 	return (
-		<>
-			<PageBreadcrumb
-				items={[
-					{ label: "대회", href: "/contests" },
-					{ label: contest.title, href: `/contests/${contestId}` },
-					{ label: "스코어보드" },
-				]}
-				className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-8"
-			/>
-			<ScoreboardPageClient
-				contestId={contestId}
-				contestTitle={contest.title}
-				isSpotboard={isSpotboard}
-				isAwardMode={isAwardMode}
-				initialData={initialData}
-				currentUserId={currentUserId}
-				isAdmin={isAdmin}
-			/>
-		</>
+		<ScoreboardPageClient
+			contestId={contestId}
+			contestTitle={contest.title}
+			isSpotboard={isSpotboard}
+			isAwardMode={isAwardMode}
+			initialData={initialData}
+			currentUserId={currentUserId}
+			isAdmin={isAdmin}
+		/>
 	);
 }

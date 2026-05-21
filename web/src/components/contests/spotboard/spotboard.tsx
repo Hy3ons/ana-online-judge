@@ -6,7 +6,7 @@
 
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ContestLogic, Run, type TeamStatus } from "@/lib/spotboard/contest";
 import type { SpotboardConfig, SpotboardRun } from "@/lib/spotboard/types";
 import { TeamRow } from "./team-row";
@@ -16,9 +16,25 @@ import "./spotboard.css";
 interface SpotboardProps {
 	config: SpotboardConfig;
 	isAwardMode?: boolean;
+	isAdmin?: boolean;
 }
 
-export function Spotboard({ config, isAwardMode = false }: SpotboardProps) {
+export type FlipPhase = "flip-before" | "flip-after";
+
+export interface FlipAnimationState {
+	teamId: number;
+	problemId: number;
+	phase: FlipPhase;
+}
+
+// Duration of each flip half (must match CSS animation-duration)
+const FLIP_HALF_MS = 250;
+
+function sleep(ms: number) {
+	return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
+export function Spotboard({ config, isAwardMode = false, isAdmin = false }: SpotboardProps) {
 	const [logic, setLogic] = useState<ContestLogic | null>(null);
 	const [rankedTeams, setRankedTeams] = useState<{ teamId: number; status: TeamStatus }[]>([]);
 	const [hiddenRuns, setHiddenRuns] = useState<SpotboardRun[]>([]);
@@ -26,6 +42,18 @@ export function Spotboard({ config, isAwardMode = false }: SpotboardProps) {
 	// Award Ceremony State
 	const [finalizedTeams, setFinalizedTeams] = useState<Set<number>>(new Set());
 	const [focusedTeamId, setFocusedTeamId] = useState<number | null>(null);
+	const [revealedTeams, setRevealedTeams] = useState<Set<number>>(new Set());
+	const [animating, setAnimating] = useState<FlipAnimationState | null>(null);
+	const animatingRef = useRef(false);
+
+	// Stable anonymous IDs for teams (used to render "User N" before reveal in award mode)
+	const anonymousIds = useMemo(() => {
+		const m = new Map<number, number>();
+		config.teams.forEach((t, idx) => {
+			m.set(t.id, idx + 1);
+		});
+		return m;
+	}, [config.teams]);
 
 	// Initialize logic
 	useEffect(() => {
@@ -73,6 +101,9 @@ export function Spotboard({ config, isAwardMode = false }: SpotboardProps) {
 		setHiddenRuns(hidden);
 		setFinalizedTeams(new Set());
 		setFocusedTeamId(null);
+		setRevealedTeams(new Set());
+		setAnimating(null);
+		animatingRef.current = false;
 	}, [config, isAwardMode]);
 
 	// Animation frame or update trigger
@@ -125,36 +156,80 @@ export function Spotboard({ config, isAwardMode = false }: SpotboardProps) {
 	}, [config]);
 
 	// Award ceremony step (ICPC Style)
-	const revealNext = useCallback(() => {
+	// Each press performs ONE step:
+	//   - If no focused team: pick the lowest non-finalized team and focus it (revealing its name)
+	//   - Else if focused team has pending problems: reveal ONE problem (animating each run individually)
+	//       After reveal: if the team's rank improved, unfocus (next step will pick a new lowest)
+	//   - Else: finalize the focused team
+	const revealNext = useCallback(async () => {
 		if (!logic) return;
+		if (animatingRef.current) return;
 
-		// 1. If we have a focused team, continue processing it
-		if (focusedTeamId !== null) {
-			const teamStatus = logic.teamStatuses.get(focusedTeamId);
-			if (!teamStatus) return;
-
-			// Find pending problems (problems with hidden runs)
-			const pendingProblems: number[] = [];
-			for (const [problemId, _pStatus] of teamStatus.problemStatuses) {
-				const hasHidden = hiddenRuns.some(
-					(r) => r.teamId === focusedTeamId && r.problemId === problemId
-				);
-				if (hasHidden) {
-					pendingProblems.push(problemId);
+		// 1. No focused team: pick lowest non-finalized team and focus it
+		if (focusedTeamId === null) {
+			const currentStandings = logic.getRankedTeams();
+			let targetTeamId: number | null = null;
+			for (let i = currentStandings.length - 1; i >= 0; i--) {
+				if (!finalizedTeams.has(currentStandings[i].teamId)) {
+					targetTeamId = currentStandings[i].teamId;
+					break;
 				}
 			}
+			if (targetTeamId === null) return;
 
-			if (pendingProblems.length > 0) {
-				const nextProblemId = pendingProblems[0];
+			setFocusedTeamId(targetTeamId);
+			setRevealedTeams((prev) => {
+				const next = new Set(prev);
+				next.add(targetTeamId!);
+				return next;
+			});
+			return;
+		}
 
-				// Get all hidden runs for this problem
-				const problemRuns = hiddenRuns
-					.filter((r) => r.teamId === focusedTeamId && r.problemId === nextProblemId)
-					.sort((a, b) => a.time - b.time);
+		// 2. Focused team: find next pending problem (in problem display order)
+		const myHidden = hiddenRuns.filter((r) => r.teamId === focusedTeamId);
+		if (myHidden.length === 0) {
+			// No more pending problems -> finalize this team
+			setFinalizedTeams((prev) => {
+				const next = new Set(prev);
+				next.add(focusedTeamId);
+				return next;
+			});
+			setFocusedTeamId(null);
+			return;
+		}
 
-				// Reveal all runs for this ONE problem
-				for (const run of problemRuns) {
-					const runToAdd = new Run(
+		let targetProblemId: number | null = null;
+		for (const prob of config.problems) {
+			if (myHidden.some((r) => r.problemId === prob.id)) {
+				targetProblemId = prob.id;
+				break;
+			}
+		}
+		if (targetProblemId === null) return;
+
+		// 3. Reveal each run for this problem in time order with flip animations
+		const runsForProblem = myHidden
+			.filter((r) => r.problemId === targetProblemId)
+			.sort((a, b) => a.time - b.time);
+
+		const oldRank = logic.teamStatuses.get(focusedTeamId)?.rank ?? 0;
+
+		animatingRef.current = true;
+
+		try {
+			for (const run of runsForProblem) {
+				// Phase A: rotateX(0 -> 90deg)
+				setAnimating({
+					teamId: focusedTeamId,
+					problemId: targetProblemId,
+					phase: "flip-before",
+				});
+				await sleep(FLIP_HALF_MS);
+
+				// At mid-flip (perpendicular to screen, invisible): apply the run
+				logic.addRun(
+					new Run(
 						run.id,
 						run.teamId,
 						run.problemId,
@@ -164,49 +239,37 @@ export function Spotboard({ config, isAwardMode = false }: SpotboardProps) {
 						run.problemType,
 						run.anigmaDetails,
 						run.passedTestcases
-					);
-					logic.addRun(runToAdd);
-				}
-
-				// Remove revealed runs from hidden
-				setHiddenRuns((prev) =>
-					prev.filter((r) => !(r.teamId === focusedTeamId && r.problemId === nextProblemId))
+					)
 				);
+				setHiddenRuns((prev) => prev.filter((r) => r.id !== run.id));
 				updateRankings();
-			} else {
-				// No more pending problems for this team -> Finalize
-				setFinalizedTeams((prev) => {
-					const next = new Set(prev);
-					next.add(focusedTeamId);
-					return next;
+
+				// Phase B: rotateX(270 -> 360deg)
+				setAnimating({
+					teamId: focusedTeamId,
+					problemId: targetProblemId,
+					phase: "flip-after",
 				});
-				setFocusedTeamId(null);
+				await sleep(FLIP_HALF_MS);
 			}
-			return;
+		} finally {
+			setAnimating(null);
+			animatingRef.current = false;
 		}
 
-		// 2. No focused team -> Find the lowest ranked non-finalized team
-		const currentStandings = logic.getRankedTeams();
-		let targetTeamId: number | null = null;
-
-		for (let i = currentStandings.length - 1; i >= 0; i--) {
-			if (!finalizedTeams.has(currentStandings[i].teamId)) {
-				targetTeamId = currentStandings[i].teamId;
-				break;
-			}
+		// 4. If this reveal changed the team's rank, hand focus over to the next lowest
+		const newRank = logic.teamStatuses.get(focusedTeamId)?.rank ?? 0;
+		if (newRank < oldRank) {
+			setFocusedTeamId(null);
 		}
-
-		if (targetTeamId !== null) {
-			setFocusedTeamId(targetTeamId);
-		}
-	}, [logic, hiddenRuns, focusedTeamId, finalizedTeams, updateRankings]);
+	}, [logic, hiddenRuns, focusedTeamId, finalizedTeams, updateRankings, config.problems]);
 
 	useEffect(() => {
 		if (!isAwardMode) return;
 
 		const handleKeyDown = (e: KeyboardEvent) => {
 			if (e.key === "ArrowRight" || e.key === "Enter") {
-				revealNext();
+				void revealNext();
 			}
 		};
 
@@ -218,6 +281,7 @@ export function Spotboard({ config, isAwardMode = false }: SpotboardProps) {
 
 	return (
 		<div className="spotboard-container">
+			{isAdmin && <div className="spotboard-admin-badge">(admin)</div>}
 			<div id="header">
 				<div id="contest-title">
 					{config.contestTitle}
@@ -244,6 +308,10 @@ export function Spotboard({ config, isAwardMode = false }: SpotboardProps) {
 								hiddenRuns={hiddenRuns}
 								isFinalized={finalizedTeams.has(team.id)}
 								isFocused={focusedTeamId === team.id}
+								isAwardMode={isAwardMode}
+								isRevealed={revealedTeams.has(team.id) || finalizedTeams.has(team.id)}
+								anonymousId={anonymousIds.get(team.id) ?? team.id}
+								animating={animating}
 								rankedTeams={rankedTeams}
 							/>
 						);

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import "@fontsource/geist-mono/400.css";
 import "@fontsource/geist-mono/700.css";
 import "pretendard/dist/web/variable/pretendardvariable.css";
@@ -8,6 +7,7 @@ import { Toaster as SonnerToaster } from "sonner";
 import { getRunningContestPracticeCounts } from "@/actions/layout";
 import { auth } from "@/auth";
 import { ImpersonationBanner } from "@/components/auth/impersonation-banner";
+import { ChromeShell } from "@/components/layout/chrome-shell";
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
 import { ServerTimeFloater } from "@/components/layout/server-time-floater";
@@ -31,14 +31,8 @@ export default async function RootLayout({
 }: Readonly<{
 	children: React.ReactNode;
 }>) {
-	const headersList = await headers();
-	const pathname = headersList.get("x-pathname") || "";
 	const session = await auth();
-
-	// 스코어보드 페이지에서는 헤더와 푸터를 숨김
-	const isScoreboardPage = pathname.includes("/scoreboard") || pathname === "/test-scoreboard";
-
-	const activeCounts = isScoreboardPage ? undefined : await getRunningContestPracticeCounts();
+	const activeCounts = await getRunningContestPracticeCounts();
 
 	return (
 		<html lang="ko" suppressHydrationWarning>
@@ -51,10 +45,13 @@ export default async function RootLayout({
 						disableTransitionOnChange
 					>
 						<ImpersonationBanner />
-						{!isScoreboardPage && <Header activeCounts={activeCounts} />}
-						<main className="flex-1">{children}</main>
-						{!isScoreboardPage && <Footer />}
-						{!isScoreboardPage && <ServerTimeFloater />}
+						<ChromeShell
+							header={<Header activeCounts={activeCounts} />}
+							footer={<Footer />}
+							floater={<ServerTimeFloater />}
+						>
+							{children}
+						</ChromeShell>
 						<Toaster />
 						<SonnerToaster richColors />
 					</ThemeProvider>

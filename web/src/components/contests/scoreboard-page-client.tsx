@@ -61,7 +61,7 @@ export function ScoreboardPageClient({
 	if (isSpotboard) {
 		return (
 			<div className="w-full min-h-screen bg-white">
-				<Spotboard config={data as SpotboardConfig} isAwardMode={isAwardMode} />
+				<Spotboard config={data as SpotboardConfig} isAwardMode={isAwardMode} isAdmin={isAdmin} />
 			</div>
 		);
 	}

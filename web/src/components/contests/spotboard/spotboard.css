@@ -10,6 +10,8 @@
 .spotboard-container {
     font-family: 'Open Sans', 'Nanum Gothic', sans-serif;
     font-weight: 300;
+    /* contain floated descendants (#wrapper) so the container grows with content */
+    display: flow-root;
 }
 
 .spotboard-container sup {
@@ -251,17 +253,46 @@
 
 .spotboard-container .problem-result.flip-before {
     animation-name: flip-before-animation;
+    animation-duration: 250ms;
+    animation-timing-function: ease-in;
     animation-fill-mode: forwards !important;
+    backface-visibility: hidden;
 }
 
 .spotboard-container .problem-result.flip-after {
     animation-name: flip-after-animation;
+    animation-duration: 250ms;
+    animation-timing-function: ease-out;
     animation-fill-mode: forwards !important;
+    backface-visibility: hidden;
 }
 
 .spotboard-container .problem-result.flip-before:not(.solved):not(.failed):not(.pending) {
     background-color: #888888;
     transition: background-color 1000ms ease-in-out;
+}
+
+/* Admin badge (always visible at top-left when admin views the spotboard) */
+.spotboard-container .spotboard-admin-badge {
+    position: fixed;
+    top: 0.5em;
+    left: 0.5em;
+    z-index: 100000;
+    padding: 0.2em 0.6em;
+    background-color: rgba(220, 38, 38, 0.95);
+    color: white;
+    font-weight: 600;
+    font-size: 0.85em;
+    border-radius: 0.25em;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    pointer-events: none;
+}
+
+/* Anonymous team name placeholder for award mode (before reveal) */
+.spotboard-container .team-anonymous {
+    color: #888;
+    font-style: italic;
+    letter-spacing: 0.02em;
 }
 
 
