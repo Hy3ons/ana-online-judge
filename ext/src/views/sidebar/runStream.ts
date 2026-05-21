@@ -192,13 +192,15 @@ async function runOnePair(
 	}
 	if ((res.exitCode ?? 0) !== 0) {
 		const signalNote = res.signal ? ` (${res.signal})` : "";
+		const actual =
+			res.stdout && res.stderr ? `${res.stdout}\n${res.stderr}` : res.stdout || res.stderr;
 		ev.caseDone({
 			index: p.index,
 			verdict: "RE",
 			timeMs: elapsed,
 			memoryKb: 0,
-			actual: res.stdout,
-			detail: `exit ${res.exitCode ?? "?"}${signalNote}${res.stderr ? ` — ${res.stderr.split("\n")[0]}` : ""}`,
+			actual,
+			detail: `exit ${res.exitCode ?? "?"}${signalNote}`,
 		});
 		return;
 	}
