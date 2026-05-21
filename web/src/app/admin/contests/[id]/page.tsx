@@ -100,6 +100,12 @@ export default async function AdminContestDetailPage({
 								<p className="text-sm text-muted-foreground">프리즈 상태</p>
 								<p className="font-medium">{contest.isFrozen ? "프리즈됨" : "공개"}</p>
 							</div>
+							<div>
+								<p className="text-sm text-muted-foreground">종료 후 스코어보드</p>
+								<p className="font-medium">
+									{contest.postContestVisibility === "frozen" ? "프리즈 유지" : "공개"}
+								</p>
+							</div>
 						</div>
 
 						<div className="mt-6 flex flex-wrap gap-2">

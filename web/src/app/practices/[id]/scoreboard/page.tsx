@@ -44,6 +44,7 @@ export default async function PracticeScoreboardPage({
 			isFrozen: false,
 			visibility: "public",
 			scoreboardType: "basic",
+			postContestVisibility: "public",
 			penaltyMinutes: practice.penaltyMinutes,
 			sourceId: null,
 			createdAt: practice.createdAt,

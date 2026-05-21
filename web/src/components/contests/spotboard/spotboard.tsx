@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ContestLogic, Run, type TeamStatus } from "@/lib/spotboard/contest";
 import type { SpotboardConfig, SpotboardRun } from "@/lib/spotboard/types";
+import { RefreshProgress } from "./refresh-progress";
 import { TeamRow } from "./team-row";
 import { hsvToRgb } from "./utils";
 import "./spotboard.css";
@@ -17,6 +18,9 @@ interface SpotboardProps {
 	config: SpotboardConfig;
 	isAwardMode?: boolean;
 	isAdmin?: boolean;
+	lastUpdate?: Date;
+	refreshIntervalMs?: number;
+	isRefreshing?: boolean;
 }
 
 export type FlipPhase = "flip-before" | "flip-after";
@@ -34,7 +38,17 @@ function sleep(ms: number) {
 	return new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
 
-export function Spotboard({ config, isAwardMode = false, isAdmin = false }: SpotboardProps) {
+export function Spotboard({
+	config,
+	isAwardMode = false,
+	isAdmin = false,
+	lastUpdate,
+	refreshIntervalMs,
+	isRefreshing = false,
+}: SpotboardProps) {
+	const showRefreshProgress =
+		!isAwardMode && lastUpdate !== undefined && refreshIntervalMs !== undefined;
+
 	const [logic, setLogic] = useState<ContestLogic | null>(null);
 	const [rankedTeams, setRankedTeams] = useState<{ teamId: number; status: TeamStatus }[]>([]);
 	const [hiddenRuns, setHiddenRuns] = useState<SpotboardRun[]>([]);
@@ -300,6 +314,13 @@ export function Spotboard({ config, isAwardMode = false, isAdmin = false }: Spot
 	return (
 		<div className="spotboard-container">
 			{isAdmin && <div className="spotboard-admin-badge">(admin)</div>}
+			{showRefreshProgress && (
+				<RefreshProgress
+					lastUpdate={lastUpdate as Date}
+					intervalMs={refreshIntervalMs as number}
+					isRefreshing={isRefreshing}
+				/>
+			)}
 			<div id="header">
 				<div id="contest-title">
 					{config.contestTitle}

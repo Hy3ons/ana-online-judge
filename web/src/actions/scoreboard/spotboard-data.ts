@@ -52,19 +52,20 @@ export async function getSpotboardData(contestId: number): Promise<SpotboardConf
 		}
 	}
 
-	// Check freeze state
+	// Check freeze state.
+	// During contest: isFrozen + freezeMinutes controls masking after the freeze threshold.
+	// After contest: postContestVisibility controls whether the freeze persists or auto-lifts.
+	// Admins always see real results.
 	const contestEndTime = new Date(contest.endTime);
 	const freezeTime = contest.freezeMinutes
 		? new Date(contestEndTime.getTime() - contest.freezeMinutes * 60 * 1000)
 		: null;
-
-	// Determine if we should mask results (Freeze logic)
-	// We mask results if:
-	// 1. Not Admin AND
-	// 2. Contest is Frozen AND
-	// 3. (Current time >= Freeze Time)
-	// Even if contest is over, if it is still marked 'isFrozen', we mask results.
-	const shouldMask = !isAdmin && contest.isFrozen && freezeTime && now >= freezeTime;
+	const shouldMask =
+		!isAdmin &&
+		freezeTime !== null &&
+		(isFinished
+			? contest.postContestVisibility === "frozen"
+			: contest.isFrozen === true && now >= freezeTime);
 
 	// Get contest problems
 	const contestProblemsList = await db

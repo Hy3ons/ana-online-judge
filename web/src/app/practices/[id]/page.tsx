@@ -66,6 +66,7 @@ export default async function PracticeDetailPage({ params }: { params: Promise<{
 			isFrozen: false,
 			visibility: "public",
 			scoreboardType: "basic",
+			postContestVisibility: "public",
 			penaltyMinutes: practice.penaltyMinutes,
 			sourceId: null,
 			createdAt: practice.createdAt,

@@ -45,6 +45,7 @@ export const problemTypeEnum = pgEnum("problem_type", [
 export const inputMethodEnum = pgEnum("input_method", ["stdin", "args"]);
 export const contestVisibilityEnum = pgEnum("contest_visibility", ["public", "private"]);
 export const scoreboardTypeEnum = pgEnum("scoreboard_type", ["basic", "spotboard"]);
+export const postContestVisibilityEnum = pgEnum("post_contest_visibility", ["public", "frozen"]);
 export const submissionVisibilityEnum = pgEnum("submission_visibility", [
 	"public",
 	"private",
@@ -398,6 +399,9 @@ export const contests = pgTable(
 		freezeMinutes: integer("freeze_minutes").default(60), // Minutes before end to freeze (null = no freeze)
 		isFrozen: boolean("is_frozen").default(false), // Current freeze state
 		visibility: contestVisibilityEnum("visibility").default("public").notNull(),
+		postContestVisibility: postContestVisibilityEnum("post_contest_visibility")
+			.default("public")
+			.notNull(),
 		scoreboardType: scoreboardTypeEnum("scoreboard_type").default("basic").notNull(),
 		penaltyMinutes: integer("penalty_minutes").default(20).notNull(), // ICPC penalty minutes
 		sourceId: integer("source_id").references((): AnyPgColumn => sources.id, {
@@ -1017,6 +1021,7 @@ export type ProblemType = (typeof problemTypeEnum.enumValues)[number];
 export type InputMethod = (typeof inputMethodEnum.enumValues)[number];
 export type ContestVisibility = (typeof contestVisibilityEnum.enumValues)[number];
 export type ScoreboardType = (typeof scoreboardTypeEnum.enumValues)[number];
+export type PostContestVisibility = (typeof postContestVisibilityEnum.enumValues)[number];
 export type SubmissionVisibility = (typeof submissionVisibilityEnum.enumValues)[number];
 export type TokenType = (typeof tokenTypeEnum.enumValues)[number];
 

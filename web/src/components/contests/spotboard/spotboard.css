@@ -295,6 +295,74 @@
     letter-spacing: 0.02em;
 }
 
+/* Auto-refresh progress indicator (top-right, fixed) */
+.spotboard-container .spotboard-refresh-progress {
+    position: fixed;
+    top: 0.5em;
+    right: 0.5em;
+    z-index: 100000;
+    width: 14em;
+    padding: 0.45em 0.7em 0.55em;
+    background-color: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 0.3em;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    font-family: 'Open Sans', 'Nanum Gothic', sans-serif;
+    color: #333;
+    pointer-events: none;
+}
+
+.spotboard-container .spotboard-refresh-progress-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5em;
+    font-size: 0.72em;
+    line-height: 1.2;
+    margin-bottom: 0.35em;
+    color: #555;
+}
+
+.spotboard-container .spotboard-refresh-time {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: #222;
+}
+
+.spotboard-container .spotboard-refresh-spinner {
+    display: inline-block;
+    margin-right: 0.3em;
+    animation: spotboard-refresh-spin 1s linear infinite;
+}
+
+.spotboard-container .spotboard-refresh-progress-track {
+    width: 100%;
+    height: 4px;
+    background-color: rgba(0, 0, 0, 0.08);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.spotboard-container .spotboard-refresh-progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #3F72AF, #20660E);
+    border-radius: 2px;
+    animation-name: spotboard-refresh-fill;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+}
+
+@keyframes spotboard-refresh-fill {
+    from { width: 0%; }
+    to { width: 100%; }
+}
+
+@keyframes spotboard-refresh-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
 
 .spotboard-container .team-title {
     display: block;

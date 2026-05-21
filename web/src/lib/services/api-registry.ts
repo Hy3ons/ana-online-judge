@@ -820,6 +820,7 @@ export const endpoints: Endpoint[] = [
 			freezeMinutes: z.number().int().nullable().optional(),
 			visibility: z.enum(["public", "private"]).optional(),
 			scoreboardType: z.enum(["basic", "spotboard"]).optional(),
+			postContestVisibility: z.enum(["public", "frozen"]).optional(),
 			penaltyMinutes: z.number().int().optional(),
 		}),
 		handler: async ({ body }) => {
@@ -855,6 +856,7 @@ export const endpoints: Endpoint[] = [
 			freezeMinutes: z.number().int().nullable().optional(),
 			visibility: z.enum(["public", "private"]).optional(),
 			scoreboardType: z.enum(["basic", "spotboard"]).optional(),
+			postContestVisibility: z.enum(["public", "frozen"]).optional(),
 			penaltyMinutes: z.number().int().optional(),
 		}),
 		handler: async ({ pathParams, body }) => {

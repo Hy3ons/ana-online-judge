@@ -54,26 +54,14 @@ export default async function ScoreboardPage({
 		? await getSpotboardData(contestId)
 		: await getScoreboard(contestId);
 
-	// Award mode is admin-only until the contest is over AND the scoreboard is unfrozen.
-	// Non-admins requesting ?award=true before that point get a friendly denial.
+	// Award mode is admin-only until the contest has ended AND the scoreboard is set to
+	// "public" post-contest. While the contest is still running, or while
+	// postContestVisibility="frozen" keeps results masked, non-admins are denied.
 	if (isAwardMode && !isAdmin) {
-		const now = new Date();
-		const isFinished = now > new Date(contest.endTime);
+		const isFinished = new Date() > new Date(contest.endTime);
+		const isPostContestFrozen = contest.postContestVisibility === "frozen";
 
-		// Frozen-state check — basic scoreboard exposes it directly; spotboard derives it
-		// from contest.isFrozen + freezeMinutes so non-admins can't peek while results are
-		// still masked server-side.
-		let isStillFrozen = false;
-		if (!isSpotboard && "isFrozen" in initialData) {
-			isStillFrozen = initialData.isFrozen === true;
-		} else if (isSpotboard && contest.isFrozen && contest.freezeMinutes) {
-			const freezeStart = new Date(
-				new Date(contest.endTime).getTime() - contest.freezeMinutes * 60 * 1000
-			);
-			isStillFrozen = now >= freezeStart;
-		}
-
-		if (!isFinished || isStillFrozen) {
+		if (!isFinished || isPostContestFrozen) {
 			return (
 				<div className="flex items-center justify-center min-h-screen">
 					<div className="text-center">

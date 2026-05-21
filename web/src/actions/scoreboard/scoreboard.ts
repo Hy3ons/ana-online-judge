@@ -88,13 +88,16 @@ export async function getScoreboard(contestId: number) {
 		}
 	}
 
-	// Check if contest is frozen
+	// Check if contest is frozen.
+	// During contest: isFrozen + freezeMinutes controls masking after the freeze threshold.
+	// After contest: postContestVisibility controls whether the freeze persists or auto-lifts.
 	const contestEndTime = new Date(contest.endTime);
 	const freezeTime = contest.freezeMinutes
 		? new Date(contestEndTime.getTime() - contest.freezeMinutes * 60 * 1000)
 		: null;
-
-	const shouldFreeze = contest.isFrozen && freezeTime && now >= freezeTime;
+	const shouldFreeze = isFinished
+		? contest.postContestVisibility === "frozen" && freezeTime !== null
+		: contest.isFrozen === true && freezeTime !== null && now >= freezeTime;
 
 	// Get contest problems
 	const contestProblemsList = await db

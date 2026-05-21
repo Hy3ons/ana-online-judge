@@ -52,6 +52,7 @@ export function ContestForm({ contest }: ContestFormProps) {
 					: null,
 				visibility: formData.get("visibility") as "public" | "private",
 				scoreboardType: formData.get("scoreboardType") as "basic" | "spotboard",
+				postContestVisibility: formData.get("postContestVisibility") as "public" | "frozen",
 				penaltyMinutes: Number.parseInt(formData.get("penaltyMinutes") as string, 10),
 			};
 
@@ -174,15 +175,33 @@ export function ContestForm({ contest }: ContestFormProps) {
 				</div>
 			</div>
 
-			<div className="space-y-2">
-				<Label htmlFor="freezeMinutes">프리즈 시간 (종료 N분 전, 0이면 프리즈 없음)</Label>
-				<Input
-					id="freezeMinutes"
-					name="freezeMinutes"
-					type="number"
-					min="0"
-					defaultValue={contest?.freezeMinutes || 60}
-				/>
+			<div className="grid gap-4 md:grid-cols-2">
+				<div className="space-y-2">
+					<Label htmlFor="freezeMinutes">프리즈 시간 (종료 N분 전, 0이면 프리즈 없음)</Label>
+					<Input
+						id="freezeMinutes"
+						name="freezeMinutes"
+						type="number"
+						min="0"
+						defaultValue={contest?.freezeMinutes || 60}
+					/>
+				</div>
+
+				<div className="space-y-2">
+					<Label htmlFor="postContestVisibility">대회 종료 후 스코어보드 *</Label>
+					<Select
+						name="postContestVisibility"
+						defaultValue={contest?.postContestVisibility || "public"}
+					>
+						<SelectTrigger>
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="public">공개 (프리즈 해제, 시상 모드 허용)</SelectItem>
+							<SelectItem value="frozen">프리즈 (프리즈 유지, 시상 모드 비활성)</SelectItem>
+						</SelectContent>
+					</Select>
+				</div>
 			</div>
 
 			<div className="flex gap-2">

@@ -1,0 +1,2 @@
+CREATE TYPE "public"."post_contest_visibility" AS ENUM('public', 'frozen');--> statement-breakpoint
+ALTER TABLE "contests" ADD COLUMN "post_contest_visibility" "post_contest_visibility" DEFAULT 'public' NOT NULL;

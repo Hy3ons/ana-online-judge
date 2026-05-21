@@ -5,6 +5,7 @@ import {
 	contestParticipants,
 	contestProblems,
 	contests,
+	type PostContestVisibility,
 	problems,
 	type ScoreboardType,
 	submissions,
@@ -134,6 +135,7 @@ export async function createContest(data: {
 	freezeMinutes?: number | null;
 	visibility?: ContestVisibility;
 	scoreboardType?: ScoreboardType;
+	postContestVisibility?: PostContestVisibility;
 	penaltyMinutes?: number;
 }) {
 	if (!data.title || data.title.trim().length === 0) {
@@ -168,6 +170,7 @@ export async function createContest(data: {
 			freezeMinutes: data.freezeMinutes ?? 60,
 			visibility: data.visibility ?? "public",
 			scoreboardType: data.scoreboardType ?? "basic",
+			postContestVisibility: data.postContestVisibility ?? "public",
 			penaltyMinutes: data.penaltyMinutes ?? 20,
 		})
 		.returning();
@@ -185,6 +188,7 @@ export async function updateContest(
 		freezeMinutes?: number | null;
 		visibility?: ContestVisibility;
 		scoreboardType?: ScoreboardType;
+		postContestVisibility?: PostContestVisibility;
 		penaltyMinutes?: number;
 	}
 ) {
