@@ -21,6 +21,8 @@ export interface SpawnResult {
 	elapsedMs: number;
 	timedOut: boolean;
 	aborted: boolean;
+	/** Node.js error code from spawn error event (e.g. "ENOENT" when binary missing). Undefined when spawn succeeded. */
+	errorCode?: string;
 }
 
 /** Kill a process group. POSIX uses negative PID; Windows uses taskkill /T /F. */
@@ -99,7 +101,7 @@ export function spawnWithTimeout(opts: SpawnOptions): Promise<SpawnResult> {
 		child.stdin.on("error", () => {
 			/* ignore */
 		});
-		child.on("error", (err) => {
+		child.on("error", (err: NodeJS.ErrnoException) => {
 			if (settled) return;
 			settled = true;
 			cleanup();
@@ -111,6 +113,7 @@ export function spawnWithTimeout(opts: SpawnOptions): Promise<SpawnResult> {
 				elapsedMs: Date.now() - start,
 				timedOut,
 				aborted,
+				errorCode: err.code,
 			});
 		});
 		child.on("close", (code, signal) => {

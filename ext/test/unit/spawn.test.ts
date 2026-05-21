@@ -61,3 +61,27 @@ describe("spawnWithTimeout", () => {
 		expect(r.stderr).toContain("[spawn error]");
 	});
 });
+
+describe("spawnWithTimeout error handling", () => {
+	it("returns errorCode='ENOENT' when binary is missing", async () => {
+		const r = await spawnWithTimeout({
+			cmd: "definitely-not-a-real-bin-xyz",
+			args: [],
+			cwd: "/tmp",
+			timeoutMs: 1000,
+		});
+		expect(r.errorCode).toBe("ENOENT");
+		expect(r.exitCode).toBe(null);
+	});
+
+	it("does not set errorCode when binary exists and runs", async () => {
+		const r = await spawnWithTimeout({
+			cmd: "node",
+			args: ["-e", "process.exit(0)"],
+			cwd: "/tmp",
+			timeoutMs: 5000,
+		});
+		expect(r.errorCode).toBeUndefined();
+		expect(r.exitCode).toBe(0);
+	});
+});
