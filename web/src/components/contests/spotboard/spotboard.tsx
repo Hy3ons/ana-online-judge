@@ -214,11 +214,14 @@ export function Spotboard({ config, isAwardMode = false, isAdmin = false }: Spot
 			.sort((a, b) => a.time - b.time);
 
 		const oldRank = logic.teamStatuses.get(focusedTeamId)?.rank ?? 0;
+		const hiddenIds = new Set(runsForProblem.map((r) => r.id));
 
 		animatingRef.current = true;
 
 		try {
-			for (const run of runsForProblem) {
+			for (let i = 0; i < runsForProblem.length; i++) {
+				const run = runsForProblem[i];
+
 				// Phase A: rotateX(0 -> 90deg)
 				setAnimating({
 					teamId: focusedTeamId,
@@ -227,7 +230,23 @@ export function Spotboard({ config, isAwardMode = false, isAdmin = false }: Spot
 				});
 				await sleep(FLIP_HALF_MS);
 
-				// At mid-flip (perpendicular to screen, invisible): apply the run
+				// At mid-flip (perpendicular to screen, invisible): apply the run.
+				// On the first iteration also drop the pending placeholders for this problem
+				// (and clear hiddenRuns for it) so the interim count reflects only the runs
+				// revealed so far — otherwise the cell keeps showing "?" because the
+				// remaining placeholders keep isPending=true.
+				if (i === 0) {
+					const pStatus = logic.teamStatuses
+						.get(focusedTeamId)
+						?.getProblemStatus(targetProblemId, run.problemType);
+					if (pStatus) {
+						pStatus.runs = pStatus.runs.filter((r) => !hiddenIds.has(r.id));
+					}
+					setHiddenRuns((prev) =>
+						prev.filter((r) => !(r.teamId === focusedTeamId && r.problemId === targetProblemId))
+					);
+				}
+
 				logic.addRun(
 					new Run(
 						run.id,
@@ -241,7 +260,6 @@ export function Spotboard({ config, isAwardMode = false, isAdmin = false }: Spot
 						run.passedTestcases
 					)
 				);
-				setHiddenRuns((prev) => prev.filter((r) => r.id !== run.id));
 				updateRankings();
 
 				// Phase B: rotateX(270 -> 360deg)

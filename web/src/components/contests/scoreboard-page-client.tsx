@@ -35,8 +35,12 @@ export function ScoreboardPageClient({
 	const [lastUpdate, setLastUpdate] = useState(new Date());
 	const [isRefreshing, setIsRefreshing] = useState(false);
 
-	// Auto-refresh every 30 seconds
+	// Auto-refresh every 30 seconds — but never while in award mode, since a refresh
+	// re-initializes the Spotboard and wipes the in-progress reveal (focused team,
+	// finalized teams, revealed names, etc.).
 	useEffect(() => {
+		if (isAwardMode) return;
+
 		const fetchData = async () => {
 			try {
 				setIsRefreshing(true);
@@ -56,7 +60,7 @@ export function ScoreboardPageClient({
 
 		// Cleanup on unmount
 		return () => clearInterval(interval);
-	}, [contestId, isSpotboard]);
+	}, [contestId, isSpotboard, isAwardMode]);
 
 	if (isSpotboard) {
 		return (
