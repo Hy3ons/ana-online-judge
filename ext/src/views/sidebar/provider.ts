@@ -259,7 +259,7 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 	}
 
 	private async loadCasesFromDisk(sourcePath: string): Promise<TestcaseView[]> {
-		const pairs = await listTestcases(sourcePath);
+		const pairs = await listTestcases(sourcePath, getSidecarDir());
 		const out: TestcaseView[] = [];
 		for (const p of pairs) {
 			const tc = await readTestcase(p);
@@ -366,7 +366,7 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 		expected: string
 	): Promise<void> {
 		try {
-			await writeTestcase(sourcePath, index, input, expected);
+			await writeTestcase(sourcePath, index, input, expected, getSidecarDir());
 			const slot = this.ensureSlot(sourcePath);
 			this.updateCase(slot, index, { input, expected });
 			await this.refresh();
@@ -376,7 +376,7 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 	}
 
 	private async removeCaseWithUndo(sourcePath: string, index: number): Promise<void> {
-		const pairs = await listTestcases(sourcePath);
+		const pairs = await listTestcases(sourcePath, getSidecarDir());
 		const pair = pairs.find((p) => p.index === index);
 		if (!pair) return;
 		const content = await readTestcase(pair);
@@ -398,11 +398,11 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 		const snap = this.pendingFor(sourcePath).get(index);
 		if (!snap) return;
 		await restoreSnapshot(snap, (i, inp, out) =>
-			writeTestcase(sourcePath, i, inp, out).then(() => undefined)
+			writeTestcase(sourcePath, i, inp, out, getSidecarDir()).then(() => undefined)
 		);
 		this.pendingFor(sourcePath).delete(index);
 		const slot = this.ensureSlot(sourcePath);
-		const pairs = await listTestcases(sourcePath);
+		const pairs = await listTestcases(sourcePath, getSidecarDir());
 		const pair = pairs.find((p) => p.index === index);
 		if (pair) {
 			const tc = await readTestcase(pair);
@@ -444,7 +444,7 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 			vscode.window.showErrorMessage(`언어 메타 누락: ${lang}`);
 			return;
 		}
-		const pairs = await listTestcases(sourcePath);
+		const pairs = await listTestcases(sourcePath, getSidecarDir());
 		if (pairs.length === 0) {
 			vscode.window.showInformationMessage("실행할 테스트케이스가 없습니다. ＋ 으로 추가하세요.");
 			return;

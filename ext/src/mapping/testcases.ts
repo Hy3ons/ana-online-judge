@@ -14,10 +14,7 @@ export interface TestcaseContent extends TestcasePair {
 
 const PAT = /^(.+)_(\d+)\.(in|out)$/;
 
-/** List existing pairs for a given source file. Only returns indices that have BOTH .in and .out. */
-export async function listTestcases(sourcePath: string): Promise<TestcasePair[]> {
-	const dir = path.dirname(sourcePath);
-	const base = path.basename(sourcePath, path.extname(sourcePath));
+async function readPairsIn(dir: string, base: string): Promise<TestcasePair[]> {
 	let entries: string[];
 	try {
 		entries = await fs.readdir(dir);
@@ -41,6 +38,26 @@ export async function listTestcases(sourcePath: string): Promise<TestcasePair[]>
 	return out;
 }
 
+/**
+ * List existing pairs for a given source file. Pairs in `<sourceDir>/<sidecarDir>/`
+ * take precedence; entries at the legacy `<sourceDir>/` location fill in any
+ * indices not present in the sidecar dir (natural migration path — newly added
+ * pairs land in the sidecar dir, old ones keep working until the user moves them).
+ */
+export async function listTestcases(
+	sourcePath: string,
+	sidecarDir = ".aoj"
+): Promise<TestcasePair[]> {
+	const sourceDir = path.dirname(sourcePath);
+	const base = path.basename(sourcePath, path.extname(sourcePath));
+	const sidecar = await readPairsIn(path.join(sourceDir, sidecarDir), base);
+	const legacy = await readPairsIn(sourceDir, base);
+	const byIndex = new Map<number, TestcasePair>();
+	for (const p of legacy) byIndex.set(p.index, p);
+	for (const p of sidecar) byIndex.set(p.index, p);
+	return [...byIndex.values()].sort((a, b) => a.index - b.index);
+}
+
 export async function readTestcase(pair: TestcasePair): Promise<TestcaseContent> {
 	const [input, output] = await Promise.all([
 		fs.readFile(pair.inputPath, "utf-8"),
@@ -53,9 +70,10 @@ export async function writeTestcase(
 	sourcePath: string,
 	index: number,
 	input: string,
-	output: string
+	output: string,
+	sidecarDir = ".aoj"
 ): Promise<TestcasePair> {
-	const dir = path.dirname(sourcePath);
+	const dir = path.join(path.dirname(sourcePath), sidecarDir);
 	const base = path.basename(sourcePath, path.extname(sourcePath));
 	const inputPath = path.join(dir, `${base}_${index}.in`);
 	const outputPath = path.join(dir, `${base}_${index}.out`);
@@ -79,13 +97,16 @@ export function nextIndex(existing: TestcasePair[]): number {
 /** Overwrite-style: replace all existing pairs with the given examples (1-indexed). */
 export async function syncTestcasesFromExamples(
 	sourcePath: string,
-	examples: { input: string; output: string }[]
+	examples: { input: string; output: string }[],
+	sidecarDir = ".aoj"
 ): Promise<TestcasePair[]> {
-	const existing = await listTestcases(sourcePath);
+	const existing = await listTestcases(sourcePath, sidecarDir);
 	for (const p of existing) await removeTestcase(p);
 	const written: TestcasePair[] = [];
 	for (let i = 0; i < examples.length; i++) {
-		written.push(await writeTestcase(sourcePath, i + 1, examples[i].input, examples[i].output));
+		written.push(
+			await writeTestcase(sourcePath, i + 1, examples[i].input, examples[i].output, sidecarDir)
+		);
 	}
 	return written;
 }

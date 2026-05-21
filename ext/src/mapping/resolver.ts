@@ -13,6 +13,6 @@ export async function resolveFile(
 	sidecarDir = ".aoj"
 ): Promise<ResolvedFile> {
 	const sidecar = await readSidecar(sidecarPath(workspaceRoot, sourcePath, sidecarDir));
-	const testcases = await listTestcases(sourcePath);
+	const testcases = await listTestcases(sourcePath, sidecarDir);
 	return { sourcePath, sidecar, testcases };
 }
