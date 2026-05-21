@@ -55,6 +55,8 @@ export interface SubmissionView {
 	verdict?: SubmissionVerdictTag;
 	pass?: number;
 	total?: number;
+	/** 0–100; only meaningful while `state === "running"`. */
+	percentage?: number;
 	finishedAtIso?: string;
 }
 
@@ -94,7 +96,7 @@ export type HostToWeb =
 	| { type: "caseAppended"; tc: TestcaseView }
 	| { type: "caseRemoved"; index: number }
 	| { type: "submissionStart"; submissionId: number; problemId: number }
-	| { type: "submissionProgress"; verdict?: SubmissionVerdictTag; pass: number; total: number }
+	| { type: "submissionProgress"; percentage: number }
 	| {
 			type: "submissionDone";
 			verdict: SubmissionVerdictTag;

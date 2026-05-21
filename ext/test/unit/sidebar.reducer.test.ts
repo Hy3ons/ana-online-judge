@@ -62,18 +62,11 @@ describe("sidebar reducer", () => {
 		expect(next.submission).toMatchObject({ submissionId: 99, state: "running" });
 	});
 
-	it("submissionProgress updates pass/total", () => {
+	it("submissionProgress updates percentage", () => {
 		const seeded = applyEvent(base, { type: "submissionStart", submissionId: 99, problemId: 1 });
-		const next = applyEvent(seeded, {
-			type: "submissionProgress",
-			verdict: "wrong_answer",
-			pass: 3,
-			total: 10,
-		});
+		const next = applyEvent(seeded, { type: "submissionProgress", percentage: 42 });
 		expect(next.submission).toMatchObject({
-			verdict: "wrong_answer",
-			pass: 3,
-			total: 10,
+			percentage: 42,
 			state: "running",
 		});
 	});

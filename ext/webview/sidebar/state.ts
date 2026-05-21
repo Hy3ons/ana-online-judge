@@ -45,9 +45,7 @@ export function applyEvent(prev: SidebarState, ev: HostToWeb): SidebarState {
 						...prev,
 						submission: {
 							...prev.submission,
-							verdict: ev.verdict,
-							pass: ev.pass,
-							total: ev.total,
+							percentage: ev.percentage,
 						},
 					}
 				: prev;

@@ -26,7 +26,9 @@ export function SubmissionStrip({ submission, onOpen }: Props) {
 	const cls = verdictClass(submission.verdict);
 	const statusText =
 		submission.state === "running"
-			? `${submission.verdict ?? "Running"} (${submission.pass ?? 0}/${submission.total ?? "?"})`
+			? typeof submission.percentage === "number"
+				? `Running ${submission.percentage}%`
+				: "Running…"
 			: `${submission.verdict ?? "?"} · ${submission.pass ?? 0}/${submission.total ?? 0}`;
 
 	return (

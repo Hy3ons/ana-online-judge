@@ -357,6 +357,12 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 		try {
 			const res = await this.endpoints.submissionStream(submissionId, this.submitController.signal);
 			await submitStream(res, this.submitController.signal, {
+				progress: ({ percentage }) => {
+					if (slot.submission) {
+						slot.submission.percentage = percentage;
+					}
+					void this.post({ type: "submissionProgress", percentage });
+				},
 				complete: () => {
 					void finalize();
 				},
