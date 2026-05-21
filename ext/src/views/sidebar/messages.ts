@@ -58,6 +58,12 @@ export interface SidebarState {
 	submission: SubmissionView | null;
 }
 
+export interface SearchProblemHit {
+	id: number;
+	title: string;
+	tier?: number;
+}
+
 export type HostToWeb =
 	| { type: "state"; payload: SidebarState }
 	| { type: "compile"; state: "running" | "ok" | "error"; message?: string }
@@ -87,6 +93,13 @@ export type HostToWeb =
 			level: "info" | "error";
 			text: string;
 			action?: { label: string; cmd: string; args?: unknown[] };
+	  }
+	| { type: "searchOpen" }
+	| {
+			type: "searchResults";
+			q: string;
+			problems: SearchProblemHit[];
+			error?: string;
 	  };
 
 export type WebToHost =
@@ -110,4 +123,7 @@ export type WebToHost =
 	| { type: "undoRemove"; index: number }
 	| { type: "unlink" }
 	| { type: "dismissSignInBanner" }
-	| { type: "openSubmission"; submissionId: number };
+	| { type: "openSubmission"; submissionId: number }
+	| { type: "searchQuery"; q: string }
+	| { type: "searchClose" }
+	| { type: "attachSearchResult"; problemId: number };

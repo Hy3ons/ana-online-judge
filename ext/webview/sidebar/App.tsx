@@ -1,5 +1,10 @@
 import { useEffect, useState } from "preact/hooks";
-import type { HostToWeb, SidebarState, WebToHost } from "../../src/views/sidebar/messages";
+import type {
+	HostToWeb,
+	SearchProblemHit,
+	SidebarState,
+	WebToHost,
+} from "../../src/views/sidebar/messages";
 import { EmptyState } from "../shared/components/EmptyState";
 import { Toast } from "../shared/components/Toast";
 import { createBridge } from "../shared/postMessage";
@@ -8,6 +13,7 @@ import { CompileBanner } from "./components/CompileBanner";
 import { FileRow } from "./components/FileRow";
 import { Header } from "./components/Header";
 import { LinkedProblemCard } from "./components/LinkedProblemCard";
+import { SearchPanel } from "./components/SearchPanel";
 import { SignInBanner } from "./components/SignInBanner";
 import { SubmissionStrip } from "./components/SubmissionStrip";
 import { TestList } from "./components/TestList";
@@ -18,6 +24,22 @@ interface ToastUi {
 	actionLabel?: string;
 	undoIndex?: number;
 }
+
+interface SearchUi {
+	open: boolean;
+	query: string;
+	results: SearchProblemHit[] | null;
+	loading: boolean;
+	error: string | null;
+}
+
+const SEARCH_INITIAL: SearchUi = {
+	open: false,
+	query: "",
+	results: null,
+	loading: false,
+	error: null,
+};
 
 const INITIAL: SidebarState = {
 	root: "no-editor",
@@ -36,6 +58,7 @@ const INITIAL: SidebarState = {
 export function App({ vscode }: { vscode: { postMessage: (m: WebToHost) => void } }) {
 	const [state, setState] = useState<SidebarState>(INITIAL);
 	const [toast, setToast] = useState<ToastUi | null>(null);
+	const [search, setSearch] = useState<SearchUi>(SEARCH_INITIAL);
 	const bridge = createBridge<WebToHost, HostToWeb>(vscode);
 
 	useEffect(() => {
@@ -46,6 +69,18 @@ export function App({ vscode }: { vscode: { postMessage: (m: WebToHost) => void 
 						? (m.action.args[0] as number)
 						: undefined;
 				setToast({ text: m.text, actionLabel: m.action?.label, undoIndex });
+				return;
+			}
+			if (m.type === "searchOpen") {
+				setSearch({ ...SEARCH_INITIAL, open: true });
+				return;
+			}
+			if (m.type === "searchResults") {
+				setSearch((prev) =>
+					prev.open && prev.query === m.q
+						? { ...prev, loading: false, results: m.problems, error: m.error ?? null }
+						: prev
+				);
 				return;
 			}
 			setState((prev) => applyEvent(prev, m));
@@ -109,20 +144,41 @@ export function App({ vscode }: { vscode: { postMessage: (m: WebToHost) => void 
 						onRun={() => cmd("aoj.runAll")}
 						onSubmit={() => cmd("aoj.submit")}
 						onAdd={() => cmd("aoj.addTestcase")}
-						onSearch={() => cmd("aoj.searchProblems")}
+						onSearch={() => setSearch({ ...SEARCH_INITIAL, open: true })}
 					/>
 					{(state.compile.state === "running" || state.compile.state === "error") && (
 						<CompileBanner state={state.compile.state} message={state.compile.message} />
 					)}
-					<TestList
-						cases={state.cases}
-						onRunCase={(index) => bridge.post({ type: "runCase", index })}
-						onRemoveCase={(index) => bridge.post({ type: "removeCase", index })}
-						onEditCase={(index, input, expected) =>
-							bridge.post({ type: "editCase", index, input, expected })
-						}
-					/>
-					{state.submission && (
+					{search.open ? (
+						<SearchPanel
+							query={search.query}
+							results={search.results}
+							loading={search.loading}
+							error={search.error}
+							onQuery={(q) => {
+								setSearch((prev) => ({ ...prev, query: q, loading: q.trim() !== "", error: null }));
+								bridge.post({ type: "searchQuery", q });
+							}}
+							onPick={(id) => {
+								bridge.post({ type: "attachSearchResult", problemId: id });
+								setSearch(SEARCH_INITIAL);
+							}}
+							onClose={() => {
+								bridge.post({ type: "searchClose" });
+								setSearch(SEARCH_INITIAL);
+							}}
+						/>
+					) : (
+						<TestList
+							cases={state.cases}
+							onRunCase={(index) => bridge.post({ type: "runCase", index })}
+							onRemoveCase={(index) => bridge.post({ type: "removeCase", index })}
+							onEditCase={(index, input, expected) =>
+								bridge.post({ type: "editCase", index, input, expected })
+							}
+						/>
+					)}
+					{state.submission && !search.open && (
 						<SubmissionStrip
 							submission={state.submission}
 							onOpen={() =>

@@ -66,7 +66,9 @@ export function applyEvent(prev: SidebarState, ev: HostToWeb): SidebarState {
 					}
 				: prev;
 		case "toast":
-			return prev; // toasts surface via App.tsx state directly; reducer is a no-op here
+		case "searchOpen":
+		case "searchResults":
+			return prev; // transient UI; App.tsx tracks via local state
 	}
 }
 

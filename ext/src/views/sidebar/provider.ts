@@ -133,6 +133,46 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 				await vscode.env.openExternal(vscode.Uri.parse(url));
 				return;
 			}
+			case "searchQuery":
+				await this.runSearch(m.q);
+				return;
+			case "searchClose":
+				return;
+			case "attachSearchResult":
+				await vscode.commands.executeCommand("aoj.attachProblemById", m.problemId);
+				return;
+		}
+	}
+
+	openSearch(): void {
+		void this.post({ type: "searchOpen" });
+	}
+
+	private searchSeq = 0;
+
+	private async runSearch(q: string): Promise<void> {
+		const seq = ++this.searchSeq;
+		const query = q.trim();
+		if (!query) {
+			await this.post({ type: "searchResults", q: query, problems: [] });
+			return;
+		}
+		try {
+			const r = await this.endpoints.searchProblems(query, 30);
+			if (seq !== this.searchSeq) return;
+			await this.post({
+				type: "searchResults",
+				q: query,
+				problems: r.problems.map((p) => ({ id: p.id, title: p.title, tier: p.tier })),
+			});
+		} catch (e) {
+			if (seq !== this.searchSeq) return;
+			await this.post({
+				type: "searchResults",
+				q: query,
+				problems: [],
+				error: (e as Error).message,
+			});
 		}
 	}
 

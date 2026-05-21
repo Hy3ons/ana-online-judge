@@ -10,7 +10,6 @@ import { openInBrowserCmd } from "./commands/openInBrowser";
 import { removeTestcaseCmd } from "./commands/removeTestcase";
 import { runAllCmd } from "./commands/runAll";
 import { runOneCmd } from "./commands/runOne";
-import { searchProblemsCmd } from "./commands/searchProblems";
 import { submitCmd } from "./commands/submit";
 import { LanguageCatalog } from "./languages/catalog";
 import { ContestCountdown } from "./status/contestCountdown";
@@ -84,7 +83,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 			await provider.removeSession(sessions[0].id);
 			vscode.window.showInformationMessage("로그아웃되었습니다.");
 		}),
-		vscode.commands.registerCommand("aoj.searchProblems", () => searchProblemsCmd(endpoints)),
+		vscode.commands.registerCommand("aoj.searchProblems", async () => {
+			await vscode.commands.executeCommand("aoj.sidebar.focus");
+			sidebar.openSearch();
+		}),
 		vscode.commands.registerCommand("aoj.attachProblemById", (id?: number, contestId?: number) =>
 			attachProblemCmd(endpoints, id, contestId)
 		),
