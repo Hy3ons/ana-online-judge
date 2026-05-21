@@ -1,7 +1,7 @@
 {
   "name": "aoj-vscode",
   "displayName": "ANA Online Judge",
-  "description": "Solve AOJ problems from VS Code: sync problems, run testcases locally, submit, watch verdicts live.",
+  "description": "VS Code에서 ANA Online Judge 문제를 풀어보세요. 문제 연결, 로컬 테스트 실행, 제출, 채점 결과 실시간 확인까지.",
   "version": "0.1.0",
   "publisher": "ana-online-judge",
   "private": true,
@@ -44,62 +44,62 @@
     "commands": [
       {
         "command": "aoj.signIn",
-        "title": "AOJ: Sign in",
+        "title": "AOJ: 로그인",
         "category": "AOJ"
       },
       {
         "command": "aoj.signOut",
-        "title": "AOJ: Sign out",
+        "title": "AOJ: 로그아웃",
         "category": "AOJ"
       },
       {
         "command": "aoj.searchProblems",
-        "title": "AOJ: Search Problems",
+        "title": "AOJ: 문제 검색",
         "category": "AOJ"
       },
       {
         "command": "aoj.syncProblemById",
-        "title": "AOJ: Attach Problem (legacy alias)",
+        "title": "AOJ: 문제 연결 (legacy alias)",
         "category": "AOJ"
       },
       {
         "command": "aoj.attachProblemById",
-        "title": "AOJ: Attach Problem by ID...",
+        "title": "AOJ: 문제 번호로 연결…",
         "category": "AOJ"
       },
       {
         "command": "aoj.sidebar.refresh",
-        "title": "AOJ: Refresh Sidebar",
+        "title": "AOJ: 사이드바 새로고침",
         "category": "AOJ"
       },
       {
         "command": "aoj.runAll",
-        "title": "AOJ: Run All Testcases",
+        "title": "AOJ: 모든 테스트케이스 실행",
         "category": "AOJ"
       },
       {
         "command": "aoj.runOne",
-        "title": "AOJ: Run This Testcase",
+        "title": "AOJ: 이 테스트케이스 실행",
         "category": "AOJ"
       },
       {
         "command": "aoj.submit",
-        "title": "AOJ: Submit Current File",
+        "title": "AOJ: 현재 파일 제출",
         "category": "AOJ"
       },
       {
         "command": "aoj.openInBrowser",
-        "title": "AOJ: Open in Browser",
+        "title": "AOJ: 브라우저에서 열기",
         "category": "AOJ"
       },
       {
         "command": "aoj.addTestcase",
-        "title": "AOJ: Add Testcase",
+        "title": "AOJ: 테스트케이스 추가",
         "category": "AOJ"
       },
       {
         "command": "aoj.removeTestcase",
-        "title": "AOJ: Remove Testcase",
+        "title": "AOJ: 테스트케이스 삭제",
         "category": "AOJ"
       }
     ],
@@ -211,13 +211,13 @@
         },
         "aoj.defaultRunTimeoutMs": {
           "type": "number",
-          "default": 2000,
-          "description": "Per-case run timeout (ms) when the active file is not linked to a problem."
+          "default": 10000,
+          "description": "문제 연결이 없을 때 적용되는 케이스당 실행 timeout (ms)"
         },
         "aoj.dismissSignInBanner": {
           "type": "boolean",
           "default": false,
-          "description": "Hide the 'Sign in' banner shown at the top of the AOJ sidebar."
+          "description": "(deprecated) 사이드바 상단의 로그인 배너 숨기기"
         }
       }
     }

@@ -46,7 +46,7 @@ export function SearchPanel({ results, loading, error, query, onQuery, onPick, o
 					type="button"
 					class="text-fg-muted hover:text-fg text-xs px-2 py-1 rounded border border-border"
 					onClick={onClose}
-					title="Close search"
+					title="검색 닫기"
 				>
 					×
 				</button>
@@ -55,7 +55,7 @@ export function SearchPanel({ results, loading, error, query, onQuery, onPick, o
 				{loading && (
 					<div class="flex items-center justify-center py-6 gap-2 text-fg-muted text-xs">
 						<Spinner />
-						<span>Searching…</span>
+						<span>검색 중…</span>
 					</div>
 				)}
 				{!loading && error && (

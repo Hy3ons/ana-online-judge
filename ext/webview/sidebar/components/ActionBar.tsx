@@ -26,11 +26,11 @@ export function ActionBar({
 	const runDisabled = !running && caseCount === 0;
 	const submitDisabled = !signedIn || !linked || submissionRunning;
 	const submitTooltip = !signedIn
-		? "Sign in to submit"
+		? "로그인 후 제출할 수 있습니다"
 		: !linked
-			? "Attach a problem to submit"
+			? "문제를 먼저 연결해주세요"
 			: submissionRunning
-				? "Submission in progress"
+				? "제출 진행 중입니다"
 				: "";
 
 	return (
@@ -40,9 +40,9 @@ export function ActionBar({
 					type="button"
 					class="flex-1 h-8 rounded bg-bad text-white font-medium hover:opacity-90"
 					onClick={onStop}
-					title="Stop the running tests"
+					title="실행 중인 테스트 중단"
 				>
-					■ Stop
+					■ 중단
 				</button>
 			) : (
 				<button
@@ -50,9 +50,9 @@ export function ActionBar({
 					class="flex-1 h-8 rounded bg-ok text-white font-medium hover:opacity-90 disabled:bg-bg-elev disabled:text-fg-muted disabled:border disabled:border-border"
 					onClick={onRun}
 					disabled={runDisabled}
-					title={caseCount === 0 ? "Add a testcase first" : "Run all testcases"}
+					title={caseCount === 0 ? "먼저 테스트케이스를 추가하세요" : "모든 테스트케이스 실행"}
 				>
-					▶ Run All
+					▶ 전체 실행
 				</button>
 			)}
 			<button
@@ -60,15 +60,15 @@ export function ActionBar({
 				class="flex-1 h-8 rounded bg-primary text-primary-fg font-medium hover:opacity-90 disabled:bg-bg-elev disabled:text-fg-muted disabled:border disabled:border-border"
 				onClick={onSubmit}
 				disabled={submitDisabled}
-				title={submitTooltip || "Submit current file"}
+				title={submitTooltip || "현재 파일 제출"}
 			>
-				↑ Submit
+				↑ 제출
 			</button>
 			<button
 				type="button"
 				class="h-8 px-3 rounded border border-border text-fg hover:bg-bg-card"
 				onClick={onAdd}
-				title="Add a new testcase"
+				title="테스트케이스 추가"
 			>
 				＋
 			</button>
@@ -77,7 +77,7 @@ export function ActionBar({
 					type="button"
 					class="h-8 px-3 rounded border border-border text-fg hover:bg-bg-card"
 					onClick={onSearch}
-					title="Search and attach a problem"
+					title="문제 검색 및 연결"
 				>
 					🔎
 				</button>

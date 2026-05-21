@@ -15,7 +15,7 @@ export function LinkedProblemCard({ problem, onUnlink, onOpenInBrowser }: Props)
 						type="button"
 						class="text-sm text-fg hover:text-accent text-left truncate w-full"
 						onClick={onOpenInBrowser}
-						title="Open in browser"
+						title="브라우저에서 열기"
 					>
 						#{problem.problemId} · {problem.problemTitle}
 					</button>
@@ -27,9 +27,9 @@ export function LinkedProblemCard({ problem, onUnlink, onOpenInBrowser }: Props)
 					type="button"
 					class="text-fg-muted hover:text-bad text-xs px-2 py-1 rounded border border-border"
 					onClick={onUnlink}
-					title="Unlink problem (testcases kept)"
+					title="문제 연결 해제 (테스트케이스는 유지)"
 				>
-					Unlink
+					연결 해제
 				</button>
 			</div>
 		</div>

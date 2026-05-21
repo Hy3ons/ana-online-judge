@@ -19,7 +19,7 @@ export function getCompileFlags(lang: string): string[] {
 }
 
 export function getTimeoutMultiplier(): number {
-	return vscode.workspace.getConfiguration("aoj").get<number>("timeoutMultiplier", 2.0);
+	return vscode.workspace.getConfiguration("aoj").get<number>("timeoutMultiplier", 5.0);
 }
 
 export function getConfirmSubmit(): boolean {

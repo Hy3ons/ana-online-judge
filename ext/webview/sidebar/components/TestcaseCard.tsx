@@ -10,24 +10,40 @@ interface Props {
 }
 
 const verdictMap: Record<CaseVerdictTag, { label: string; cls: string; border: string }> = {
-	AC: { label: "Accepted", cls: "bg-verdict-ac-bg text-verdict-ac", border: "border-l-verdict-ac" },
-	WA: { label: "Wrong", cls: "bg-verdict-wa-bg text-verdict-wa", border: "border-l-verdict-wa" },
-	TLE: { label: "Timeout", cls: "bg-verdict-tle-bg text-verdict-tle", border: "border-l-verdict-tle" },
-	MLE: { label: "Memory", cls: "bg-verdict-mle-bg text-verdict-mle", border: "border-l-verdict-mle" },
-	RE: { label: "Runtime", cls: "bg-verdict-re-bg text-verdict-re", border: "border-l-verdict-re" },
-	CE: { label: "Compile error", cls: "bg-verdict-ce-bg text-verdict-ce", border: "border-l-verdict-ce" },
+	AC: { label: "정답", cls: "bg-verdict-ac-bg text-verdict-ac", border: "border-l-verdict-ac" },
+	WA: { label: "오답", cls: "bg-verdict-wa-bg text-verdict-wa", border: "border-l-verdict-wa" },
+	TLE: {
+		label: "시간 초과",
+		cls: "bg-verdict-tle-bg text-verdict-tle",
+		border: "border-l-verdict-tle",
+	},
+	MLE: {
+		label: "메모리 초과",
+		cls: "bg-verdict-mle-bg text-verdict-mle",
+		border: "border-l-verdict-mle",
+	},
+	RE: {
+		label: "런타임 에러",
+		cls: "bg-verdict-re-bg text-verdict-re",
+		border: "border-l-verdict-re",
+	},
+	CE: {
+		label: "컴파일 에러",
+		cls: "bg-verdict-ce-bg text-verdict-ce",
+		border: "border-l-verdict-ce",
+	},
 	PENDING: {
-		label: "Pending",
+		label: "대기",
 		cls: "bg-verdict-pending-bg text-verdict-pending",
 		border: "border-l-verdict-pending",
 	},
 	SKIPPED: {
-		label: "Skipped",
+		label: "건너뜀",
 		cls: "bg-verdict-skipped-bg text-verdict-skipped",
 		border: "border-l-verdict-skipped",
 	},
 	RUNNING: {
-		label: "Running…",
+		label: "실행 중…",
 		cls: "bg-verdict-pending-bg text-verdict-pending",
 		border: "border-l-verdict-pending",
 	},
@@ -47,27 +63,27 @@ export function TestcaseCard({ tc, onRun, onRemove, onEdit }: Props) {
 				)}
 				{tc.detail && <span class="text-xs text-fg-muted truncate">· {tc.detail}</span>}
 				<div class="flex-1" />
-				<IconButton onClick={onRun} title="Run this case">
+				<IconButton onClick={onRun} title="이 케이스만 실행">
 					▶
 				</IconButton>
-				<IconButton onClick={onRemove} title="Remove">
+				<IconButton onClick={onRemove} title="삭제">
 					×
 				</IconButton>
 			</div>
 			<div class="p-2 space-y-2">
 				<IoColumn
-					label="Input"
+					label="입력"
 					value={tc.input}
 					editable
 					onCommit={(next) => onEdit(next, tc.expected)}
 				/>
 				<IoColumn
-					label="Expected"
+					label="기댓값"
 					value={tc.expected}
 					editable
 					onCommit={(next) => onEdit(tc.input, next)}
 				/>
-				<IoColumn label="Actual" value={tc.actual ?? ""} />
+				<IoColumn label="실제 출력" value={tc.actual ?? ""} />
 			</div>
 		</div>
 	);

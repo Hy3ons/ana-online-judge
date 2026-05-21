@@ -288,7 +288,9 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 		}
 		const sc = await readSidecar(sidecarPath(folder.uri.fsPath, sourcePath, getSidecarDir()));
 		if (!sc) {
-			vscode.window.showErrorMessage("이 파일은 AOJ 문제와 연결되지 않았습니다. Attach 먼저.");
+			vscode.window.showErrorMessage(
+				"이 파일은 AOJ 문제와 연결되지 않았습니다. 먼저 문제를 연결해주세요."
+			);
 			return;
 		}
 		if (getConfirmSubmit()) {
@@ -366,7 +368,7 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 				complete: () => {
 					void finalize();
 				},
-				error: (m) => vscode.window.showErrorMessage(`Submission stream error: ${m}`),
+				error: (m) => vscode.window.showErrorMessage(`제출 스트림 오류: ${m}`),
 			});
 		} finally {
 			this.submitController = null;
@@ -385,7 +387,7 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 			this.updateCase(slot, index, { input, expected });
 			await this.refresh();
 		} catch (e) {
-			vscode.window.showErrorMessage(`Save failed: ${(e as Error).message}`);
+			vscode.window.showErrorMessage(`저장 실패: ${(e as Error).message}`);
 		}
 	}
 
@@ -465,14 +467,14 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 		}
 
 		const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(sourcePath));
-		let baseTimeout = 2000;
+		let baseTimeout = 10000;
 		if (folder) {
 			const sc = await readSidecar(sidecarPath(folder.uri.fsPath, sourcePath, getSidecarDir()));
 			if (sc?.timeLimit) baseTimeout = sc.timeLimit;
 		}
 		const defaultMs = vscode.workspace
 			.getConfiguration("aoj")
-			.get<number>("defaultRunTimeoutMs", 2000);
+			.get<number>("defaultRunTimeoutMs", 10000);
 		const timeoutMs = Math.floor((baseTimeout || defaultMs) * getTimeoutMultiplier());
 
 		const resolvedCompilerPath =
@@ -535,7 +537,7 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 				const message = (e as Error).message;
 				slot.compile = { state: "error", message };
 				void this.post({ type: "compile", state: "error", message });
-				vscode.window.showErrorMessage(`Run failed: ${message}`);
+				vscode.window.showErrorMessage(`실행 실패: ${message}`);
 			}
 		} finally {
 			// Only clear the controller if it's still ours (a newer run may have replaced it).
