@@ -76,7 +76,7 @@ describe("spawnWithTimeout error handling", () => {
 
 	it("does not set errorCode when binary exists and runs", async () => {
 		const r = await spawnWithTimeout({
-			cmd: "node",
+			cmd: process.execPath,
 			args: ["-e", "process.exit(0)"],
 			cwd: "/tmp",
 			timeoutMs: 5000,
