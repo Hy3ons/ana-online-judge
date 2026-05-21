@@ -24,7 +24,7 @@ import { CompileCache } from "../../runner/compileCache";
 import { type ComputeInputs, computeSidebarState } from "./compute";
 import type { HostToWeb, SidebarState, TestcaseView, WebToHost } from "./messages";
 import { runStream } from "./runStream";
-import { submitStream } from "./submitStream";
+import { submitStream, toVerdict } from "./submitStream";
 
 const SUPPORTED_EXTS = Object.keys(EXT_MAP).sort();
 
@@ -330,27 +330,35 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 		await this.post({ type: "submissionStart", submissionId, problemId: sc.problemId });
 
 		this.submitController = new AbortController();
+		const finalize = async () => {
+			// Server `complete` event carries only the submissionId — fetch the
+			// final verdict via REST (mirrors the web client at
+			// web/src/app/submissions/[id]/submission-status.tsx).
+			const detail = await this.endpoints.getMySubmission(submissionId);
+			const verdict = toVerdict(detail.verdict);
+			const pass = detail.testcaseResults.filter((tc) => tc.verdict === "accepted").length;
+			const total = detail.testcaseResults.length;
+			const iso = new Date().toISOString();
+			if (slot.submission) {
+				slot.submission.state = "done";
+				slot.submission.verdict = verdict;
+				slot.submission.pass = pass;
+				slot.submission.total = total;
+				slot.submission.finishedAtIso = iso;
+			}
+			void this.post({
+				type: "submissionDone",
+				verdict: verdict ?? "system_error",
+				pass,
+				total,
+				finishedAtIso: iso,
+			});
+		};
 		try {
 			const res = await this.endpoints.submissionStream(submissionId, this.submitController.signal);
 			await submitStream(res, this.submitController.signal, {
-				progress: ({ verdict, pass, total }) => {
-					if (slot.submission) {
-						slot.submission.verdict = verdict;
-						slot.submission.pass = pass;
-						slot.submission.total = total;
-					}
-					void this.post({ type: "submissionProgress", verdict, pass, total });
-				},
-				done: ({ verdict, pass, total }) => {
-					const iso = new Date().toISOString();
-					if (slot.submission) {
-						slot.submission.state = "done";
-						slot.submission.verdict = verdict;
-						slot.submission.pass = pass;
-						slot.submission.total = total;
-						slot.submission.finishedAtIso = iso;
-					}
-					void this.post({ type: "submissionDone", verdict, pass, total, finishedAtIso: iso });
+				complete: () => {
+					void finalize();
 				},
 				error: (m) => vscode.window.showErrorMessage(`Submission stream error: ${m}`),
 			});
