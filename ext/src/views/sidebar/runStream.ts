@@ -1,5 +1,6 @@
 import * as fs from "node:fs/promises";
 import type { LanguageMeta } from "../../languages/catalog";
+import { runTextCase } from "../../languages/textRunner";
 import type { TestcasePair } from "../../mapping/testcases";
 import { CompileCache } from "../../runner/compileCache";
 import { compareIcpc } from "../../runner/diff";
@@ -33,6 +34,50 @@ export interface RunStreamInput {
 }
 
 export async function runStream(input: RunStreamInput, ev: RunStreamEvents): Promise<void> {
+	if (input.meta.runtime === "text") {
+		const source = await fs.readFile(input.sourcePath, "utf-8");
+		ev.compile("ok");
+		const wanted = input.indices ? new Set(input.indices) : null;
+		for (const p of input.pairs) {
+			if (wanted && !wanted.has(p.index)) continue;
+			if (input.signal?.aborted) {
+				ev.caseDone({
+					index: p.index,
+					verdict: "SKIPPED",
+					timeMs: 0,
+					memoryKb: 0,
+					actual: "",
+					detail: "canceled",
+				});
+				continue;
+			}
+			ev.caseStart(p.index);
+			const result = await runTextCase(source, p);
+			if (result.verdict.kind === "passed") {
+				ev.caseDone({
+					index: p.index,
+					verdict: "AC",
+					timeMs: 0,
+					memoryKb: 0,
+					actual: result.stdout,
+				});
+			} else {
+				ev.caseDone({
+					index: p.index,
+					verdict: "WA",
+					timeMs: 0,
+					memoryKb: 0,
+					actual: result.stdout,
+					detail:
+						"diff" in result.verdict && result.verdict.diff.firstDiffLine !== undefined
+							? `first diff @ line ${result.verdict.diff.firstDiffLine}`
+							: undefined,
+				});
+			}
+		}
+		return;
+	}
+
 	const source = await fs.readFile(input.sourcePath, "utf-8");
 	const hash = CompileCache.hashContent(source);
 
