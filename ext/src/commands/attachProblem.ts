@@ -5,6 +5,17 @@ import { extToLang } from "../languages/extToLang";
 import { readSidecar, sidecarPath, writeSidecar } from "../mapping/sidecar";
 import { syncTestcasesFromExamples } from "../mapping/testcases";
 
+function problemTypeLabel(type: string): string {
+	switch (type) {
+		case "anigma":
+			return "Anigma (입력 추론)";
+		case "interactive":
+			return "인터랙티브";
+		default:
+			return type;
+	}
+}
+
 export async function attachProblemCmd(
 	endpoints: Endpoints,
 	problemId?: number,
@@ -32,13 +43,13 @@ export async function attachProblemCmd(
 	let id = problemId;
 	if (id === undefined || !Number.isFinite(id)) {
 		const raw = await vscode.window.showInputBox({
-			title: "AOJ: Attach Problem by ID",
+			title: "AOJ: 문제 번호로 연결",
 			placeHolder: "1234",
 		});
 		if (!raw) return;
 		id = Number(raw);
 		if (!Number.isFinite(id)) {
-			vscode.window.showErrorMessage("Invalid problem id");
+			vscode.window.showErrorMessage("올바르지 않은 문제 번호입니다.");
 			return;
 		}
 	}
@@ -47,8 +58,21 @@ export async function attachProblemCmd(
 	try {
 		problem = await endpoints.getProblem(id);
 	} catch (e) {
-		vscode.window.showErrorMessage(`문제 fetch 실패: ${(e as Error).message}`);
+		vscode.window.showErrorMessage(`문제 정보를 가져오지 못했습니다: ${(e as Error).message}`);
 		return;
+	}
+
+	// Local sanity-check only supports ICPC (stdin/stdout compare) and Special Judge
+	// (checker is server-side, so local stdout-vs-expected still gives a rough signal).
+	// Anigma / interactive problems need server-only judging — warn the user.
+	if (problem.problemType !== "icpc" && problem.problemType !== "special_judge") {
+		const typeLabel = problemTypeLabel(problem.problemType);
+		const choice = await vscode.window.showWarningMessage(
+			`이 문제는 ${typeLabel} 형식입니다. 로컬 실행으로는 채점기와 다른 결과가 나올 수 있습니다. 계속 연결할까요?`,
+			{ modal: true },
+			"계속"
+		);
+		if (choice !== "계속") return;
 	}
 
 	const scPath = sidecarPath(folder.uri.fsPath, sourcePath, getSidecarDir());
