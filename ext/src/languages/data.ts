@@ -33,7 +33,7 @@ export interface LanguageDef {
 	memoryMultiplier: number;
 	memoryAddMb: number;
 	/** Special runtime; undefined means the standard compile/spawn flow. */
-	runtime?: "text" | "csharp";
+	runtime?: "text";
 }
 
 const CC_INSTALL: Partial<Record<PlatformKey, string>> = {
@@ -226,8 +226,8 @@ export const LANGUAGES: LanguageDef[] = [
 		defaultExtension: "cs",
 		sourceFile: "Main.cs",
 		judgeVersion: ".NET 10 (C# 14)",
-		// Special runtime — csharpRunner.ts generates a temporary .csproj and runs dotnet build.
-		// No compile/run commands here; csharpRunner.ts owns the entire flow.
+		// .NET 10 supports single-file execution via `dotnet run <file>.cs` — no csproj needed.
+		run: { command: "dotnet", args: ["run", "{src}"] },
 		installHints: {
 			linux: "https://dotnet.microsoft.com/download (.NET 10 SDK)",
 			darwin: "https://dotnet.microsoft.com/download (.NET 10 SDK)",
@@ -237,7 +237,6 @@ export const LANGUAGES: LanguageDef[] = [
 		timeAddSec: 1,
 		memoryMultiplier: 2,
 		memoryAddMb: 32,
-		runtime: "csharp",
 	},
 	{
 		id: "text",

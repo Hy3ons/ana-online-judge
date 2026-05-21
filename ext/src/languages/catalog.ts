@@ -19,7 +19,7 @@ export interface LanguageMeta {
 	timeAddSec: number;
 	memoryMultiplier: number;
 	memoryAddMb: number;
-	runtime?: "text" | "csharp";
+	runtime?: "text";
 	/** Underlying static definition — used by preflight to access installHints. */
 	def: LanguageDef;
 }

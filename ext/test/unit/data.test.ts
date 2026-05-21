@@ -23,11 +23,9 @@ describe("LANGUAGES static table", () => {
 		}
 	});
 
-	it("text and csharp languages declare special runtime", () => {
+	it("text language declares the special runtime", () => {
 		const text = LANGUAGES.find((l) => l.id === "text") as LanguageDef;
-		const csharp = LANGUAGES.find((l) => l.id === "csharp") as LanguageDef;
 		expect(text.runtime).toBe("text");
-		expect(csharp.runtime).toBe("csharp");
 	});
 
 	it("spawn-runtime languages have a run command", () => {
@@ -38,13 +36,19 @@ describe("LANGUAGES static table", () => {
 		}
 	});
 
-	it("special-runtime languages (text, csharp) omit run/compile", () => {
+	it("text language omits run/compile (handled in-memory)", () => {
 		const text = LANGUAGES.find((l) => l.id === "text") as LanguageDef;
-		const csharp = LANGUAGES.find((l) => l.id === "csharp") as LanguageDef;
 		expect(text.run).toBeUndefined();
 		expect(text.compile).toBeUndefined();
-		expect(csharp.run).toBeUndefined();
+	});
+
+	it("csharp uses `dotnet run` for single-file execution (no compile step)", () => {
+		const csharp = LANGUAGES.find((l) => l.id === "csharp") as LanguageDef;
+		expect(csharp.runtime).toBeUndefined();
 		expect(csharp.compile).toBeUndefined();
+		const run = "command" in csharp.run! ? csharp.run : csharp.run!.linux!;
+		expect(run.command).toBe("dotnet");
+		expect(run.args[0]).toBe("run");
 	});
 
 	it("rust compile args include --edition=2021", () => {
