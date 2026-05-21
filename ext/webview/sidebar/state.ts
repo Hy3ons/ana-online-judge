@@ -69,6 +69,11 @@ export function applyEvent(prev: SidebarState, ev: HostToWeb): SidebarState {
 		case "searchOpen":
 		case "searchResults":
 			return prev; // transient UI; App.tsx tracks via local state
+		default: {
+			const _exhaustive: never = ev;
+			void _exhaustive;
+			return prev;
+		}
 	}
 }
 

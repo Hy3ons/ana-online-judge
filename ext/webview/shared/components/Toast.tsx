@@ -1,4 +1,4 @@
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import type { ComponentChildren } from "preact";
 
 export interface ToastProps {
@@ -17,15 +17,17 @@ export function Toast({
 	onDismiss,
 }: ToastProps) {
 	const [remaining, setRemaining] = useState(durationMs);
+	const onDismissRef = useRef(onDismiss);
+	onDismissRef.current = onDismiss;
 
 	useEffect(() => {
 		if (remaining <= 0) {
-			onDismiss();
+			onDismissRef.current();
 			return;
 		}
 		const t = setTimeout(() => setRemaining(remaining - 250), 250);
 		return () => clearTimeout(t);
-	}, [remaining, onDismiss]);
+	}, [remaining]);
 
 	const pct = Math.max(0, (remaining / durationMs) * 100);
 

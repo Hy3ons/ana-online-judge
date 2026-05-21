@@ -28,6 +28,8 @@ export interface RunStreamInput {
 	indices?: number[]; // optional filter (run only these case indices)
 	options: RunOptions;
 	cache: CompileCache;
+	/** When aborted, the in-flight case is killed and remaining cases are emitted as SKIPPED. */
+	signal?: AbortSignal;
 }
 
 export async function runStream(input: RunStreamInput, ev: RunStreamEvents): Promise<void> {
@@ -62,7 +64,18 @@ export async function runStream(input: RunStreamInput, ev: RunStreamEvents): Pro
 	const wanted = input.indices ? new Set(input.indices) : null;
 	for (const p of input.pairs) {
 		if (wanted && !wanted.has(p.index)) continue;
-		await runOnePair(p, input.meta, compile, input.options, ev);
+		if (input.signal?.aborted) {
+			ev.caseDone({
+				index: p.index,
+				verdict: "SKIPPED",
+				timeMs: 0,
+				memoryKb: 0,
+				actual: "",
+				detail: "canceled",
+			});
+			continue;
+		}
+		await runOnePair(p, input.meta, compile, input.options, ev, input.signal);
 	}
 }
 
@@ -71,7 +84,8 @@ async function runOnePair(
 	meta: LanguageMeta,
 	compile: CompileOutput,
 	opts: RunOptions,
-	ev: RunStreamEvents
+	ev: RunStreamEvents,
+	signal?: AbortSignal
 ): Promise<void> {
 	ev.caseStart(p.index);
 	const input = await fs.readFile(p.inputPath, "utf-8");
@@ -92,8 +106,21 @@ async function runOnePair(
 		cwd: compile.artifactDir,
 		stdin: input,
 		timeoutMs: opts.timeoutMs,
+		signal,
 	});
 	const elapsed = res.elapsedMs;
+
+	if (res.aborted) {
+		ev.caseDone({
+			index: p.index,
+			verdict: "SKIPPED",
+			timeMs: elapsed,
+			memoryKb: 0,
+			actual: "",
+			detail: "canceled",
+		});
+		return;
+	}
 
 	if (res.timedOut) {
 		ev.caseDone({
@@ -106,14 +133,15 @@ async function runOnePair(
 		});
 		return;
 	}
-	if ((res.exitCode ?? 0) !== 0 && !res.stdout) {
+	if ((res.exitCode ?? 0) !== 0) {
+		const signalNote = res.signal ? ` (${res.signal})` : "";
 		ev.caseDone({
 			index: p.index,
 			verdict: "RE",
 			timeMs: elapsed,
 			memoryKb: 0,
-			actual: res.stderr,
-			detail: `exit ${res.exitCode ?? "?"}`,
+			actual: res.stdout,
+			detail: `exit ${res.exitCode ?? "?"}${signalNote}${res.stderr ? ` — ${res.stderr.split("\n")[0]}` : ""}`,
 		});
 		return;
 	}

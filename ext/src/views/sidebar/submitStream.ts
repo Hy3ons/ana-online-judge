@@ -14,6 +14,29 @@ interface SsePayload {
 	finished?: boolean;
 }
 
+const KNOWN_VERDICTS = new Set<SubmissionVerdictTag>([
+	"pending",
+	"judging",
+	"accepted",
+	"wrong_answer",
+	"time_limit_exceeded",
+	"memory_limit_exceeded",
+	"runtime_error",
+	"compile_error",
+	"system_error",
+	"skipped",
+	"presentation_error",
+	"fail",
+	"partial",
+]);
+
+function toVerdict(raw: string | undefined): SubmissionVerdictTag | undefined {
+	if (!raw) return undefined;
+	return KNOWN_VERDICTS.has(raw as SubmissionVerdictTag)
+		? (raw as SubmissionVerdictTag)
+		: "system_error";
+}
+
 export async function submitStream(
 	res: Response,
 	signal: AbortSignal,
@@ -30,14 +53,14 @@ export async function submitStream(
 			}
 			if (payload.finished) {
 				ev.done({
-					verdict: payload.verdict ?? "?",
+					verdict: toVerdict(payload.verdict) ?? "system_error",
 					pass: payload.pass ?? 0,
 					total: payload.total ?? 0,
 				});
 				return;
 			}
 			ev.progress({
-				verdict: payload.verdict,
+				verdict: toVerdict(payload.verdict),
 				pass: payload.pass ?? 0,
 				total: payload.total ?? 0,
 			});

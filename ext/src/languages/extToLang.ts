@@ -1,4 +1,4 @@
-const EXT_MAP: Record<string, string> = {
+export const EXT_MAP: Record<string, string> = {
 	".cpp": "cpp",
 	".cc": "cpp",
 	".cxx": "cpp",

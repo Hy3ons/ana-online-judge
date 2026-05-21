@@ -20,6 +20,6 @@ export async function removeTestcaseCmd(
 		if (!pick) return;
 		idx = pick.idx;
 	}
+	// handleRemoveTestcase posts `caseRemoved` + the undo toast itself.
 	await sidebar.handleRemoveTestcase(sourcePath, idx);
-	await vscode.commands.executeCommand("aoj.sidebar.refresh");
 }

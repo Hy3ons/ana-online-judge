@@ -66,24 +66,29 @@ describe("sidebar reducer", () => {
 		const seeded = applyEvent(base, { type: "submissionStart", submissionId: 99, problemId: 1 });
 		const next = applyEvent(seeded, {
 			type: "submissionProgress",
-			verdict: "WA",
+			verdict: "wrong_answer",
 			pass: 3,
 			total: 10,
 		});
-		expect(next.submission).toMatchObject({ verdict: "WA", pass: 3, total: 10, state: "running" });
+		expect(next.submission).toMatchObject({
+			verdict: "wrong_answer",
+			pass: 3,
+			total: 10,
+			state: "running",
+		});
 	});
 
 	it("submissionDone flips to done", () => {
 		const seeded = applyEvent(base, { type: "submissionStart", submissionId: 99, problemId: 1 });
 		const next = applyEvent(seeded, {
 			type: "submissionDone",
-			verdict: "AC",
+			verdict: "accepted",
 			pass: 10,
 			total: 10,
 			finishedAtIso: "2026-05-20T00:00:00Z",
 		});
 		expect(next.submission?.state).toBe("done");
-		expect(next.submission?.verdict).toBe("AC");
+		expect(next.submission?.verdict).toBe("accepted");
 	});
 
 	it("state event replaces wholesale", () => {

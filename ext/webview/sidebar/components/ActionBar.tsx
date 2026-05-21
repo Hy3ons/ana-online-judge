@@ -2,9 +2,10 @@ interface Props {
 	signedIn: boolean;
 	linked: boolean;
 	caseCount: number;
-	compileRunning: boolean;
+	running: boolean;
 	submissionRunning: boolean;
 	onRun: () => void;
+	onStop: () => void;
 	onSubmit: () => void;
 	onAdd: () => void;
 	onSearch: () => void;
@@ -14,14 +15,15 @@ export function ActionBar({
 	signedIn,
 	linked,
 	caseCount,
-	compileRunning,
+	running,
 	submissionRunning,
 	onRun,
+	onStop,
 	onSubmit,
 	onAdd,
 	onSearch,
 }: Props) {
-	const runDisabled = compileRunning || caseCount === 0;
+	const runDisabled = !running && caseCount === 0;
 	const submitDisabled = !signedIn || !linked || submissionRunning;
 	const submitTooltip = !signedIn
 		? "Sign in to submit"
@@ -33,15 +35,26 @@ export function ActionBar({
 
 	return (
 		<div class="flex items-center gap-2 px-3 py-2 border-y border-border bg-bg-elev">
-			<button
-				type="button"
-				class="flex-1 h-8 rounded bg-ok text-white font-medium hover:opacity-90 disabled:bg-bg-elev disabled:text-fg-muted disabled:border disabled:border-border"
-				onClick={onRun}
-				disabled={runDisabled}
-				title={caseCount === 0 ? "Add a testcase first" : "Run all testcases"}
-			>
-				▶ Run All
-			</button>
+			{running ? (
+				<button
+					type="button"
+					class="flex-1 h-8 rounded bg-bad text-white font-medium hover:opacity-90"
+					onClick={onStop}
+					title="Stop the running tests"
+				>
+					■ Stop
+				</button>
+			) : (
+				<button
+					type="button"
+					class="flex-1 h-8 rounded bg-ok text-white font-medium hover:opacity-90 disabled:bg-bg-elev disabled:text-fg-muted disabled:border disabled:border-border"
+					onClick={onRun}
+					disabled={runDisabled}
+					title={caseCount === 0 ? "Add a testcase first" : "Run all testcases"}
+				>
+					▶ Run All
+				</button>
+			)}
 			<button
 				type="button"
 				class="flex-1 h-8 rounded bg-primary text-primary-fg font-medium hover:opacity-90 disabled:bg-bg-elev disabled:text-fg-muted disabled:border disabled:border-border"

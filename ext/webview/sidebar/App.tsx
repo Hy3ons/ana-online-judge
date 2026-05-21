@@ -139,9 +139,13 @@ export function App({ vscode }: { vscode: { postMessage: (m: WebToHost) => void 
 						signedIn={state.signedIn}
 						linked={state.linked !== null}
 						caseCount={state.cases.length}
-						compileRunning={state.compile.state === "running"}
+						running={
+							state.compile.state === "running" ||
+							state.cases.some((c) => c.verdict === "RUNNING")
+						}
 						submissionRunning={state.submission?.state === "running"}
 						onRun={() => cmd("aoj.runAll")}
+						onStop={() => bridge.post({ type: "cancelRun" })}
 						onSubmit={() => cmd("aoj.submit")}
 						onAdd={() => cmd("aoj.addTestcase")}
 						onSearch={() => setSearch({ ...SEARCH_INITIAL, open: true })}

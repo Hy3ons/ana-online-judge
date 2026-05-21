@@ -12,7 +12,7 @@ import {
 	getTimeoutMultiplier,
 } from "../../config/settings";
 import type { LanguageCatalog } from "../../languages/catalog";
-import { extToLang } from "../../languages/extToLang";
+import { EXT_MAP, extToLang } from "../../languages/extToLang";
 import { readSidecar, removeSidecar, sidecarPath } from "../../mapping/sidecar";
 import {
 	removeTestcase as fsRemoveTestcase,
@@ -26,7 +26,7 @@ import type { HostToWeb, SidebarState, TestcaseView, WebToHost } from "./message
 import { runStream } from "./runStream";
 import { submitStream } from "./submitStream";
 
-const SUPPORTED_EXTS = [".c", ".cpp", ".cc", ".cxx", ".h", ".py", ".java", ".go", ".rs", ".js"];
+const SUPPORTED_EXTS = Object.keys(EXT_MAP).sort();
 
 export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Disposable {
 	public static readonly viewId = "aoj.sidebar";
@@ -45,7 +45,17 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 
 	private readonly compileCache = new CompileCache();
 	private submitController: AbortController | null = null;
+	private readonly runControllers = new Map<string, AbortController>();
 	private readonly pendingRemoves = new Map<string, Map<number, Snapshot>>();
+
+	/** Persist any unsaved buffer for the file so Run/Submit operate on current source. */
+	private async ensureSaved(sourcePath: string): Promise<void> {
+		const doc = vscode.workspace.textDocuments.find((d) => d.uri.fsPath === sourcePath);
+		if (doc?.isDirty) {
+			await doc.save();
+			this.compileCache.invalidate(sourcePath);
+		}
+	}
 
 	private pendingFor(sourcePath: string): Map<number, Snapshot> {
 		let m = this.pendingRemoves.get(sourcePath);
@@ -128,7 +138,7 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 			case "openSubmission": {
 				const endpoint = vscode.workspace
 					.getConfiguration("aoj")
-					.get<string>("endpoint", "https://aoj.example.com");
+					.get<string>("endpoint", "https://aoj.anacnu.kr");
 				const url = `${endpoint.replace(/\/$/, "")}/submissions/${m.submissionId}`;
 				await vscode.env.openExternal(vscode.Uri.parse(url));
 				return;
@@ -141,7 +151,20 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 			case "attachSearchResult":
 				await vscode.commands.executeCommand("aoj.attachProblemById", m.problemId);
 				return;
+			case "cancelRun":
+				if (sourcePath) this.cancelRun(sourcePath);
+				return;
+			default: {
+				const _exhaustive: never = m;
+				void _exhaustive;
+				return;
+			}
 		}
+	}
+
+	cancelRun(sourcePath: string): void {
+		const ctrl = this.runControllers.get(sourcePath);
+		if (ctrl) ctrl.abort();
 	}
 
 	openSearch(): void {
@@ -152,24 +175,24 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 
 	private async runSearch(q: string): Promise<void> {
 		const seq = ++this.searchSeq;
-		const query = q.trim();
-		if (!query) {
-			await this.post({ type: "searchResults", q: query, problems: [] });
+		const trimmed = q.trim();
+		if (!trimmed) {
+			await this.post({ type: "searchResults", q, problems: [] });
 			return;
 		}
 		try {
-			const r = await this.endpoints.searchProblems(query, 30);
+			const r = await this.endpoints.searchProblems(trimmed, 30);
 			if (seq !== this.searchSeq) return;
 			await this.post({
 				type: "searchResults",
-				q: query,
+				q,
 				problems: r.problems.map((p) => ({ id: p.id, title: p.title, tier: p.tier })),
 			});
 		} catch (e) {
 			if (seq !== this.searchSeq) return;
 			await this.post({
 				type: "searchResults",
-				q: query,
+				q,
 				problems: [],
 				error: (e as Error).message,
 			});
@@ -254,6 +277,10 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 	}
 
 	async startSubmit(sourcePath: string): Promise<void> {
+		if (this.submitController) {
+			vscode.window.showInformationMessage("이미 제출이 진행 중입니다.");
+			return;
+		}
 		const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(sourcePath));
 		if (!folder) {
 			vscode.window.showErrorMessage("파일이 워크스페이스 밖에 있습니다.");
@@ -272,6 +299,7 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 			);
 			if (pick !== "제출") return;
 		}
+		await this.ensureSaved(sourcePath);
 		const code = await fs.readFile(sourcePath, "utf-8");
 		let submissionId: number;
 		try {
@@ -404,6 +432,8 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 	}
 
 	private async runInternal(sourcePath: string, indices: number[] | undefined): Promise<void> {
+		await this.ensureSaved(sourcePath);
+
 		const lang = extToLang(sourcePath);
 		if (!lang) {
 			vscode.window.showErrorMessage("지원하지 않는 파일 형식입니다.");
@@ -438,6 +468,16 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 
 		const slot = this.ensureSlot(sourcePath);
 
+		// Cancel any in-flight run on the same file and install a fresh controller.
+		const prev = this.runControllers.get(sourcePath);
+		if (prev) prev.abort();
+		const ctrl = new AbortController();
+		this.runControllers.set(sourcePath, ctrl);
+
+		// Drop any callbacks from a superseded run (a newer Run All replaced the controller).
+		// A user-initiated cancel keeps `ctrl` in the map, so SKIPPED events still flow through.
+		const stale = (): boolean => this.runControllers.get(sourcePath) !== ctrl;
+
 		try {
 			await runStream(
 				{
@@ -448,17 +488,21 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 					indices,
 					options: { timeoutMs, overrides },
 					cache: this.compileCache,
+					signal: ctrl.signal,
 				},
 				{
 					compile: (state, message) => {
+						if (stale()) return;
 						slot.compile = { state, message };
 						void this.post({ type: "compile", state, message });
 					},
 					caseStart: (index) => {
+						if (stale()) return;
 						this.updateCase(slot, index, { verdict: "RUNNING" });
 						void this.post({ type: "caseStart", index });
 					},
 					caseDone: (args) => {
+						if (stale()) return;
 						this.updateCase(slot, args.index, {
 							verdict: args.verdict,
 							actual: args.actual,
@@ -471,12 +515,23 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 				}
 			);
 		} catch (e) {
-			const message = (e as Error).message;
-			slot.compile = { state: "error", message };
-			void this.post({ type: "compile", state: "error", message });
-			vscode.window.showErrorMessage(`Run failed: ${message}`);
+			if (!ctrl.signal.aborted && !stale()) {
+				const message = (e as Error).message;
+				slot.compile = { state: "error", message };
+				void this.post({ type: "compile", state: "error", message });
+				vscode.window.showErrorMessage(`Run failed: ${message}`);
+			}
 		} finally {
-			if (slot.compile.state !== "error") slot.compile = { state: "idle" };
+			// Only clear the controller if it's still ours (a newer run may have replaced it).
+			if (this.runControllers.get(sourcePath) === ctrl) {
+				this.runControllers.delete(sourcePath);
+			}
+			// CompileBanner only renders "running" / "error". "ok" is invisible, so we
+			// leave slot.compile alone unless we're stuck mid-flight (e.g., aborted before
+			// compile finished its callback). In that case, fall back to idle silently.
+			if (slot.compile.state === "running") {
+				slot.compile = { state: "idle" };
+			}
 		}
 	}
 

@@ -13,7 +13,21 @@ export type CaseVerdictTag =
 	| "SKIPPED"
 	| "RUNNING";
 
-export type SubmissionVerdictTag = string;
+/** Mirrors web/src/db/schema.ts verdictEnum. */
+export type SubmissionVerdictTag =
+	| "pending"
+	| "judging"
+	| "accepted"
+	| "wrong_answer"
+	| "time_limit_exceeded"
+	| "memory_limit_exceeded"
+	| "runtime_error"
+	| "compile_error"
+	| "system_error"
+	| "skipped"
+	| "presentation_error"
+	| "fail"
+	| "partial";
 
 export interface LinkedProblem {
 	problemId: number;
@@ -126,4 +140,5 @@ export type WebToHost =
 	| { type: "openSubmission"; submissionId: number }
 	| { type: "searchQuery"; q: string }
 	| { type: "searchClose" }
-	| { type: "attachSearchResult"; problemId: number };
+	| { type: "attachSearchResult"; problemId: number }
+	| { type: "cancelRun" };
