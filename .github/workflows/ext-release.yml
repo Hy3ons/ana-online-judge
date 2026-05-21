@@ -43,6 +43,7 @@ jobs:
         run: pnpm exec vsce publish --no-dependencies --pat "$VSCE_PAT"
       - name: Publish to Open VSX
         working-directory: ext
+        continue-on-error: true
         env:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
         run: pnpm exec ovsx publish --no-dependencies --pat "$OVSX_PAT"
