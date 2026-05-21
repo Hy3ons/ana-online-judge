@@ -1,9 +1,7 @@
 import * as vscode from "vscode";
 
 export function getEndpoint(): string {
-	return vscode.workspace
-		.getConfiguration("aoj")
-		.get<string>("endpoint", "https://aoj.example.com");
+	return vscode.workspace.getConfiguration("aoj").get<string>("endpoint", "https://aoj.anacnu.kr");
 }
 
 export function getCompilerPath(lang: string): string | undefined {

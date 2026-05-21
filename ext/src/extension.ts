@@ -19,9 +19,7 @@ let output: vscode.OutputChannel;
 let signedInUsername: string | null = null;
 
 function getEndpoint(): string {
-	return vscode.workspace
-		.getConfiguration("aoj")
-		.get<string>("endpoint", "https://aoj.example.com");
+	return vscode.workspace.getConfiguration("aoj").get<string>("endpoint", "https://aoj.anacnu.kr");
 }
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {

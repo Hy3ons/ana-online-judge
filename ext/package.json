@@ -154,7 +154,7 @@
       "properties": {
         "aoj.endpoint": {
           "type": "string",
-          "default": "https://aoj.example.com",
+          "default": "https://aoj.anacnu.kr",
           "description": "AOJ 웹 base URL"
         },
         "aoj.compilerPaths": {

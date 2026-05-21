@@ -41,7 +41,7 @@ export class DeviceFlowError extends Error {
 }
 
 export interface DeviceFlowOptions {
-	endpoint: string; // e.g. https://aoj.example.com
+	endpoint: string; // e.g. https://aoj.anacnu.kr
 	fetchImpl?: typeof fetch;
 	sleepImpl?: (ms: number) => Promise<void>;
 }
