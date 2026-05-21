@@ -14,7 +14,6 @@ import { FileRow } from "./components/FileRow";
 import { Header } from "./components/Header";
 import { LinkedProblemCard } from "./components/LinkedProblemCard";
 import { SearchPanel } from "./components/SearchPanel";
-import { SignInBanner } from "./components/SignInBanner";
 import { SubmissionStrip } from "./components/SubmissionStrip";
 import { TestList } from "./components/TestList";
 import { applyEvent } from "./state";
@@ -92,8 +91,6 @@ export function App({ vscode }: { vscode: { postMessage: (m: WebToHost) => void 
 	const cmd = (c: Extract<WebToHost, { type: "command" }>["cmd"]) =>
 		bridge.post({ type: "command", cmd: c });
 
-	const showSignInBanner = !state.signedIn && !state.dismissSignInBanner;
-
 	return (
 		<div class="min-h-screen flex flex-col">
 			<Header
@@ -103,25 +100,19 @@ export function App({ vscode }: { vscode: { postMessage: (m: WebToHost) => void 
 				onSignOut={() => cmd("aoj.signOut")}
 				onRefresh={() => cmd("aoj.sidebar.refresh")}
 			/>
-			{showSignInBanner && (
-				<SignInBanner
-					onSignIn={() => cmd("aoj.signIn")}
-					onDismiss={() => bridge.post({ type: "dismissSignInBanner" })}
-				/>
-			)}
 			{state.root === "no-editor" && (
 				<div class="flex-1 flex items-center justify-center p-4">
 					<EmptyState
-						title="Open a source file to start"
-						hint={`Supported: ${state.supportedExtensions.join(", ")}`}
+						title="소스 파일을 열어주세요"
+						hint={`지원 확장자: ${state.supportedExtensions.join(", ")}`}
 					/>
 				</div>
 			)}
 			{state.root === "unsupported" && state.fileName && (
 				<div class="flex-1 flex items-center justify-center p-4">
 					<EmptyState
-						title="This file type isn't supported"
-						hint={`${state.fileName} — supported: ${state.supportedExtensions.join(", ")}`}
+						title="지원하지 않는 파일 형식입니다"
+						hint={`${state.fileName} — 지원: ${state.supportedExtensions.join(", ")}`}
 					/>
 				</div>
 			)}
