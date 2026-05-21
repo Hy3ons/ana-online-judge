@@ -89,6 +89,17 @@ export async function compileIfNeeded(
 	const args = [...baseArgs, ...userFlags];
 
 	const r = await spawnWithTimeout({ cmd, args, cwd: tmp, timeoutMs: 30_000 });
+
+	if (r.errorCode === "ENOENT") {
+		const { buildMissingCompilerMessage } = await import("../languages/preflight");
+		const message = buildMissingCompilerMessage(
+			lang.def,
+			cmd,
+			process.platform as "linux" | "darwin" | "win32"
+		);
+		return { ok: false, message, artifactDir: tmp, sourceFile };
+	}
+
 	if (r.exitCode === 0) {
 		return { ok: true, message: r.stdout + r.stderr, artifactDir: tmp, sourceFile, exe };
 	}
