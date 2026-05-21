@@ -32,10 +32,19 @@ describe("LANGUAGES static table", () => {
 
 	it("spawn-runtime languages have a run command", () => {
 		for (const l of LANGUAGES) {
-			if (l.runtime === "spawn" || l.runtime === undefined) {
+			if (l.runtime === undefined) {
 				expect(l.run).toBeDefined();
 			}
 		}
+	});
+
+	it("special-runtime languages (text, csharp) omit run/compile", () => {
+		const text = LANGUAGES.find((l) => l.id === "text") as LanguageDef;
+		const csharp = LANGUAGES.find((l) => l.id === "csharp") as LanguageDef;
+		expect(text.run).toBeUndefined();
+		expect(text.compile).toBeUndefined();
+		expect(csharp.run).toBeUndefined();
+		expect(csharp.compile).toBeUndefined();
 	});
 
 	it("rust compile args include --edition=2021", () => {
@@ -46,14 +55,14 @@ describe("LANGUAGES static table", () => {
 
 	it("java run command does not include -XX:+UseSerialGC", () => {
 		const java = LANGUAGES.find((l) => l.id === "java") as LanguageDef;
-		const args = "command" in java.run ? java.run.args : java.run.linux!.args;
+		const args = "command" in java.run! ? java.run!.args : java.run!.linux!.args;
 		expect(args).not.toContain("-XX:+UseSerialGC");
 	});
 
 	it("python uses 'python3' on linux/darwin and 'python' on win32", () => {
 		const py = LANGUAGES.find((l) => l.id === "python") as LanguageDef;
-		expect("linux" in py.run).toBe(true);
-		const platCmd = py.run as Record<string, { command: string; args: string[] }>;
+		expect("linux" in py.run!).toBe(true);
+		const platCmd = py.run! as Record<string, { command: string; args: string[] }>;
 		expect(platCmd.linux.command).toBe("python3");
 		expect(platCmd.win32.command).toBe("python");
 	});

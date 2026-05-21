@@ -26,14 +26,14 @@ export interface LanguageDef {
 	sourceFile: string;
 	judgeVersion: string;
 	compile?: PlatformCmd;
-	run: PlatformCmd;
+	run?: PlatformCmd;
 	installHints?: Partial<Record<PlatformKey, string>>;
 	timeMultiplier: number;
 	timeAddSec: number;
 	memoryMultiplier: number;
 	memoryAddMb: number;
-	/** Special runtime; undefined or "spawn" uses the standard compile/spawn flow. */
-	runtime?: "spawn" | "text" | "csharp";
+	/** Special runtime; undefined means the standard compile/spawn flow. */
+	runtime?: "text" | "csharp";
 }
 
 const CC_INSTALL: Partial<Record<PlatformKey, string>> = {
@@ -163,7 +163,7 @@ export const LANGUAGES: LanguageDef[] = [
 		defaultExtension: "rs",
 		sourceFile: "Main.rs",
 		judgeVersion: "Rust 1.91.1",
-		// --edition=2021 must be kept in sync with judge/files/languages.toml
+		// --edition=2021 — judge/files/languages.toml update lands in plan Task 11
 		compile: {
 			command: "rustc",
 			args: ["-O", "--edition=2021", "-o", "{exe}", "{src}"],
@@ -227,9 +227,7 @@ export const LANGUAGES: LanguageDef[] = [
 		sourceFile: "Main.cs",
 		judgeVersion: ".NET 10 (C# 14)",
 		// Special runtime — csharpRunner.ts generates a temporary .csproj and runs dotnet build.
-		// compile/run command fields are unused for runtime: "csharp" but kept for type completeness.
-		compile: { command: "dotnet", args: ["build", "{srcDir}", "-c", "Release"] },
-		run: { command: "dotnet", args: ["{srcDir}/bin/Release/net10.0/Main.dll"] },
+		// No compile/run commands here; csharpRunner.ts owns the entire flow.
 		installHints: {
 			linux: "https://dotnet.microsoft.com/download (.NET 10 SDK)",
 			darwin: "https://dotnet.microsoft.com/download (.NET 10 SDK)",
@@ -250,7 +248,7 @@ export const LANGUAGES: LanguageDef[] = [
 		sourceFile: "Main.txt",
 		judgeVersion: "",
 		// Special runtime — textRunner.ts skips spawn and compares source content directly.
-		run: { command: "cat", args: ["{src}"] },
+		// No run command needed.
 		timeMultiplier: 1,
 		timeAddSec: 0,
 		memoryMultiplier: 1,
