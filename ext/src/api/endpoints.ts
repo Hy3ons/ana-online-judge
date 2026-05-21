@@ -83,20 +83,6 @@ export interface ContestActiveItem {
 	problems: Array<{ id: number; title: string; label: string }>;
 }
 
-export interface LanguageMeta {
-	id: string;
-	displayName: string;
-	fileExtensions: string[];
-	defaultExtension: string;
-	sourceFile: string; // e.g., "Main.cpp", "Main.java" — canonical staged filename
-	compile?: { command: string; args: string[] };
-	run: { command: string; args: string[] };
-	timeMultiplier: number;
-	timeAddSec: number;
-	memoryMultiplier: number;
-	memoryAddMb: number;
-}
-
 export class Endpoints {
 	constructor(private readonly client: ApiClient) {}
 
@@ -113,10 +99,6 @@ export class Endpoints {
 
 	getProblem(id: number): Promise<PublicProblemDetail> {
 		return this.client.request(`/api/v1/public/problems/${id}`, { auth: false });
-	}
-
-	languages(): Promise<{ languages: LanguageMeta[] }> {
-		return this.client.request("/api/v1/public/meta/languages", { auth: false });
 	}
 
 	submit(input: SubmitInput): Promise<SubmitResponse> {
