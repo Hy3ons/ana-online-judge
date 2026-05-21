@@ -1,5 +1,5 @@
 import * as fs from "node:fs/promises";
-import type { LanguageMeta } from "../../api/endpoints";
+import type { LanguageMeta } from "../../languages/catalog";
 import type { TestcasePair } from "../../mapping/testcases";
 import { CompileCache } from "../../runner/compileCache";
 import { compareIcpc } from "../../runner/diff";
@@ -91,6 +91,18 @@ async function runOnePair(
 	const input = await fs.readFile(p.inputPath, "utf-8");
 	const expected = await fs.readFile(p.outputPath, "utf-8");
 
+	if (!meta.run) {
+		// Special runtimes (text, csharp) should not reach here via runStream.
+		ev.caseDone({
+			index: p.index,
+			verdict: "RE",
+			timeMs: 0,
+			memoryKb: 0,
+			actual: "",
+			detail: `no run command for language ${meta.id}`,
+		});
+		return;
+	}
 	const runVars: Record<string, string> = {
 		src: compile.sourceFile,
 		exe: compile.exe ?? "",

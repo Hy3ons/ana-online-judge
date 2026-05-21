@@ -1,7 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { LanguageMeta } from "../api/endpoints";
+import type { LanguageMeta } from "../languages/catalog";
 import { readTestcase, type TestcasePair } from "../mapping/testcases";
 import { compareIcpc, type DiffResult } from "./diff";
 import { type SpawnResult, spawnWithTimeout } from "./spawn";
@@ -114,6 +114,22 @@ export async function runCase(
 		srcDir: compile.artifactDir,
 		className: path.basename(compile.sourceFile, path.extname(compile.sourceFile)),
 	};
+	if (!lang.run) {
+		// Special runtimes (text, csharp) should not reach runCase via the standard flow.
+		return {
+			testcase: tc,
+			verdict: {
+				kind: "runtime",
+				elapsedMs: 0,
+				stderr: `no run command for language ${lang.id}`,
+				exitCode: -1,
+			},
+			stdout: "",
+			stderr: `no run command for language ${lang.id}`,
+			expected: output,
+			input,
+		};
+	}
 	const runCmd = substitute(lang.run.command, vars);
 	const args = substituteAll(lang.run.args, vars);
 

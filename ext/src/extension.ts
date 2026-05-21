@@ -42,7 +42,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		deviceFlow,
 	});
 	const endpoints = new Endpoints(apiClient);
-	const catalog = new LanguageCatalog(endpoints);
+	const catalog = new LanguageCatalog();
 
 	const sidebar = new AojSidebarProvider(context, endpoints, catalog, () => signedInUsername);
 	const countdown = new ContestCountdown(endpoints);

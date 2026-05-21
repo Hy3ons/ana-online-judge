@@ -1,33 +1,63 @@
-import type { Endpoints, LanguageMeta } from "../api/endpoints";
+import { LANGUAGES, type LanguageDef } from "./data";
+import { resolveCmd } from "./resolve";
+
+/**
+ * OS-resolved language metadata — what callers (runner, runStream) consume.
+ * Commands here are concrete Cmds (not platform maps), already picked for the host OS.
+ */
+export interface LanguageMeta {
+	id: string;
+	displayName: string;
+	aliases: string[];
+	fileExtensions: string[];
+	defaultExtension: string;
+	sourceFile: string;
+	judgeVersion: string;
+	compile?: { command: string; args: string[] };
+	run?: { command: string; args: string[] };
+	timeMultiplier: number;
+	timeAddSec: number;
+	memoryMultiplier: number;
+	memoryAddMb: number;
+	runtime?: "text" | "csharp";
+	/** Underlying static definition — used by preflight to access installHints. */
+	def: LanguageDef;
+}
+
+function resolveMeta(def: LanguageDef): LanguageMeta {
+	const platform = process.platform as "linux" | "darwin" | "win32";
+	return {
+		id: def.id,
+		displayName: def.displayName,
+		aliases: def.aliases,
+		fileExtensions: def.fileExtensions,
+		defaultExtension: def.defaultExtension,
+		sourceFile: def.sourceFile,
+		judgeVersion: def.judgeVersion,
+		compile: def.compile ? resolveCmd(def.compile, platform) : undefined,
+		run: def.run ? resolveCmd(def.run, platform) : undefined,
+		timeMultiplier: def.timeMultiplier,
+		timeAddSec: def.timeAddSec,
+		memoryMultiplier: def.memoryMultiplier,
+		memoryAddMb: def.memoryAddMb,
+		runtime: def.runtime,
+		def,
+	};
+}
 
 export class LanguageCatalog {
-	private cache: LanguageMeta[] | null = null;
-	private fetching: Promise<LanguageMeta[]> | null = null;
+	private readonly resolved: LanguageMeta[] = LANGUAGES.map(resolveMeta);
 
-	constructor(private readonly endpoints: Endpoints) {}
-
-	async getAll(): Promise<LanguageMeta[]> {
-		if (this.cache) return this.cache;
-		if (!this.fetching) {
-			this.fetching = this.endpoints
-				.languages()
-				.then((r) => {
-					this.cache = r.languages;
-					return r.languages;
-				})
-				.finally(() => {
-					this.fetching = null;
-				});
-		}
-		return await this.fetching;
+	getAll(): LanguageMeta[] {
+		return this.resolved;
 	}
 
-	async get(id: string): Promise<LanguageMeta | undefined> {
-		const all = await this.getAll();
-		return all.find((l) => l.id === id);
+	get(id: string): LanguageMeta | undefined {
+		return this.resolved.find((l) => l.id === id);
 	}
 
+	/** No-op retained for API compatibility (no async fetch anymore). */
 	invalidate(): void {
-		this.cache = null;
+		/* nothing to invalidate */
 	}
 }

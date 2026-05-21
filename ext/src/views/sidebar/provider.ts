@@ -228,7 +228,7 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 		const lang = extToLang(sourcePath);
 		if (!lang) return computeSidebarState(inputs);
 
-		const meta = await this.catalog.get(lang).catch(() => null);
+		const meta = this.catalog.get(lang) ?? null;
 		inputs.languageLabel = meta?.displayName ?? lang;
 
 		if (folder) {
@@ -439,7 +439,7 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 			vscode.window.showErrorMessage("지원하지 않는 파일 형식입니다.");
 			return;
 		}
-		const meta = await this.catalog.get(lang).catch(() => null);
+		const meta = this.catalog.get(lang) ?? null;
 		if (!meta) {
 			vscode.window.showErrorMessage(`언어 메타 누락: ${lang}`);
 			return;
@@ -461,8 +461,10 @@ export class AojSidebarProvider implements vscode.WebviewViewProvider, vscode.Di
 			.get<number>("defaultRunTimeoutMs", 2000);
 		const timeoutMs = Math.floor((baseTimeout || defaultMs) * getTimeoutMultiplier());
 
+		const resolvedCompilerPath =
+			getCompilerPath(lang) ?? meta.compile?.command ?? meta.run?.command;
 		const overrides = {
-			compilerPaths: { [lang]: getCompilerPath(lang) ?? meta.compile?.command ?? meta.run.command },
+			compilerPaths: resolvedCompilerPath !== undefined ? { [lang]: resolvedCompilerPath } : {},
 			compileFlags: { [lang]: getCompileFlags(lang) },
 		};
 
