@@ -61,15 +61,13 @@ export function TestcaseCard({ tc, onRun, onRemove, onEdit }: Props) {
 					editable
 					onCommit={(next) => onEdit(next, tc.expected)}
 				/>
-				<div class="grid grid-cols-2 gap-2">
-					<IoColumn
-						label="Expected"
-						value={tc.expected}
-						editable
-						onCommit={(next) => onEdit(tc.input, next)}
-					/>
-					<IoColumn label="Actual" value={tc.actual ?? ""} />
-				</div>
+				<IoColumn
+					label="Expected"
+					value={tc.expected}
+					editable
+					onCommit={(next) => onEdit(tc.input, next)}
+				/>
+				<IoColumn label="Actual" value={tc.actual ?? ""} />
 			</div>
 		</div>
 	);
