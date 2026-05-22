@@ -2,7 +2,7 @@
   "name": "aoj-vscode",
   "displayName": "ANA Online Judge",
   "description": "VS Code에서 ANA Online Judge 문제를 풀어보세요. 문제 연결, 로컬 테스트 실행, 제출, 채점 결과 실시간 확인까지.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "ana-online-judge",
   "private": true,
   "engines": {
