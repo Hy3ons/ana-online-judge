@@ -293,18 +293,3 @@ export async function listActiveContestsForUser(userId: number) {
 	}
 	return { contests: result };
 }
-
-export async function toggleFreezeState(contestId: number) {
-	const [contest] = await db.select().from(contests).where(eq(contests.id, contestId)).limit(1);
-	if (!contest) {
-		throw new Error("Contest not found");
-	}
-
-	const [updated] = await db
-		.update(contests)
-		.set({ isFrozen: !contest.isFrozen, updatedAt: new Date() })
-		.where(eq(contests.id, contestId))
-		.returning();
-
-	return updated;
-}

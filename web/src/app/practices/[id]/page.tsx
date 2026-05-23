@@ -63,7 +63,6 @@ export default async function PracticeDetailPage({ params }: { params: Promise<{
 			startTime: practice.startTime,
 			endTime: practice.endTime,
 			freezeMinutes: 0,
-			isFrozen: false,
 			visibility: "public",
 			scoreboardType: "basic",
 			postContestVisibility: "public",

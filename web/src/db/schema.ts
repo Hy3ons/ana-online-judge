@@ -397,7 +397,6 @@ export const contests = pgTable(
 		startTime: timestamp("start_time").notNull(),
 		endTime: timestamp("end_time").notNull(),
 		freezeMinutes: integer("freeze_minutes").default(60), // Minutes before end to freeze (null = no freeze)
-		isFrozen: boolean("is_frozen").default(false), // Current freeze state
 		visibility: contestVisibilityEnum("visibility").default("public").notNull(),
 		postContestVisibility: postContestVisibilityEnum("post_contest_visibility")
 			.default("public")

@@ -97,8 +97,10 @@ export default async function AdminContestDetailPage({
 								<p className="font-medium">{contest.visibility === "public" ? "공개" : "비공개"}</p>
 							</div>
 							<div>
-								<p className="text-sm text-muted-foreground">프리즈 상태</p>
-								<p className="font-medium">{contest.isFrozen ? "프리즈됨" : "공개"}</p>
+								<p className="text-sm text-muted-foreground">프리즈 시간</p>
+								<p className="font-medium">
+									{contest.freezeMinutes ? `종료 ${contest.freezeMinutes}분 전` : "프리즈 없음"}
+								</p>
 							</div>
 							<div>
 								<p className="text-sm text-muted-foreground">종료 후 스코어보드</p>

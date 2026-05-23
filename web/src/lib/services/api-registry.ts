@@ -879,13 +879,6 @@ export const endpoints: Endpoint[] = [
 	{
 		type: "json",
 		method: "POST",
-		path: "contests/:id/freeze",
-		description: "Toggle freeze state",
-		handler: async ({ pathParams }) => adminContests.toggleFreezeState(parseInt(pathParams.id, 10)),
-	},
-	{
-		type: "json",
-		method: "POST",
 		path: "contests/:id/refresh-scoreboard",
 		description: "Refresh contest scoreboard",
 		handler: async ({ pathParams }) =>

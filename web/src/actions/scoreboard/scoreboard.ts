@@ -92,7 +92,7 @@ export async function getScoreboard(contestId: number, viewAsParticipant = false
 	}
 
 	// Check if contest is frozen.
-	// During contest: isFrozen + freezeMinutes controls masking after the freeze threshold.
+	// During contest: freeze applies automatically once now >= freezeTime (ICPC standard).
 	// After contest: postContestVisibility controls whether the freeze persists or auto-lifts.
 	const contestEndTime = new Date(contest.endTime);
 	const freezeTime = contest.freezeMinutes
@@ -100,7 +100,7 @@ export async function getScoreboard(contestId: number, viewAsParticipant = false
 		: null;
 	const shouldFreeze = isFinished
 		? contest.postContestVisibility === "frozen" && freezeTime !== null
-		: contest.isFrozen === true && freezeTime !== null && now >= freezeTime;
+		: freezeTime !== null && now >= freezeTime;
 
 	// Get contest problems
 	const contestProblemsList = await db
@@ -438,22 +438,6 @@ export async function getAdminScoreboard(contestId: number) {
 
 	// Temporarily override freeze check by calling with admin session
 	return getScoreboard(contestId);
-}
-
-// Unfreeze Scoreboard (set isFrozen to false)
-export async function unfreezeScoreboard(contestId: number) {
-	await requireAdmin();
-
-	const [updated] = await db
-		.update(contests)
-		.set({
-			isFrozen: false,
-			updatedAt: new Date(),
-		})
-		.where(eq(contests.id, contestId))
-		.returning();
-
-	return updated;
 }
 
 // Get Contest Standings (simplified for display)

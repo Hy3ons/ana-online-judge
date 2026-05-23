@@ -30,14 +30,3 @@ export async function deleteContest(...args: Parameters<typeof adminContests.del
 	revalidatePath("/admin/contests");
 	return result;
 }
-
-export async function toggleFreezeState(
-	...args: Parameters<typeof adminContests.toggleFreezeState>
-) {
-	await requireAdmin();
-	const result = await adminContests.toggleFreezeState(...args);
-	const contestId = args[0];
-	revalidatePath(`/contests/${contestId}/scoreboard`);
-	revalidatePath(`/admin/contests/${contestId}`);
-	return result;
-}

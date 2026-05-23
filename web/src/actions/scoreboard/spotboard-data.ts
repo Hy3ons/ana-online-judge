@@ -59,9 +59,9 @@ export async function getSpotboardData(
 	}
 
 	// Check freeze state.
-	// During contest: isFrozen + freezeMinutes controls masking after the freeze threshold.
+	// During contest: freeze applies automatically once now >= freezeTime (ICPC standard).
 	// After contest: postContestVisibility controls whether the freeze persists or auto-lifts.
-	// Admins always see real results.
+	// Admins always see real results unless they opt into the participant view.
 	const contestEndTime = new Date(contest.endTime);
 	const freezeTime = contest.freezeMinutes
 		? new Date(contestEndTime.getTime() - contest.freezeMinutes * 60 * 1000)
@@ -69,9 +69,7 @@ export async function getSpotboardData(
 	const shouldMask =
 		!effectiveAdmin &&
 		freezeTime !== null &&
-		(isFinished
-			? contest.postContestVisibility === "frozen"
-			: contest.isFrozen === true && now >= freezeTime);
+		(isFinished ? contest.postContestVisibility === "frozen" : now >= freezeTime);
 
 	// Get contest problems
 	const contestProblemsList = await db
