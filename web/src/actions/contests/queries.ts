@@ -4,10 +4,12 @@ import { and, asc, count, desc, eq, gte, inArray, lte, or, type SQL, sql } from 
 import { db } from "@/db";
 import {
 	type ContestVisibility,
+	contestOperators,
 	contestParticipants,
 	contestProblems,
 	contests,
 	problems,
+	users,
 } from "@/db/schema";
 import { getSessionInfo } from "@/lib/auth-utils";
 import { col } from "@/lib/db-helpers";
@@ -146,21 +148,27 @@ export async function getContestById(id: number) {
 		if (isAdmin) {
 			// Continue to load contest
 		} else if (userId) {
-			// Check if user is registered for this contest
+			// Check if user is registered or is an operator for this contest
 
 			const [participant] = await db
-
 				.select()
-
 				.from(contestParticipants)
-
 				.where(and(eq(contestParticipants.contestId, id), eq(contestParticipants.userId, userId)))
-
 				.limit(1);
 
-			// If not registered, deny access
+			let allowed = !!participant;
 
-			if (!participant) {
+			if (!allowed) {
+				const [operator] = await db
+					.select()
+					.from(contestOperators)
+					.where(and(eq(contestOperators.contestId, id), eq(contestOperators.userId, userId)))
+					.limit(1);
+				allowed = !!operator;
+			}
+
+			// If not registered and not an operator, deny access
+			if (!allowed) {
 				return null;
 			}
 		} else {
@@ -193,9 +201,23 @@ export async function getContestById(id: number) {
 		.where(eq(contestProblems.contestId, id))
 		.orderBy(contestProblems.order);
 
+	const operatorsList = await db
+		.select({
+			userId: contestOperators.userId,
+			user: {
+				username: users.username,
+				name: users.name,
+			},
+		})
+		.from(contestOperators)
+		.innerJoin(users, eq(contestOperators.userId, users.id))
+		.where(eq(contestOperators.contestId, id))
+		.orderBy(contestOperators.createdAt);
+
 	return {
 		...contest,
 		problems: contestProblemsList,
+		operators: operatorsList,
 	};
 }
 

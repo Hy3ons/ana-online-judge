@@ -453,6 +453,24 @@ export const contestParticipants = pgTable(
 	})
 );
 
+// Contest Operators - 대회 운영자
+export const contestOperators = pgTable(
+	"contest_operators",
+	{
+		contestId: integer("contest_id")
+			.references(() => contests.id, { onDelete: "cascade" })
+			.notNull(),
+		userId: integer("user_id")
+			.references(() => users.id, { onDelete: "cascade" })
+			.notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+	},
+	(t) => ({
+		pk: primaryKey({ columns: [t.contestId, t.userId] }),
+		userIdx: index("contest_operators_user_idx").on(t.userId),
+	})
+);
+
 // Practices (사용자가 생성하는 미니 대회)
 export const practices = pgTable(
 	"practices",
@@ -968,6 +986,8 @@ export type ContestProblem = typeof contestProblems.$inferSelect;
 export type NewContestProblem = typeof contestProblems.$inferInsert;
 export type ContestParticipant = typeof contestParticipants.$inferSelect;
 export type NewContestParticipant = typeof contestParticipants.$inferInsert;
+export type ContestOperator = typeof contestOperators.$inferSelect;
+export type NewContestOperator = typeof contestOperators.$inferInsert;
 export type Practice = typeof practices.$inferSelect;
 export type NewPractice = typeof practices.$inferInsert;
 export type PracticeProblem = typeof practiceProblems.$inferSelect;

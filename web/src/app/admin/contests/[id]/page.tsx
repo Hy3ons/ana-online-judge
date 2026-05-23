@@ -115,6 +115,9 @@ export default async function AdminContestDetailPage({
 							<Link href={`/admin/contests/${contestId}/participants`}>
 								<Button variant="outline">참가자 관리</Button>
 							</Link>
+							<Link href={`/admin/contests/${contestId}/operators`}>
+								<Button variant="outline">운영자 관리</Button>
+							</Link>
 							<Link href={`/contests/${contestId}/scoreboard`}>
 								<Button variant="outline">스코어보드 보기</Button>
 							</Link>

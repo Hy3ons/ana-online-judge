@@ -2,7 +2,7 @@ import { Pencil } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getContestById, isUserRegistered } from "@/actions/contests";
+import { getContestById, isUserContestOperator, isUserRegistered } from "@/actions/contests";
 import { getUserProblemStatuses } from "@/actions/submissions";
 import { auth } from "@/auth";
 import { ContestTime } from "@/components/contests/contest-time";
@@ -68,6 +68,10 @@ export default async function ContestDetailPage({ params }: { params: Promise<{ 
 	const isRegistered = session?.user?.id
 		? await isUserRegistered(contestId, parseInt(session.user.id, 10))
 		: false;
+	const isOperator = session?.user?.id
+		? await isUserContestOperator(contestId, parseInt(session.user.id, 10))
+		: false;
+	const isStaff = isAdmin || isOperator;
 
 	const status = getContestStatus(contest);
 
@@ -129,13 +133,33 @@ export default async function ContestDetailPage({ params }: { params: Promise<{ 
 							)}
 						</div>
 
+						{contest.operators.length > 0 && (
+							<div className="mt-6">
+								<p className="text-sm text-muted-foreground">운영자</p>
+								<div className="mt-2 flex flex-wrap gap-2">
+									{contest.operators.map((op) => (
+										<Link
+											key={op.userId}
+											href={`/profile/${op.user.username}`}
+											className="inline-flex items-center gap-2 border border-border bg-secondary/40 px-2.5 py-1 text-sm hover:border-accent hover:bg-secondary/60 transition-colors"
+										>
+											<span className="font-medium">{op.user.name}</span>
+											<span className="font-mono text-xs text-muted-foreground">
+												@{op.user.username}
+											</span>
+										</Link>
+									))}
+								</div>
+							</div>
+						)}
+
 						<div className="mt-6 flex gap-2">
-							{!isRegistered && status !== "finished" && !isAdmin && (
+							{!isRegistered && status !== "finished" && !isStaff && (
 								<form action={`/api/contests/${contestId}/register`} method="POST">
 									<Button type="submit">대회 등록</Button>
 								</form>
 							)}
-							{(isRegistered || isAdmin || status === "finished") && (
+							{(isRegistered || isStaff || status === "finished") && (
 								<Link href={`/contests/${contestId}/scoreboard`}>
 									<Button variant="outline">스코어보드</Button>
 								</Link>
@@ -150,7 +174,7 @@ export default async function ContestDetailPage({ params }: { params: Promise<{ 
 				</Card>
 
 				{/* Problems */}
-				{status !== "upcoming" && (
+				{(status !== "upcoming" || isStaff) && (
 					<Card>
 						<CardHeader>
 							<CardTitle className="text-2xl">문제 목록</CardTitle>

@@ -281,6 +281,13 @@
       "when": 1779365253605,
       "tag": "0039_square_vulcan",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1779529549481,
+      "tag": "0040_flashy_darkstar",
+      "breakpoints": true
     }
   ]
 }
