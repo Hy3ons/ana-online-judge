@@ -49,7 +49,7 @@ export async function addOperatorToContest(contestId: number, userId: number) {
 		.limit(1);
 
 	if (existing) {
-		throw new Error("이미 운영자로 등록된 사용자입니다");
+		throw new Error("이미 운영진로 등록된 사용자입니다");
 	}
 
 	await db.insert(contestOperators).values({ contestId, userId });

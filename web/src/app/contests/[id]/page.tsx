@@ -136,7 +136,7 @@ export default async function ContestDetailPage({ params }: { params: Promise<{ 
 
 						{contest.operators.length > 0 && (
 							<div className="mt-6">
-								<p className="text-sm text-muted-foreground">운영자</p>
+								<p className="text-sm text-muted-foreground">운영진</p>
 								<div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
 									{contest.operators.map((op) => (
 										<UserNameDisplay key={op.userId} user={op.user} withLink />

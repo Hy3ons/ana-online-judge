@@ -26,13 +26,13 @@ export function AddOperatorDialog({ contestId, excludeIds }: AddOperatorDialogPr
 		<>
 			<Button onClick={() => setOpen(true)}>
 				<UserPlus className="mr-2 h-4 w-4" />
-				운영자 추가
+				운영진 추가
 			</Button>
 			<UserSearchDialog
 				open={open}
 				onOpenChange={setOpen}
-				title="운영자 추가"
-				description="사용자 아이디나 이름을 검색하여 운영자를 추가하세요."
+				title="운영진 추가"
+				description="사용자 아이디나 이름을 검색하여 운영진를 추가하세요."
 				searchAction={searchUsers}
 				onSelect={handleAdd}
 				excludeIds={excludeIds}

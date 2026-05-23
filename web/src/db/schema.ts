@@ -453,7 +453,7 @@ export const contestParticipants = pgTable(
 	})
 );
 
-// Contest Operators - 대회 운영자
+// Contest Operators - 대회 운영진
 export const contestOperators = pgTable(
 	"contest_operators",
 	{

@@ -31,7 +31,7 @@ export async function generateMetadata({
 	}
 
 	return {
-		title: `${contest.title} - 운영자 관리`,
+		title: `${contest.title} - 운영진 관리`,
 	};
 }
 
@@ -57,14 +57,14 @@ export default async function ContestOperatorsPage({
 					{ label: "관리자", href: "/admin" },
 					{ label: "대회", href: "/admin/contests" },
 					{ label: contest.title, href: `/admin/contests/${contestId}` },
-					{ label: "운영자" },
+					{ label: "운영진" },
 				]}
 			/>
 			<Card>
 				<CardHeader>
 					<div className="flex items-center justify-between">
 						<CardTitle className="text-2xl">
-							{contest.title} - 운영자 관리 ({operators.length}명)
+							{contest.title} - 운영진 관리 ({operators.length}명)
 						</CardTitle>
 						<AddOperatorDialog
 							contestId={contestId}
@@ -74,7 +74,7 @@ export default async function ContestOperatorsPage({
 				</CardHeader>
 				<CardContent>
 					{operators.length === 0 ? (
-						<div className="text-center py-12 text-muted-foreground">운영자가 없습니다.</div>
+						<div className="text-center py-12 text-muted-foreground">운영진가 없습니다.</div>
 					) : (
 						<div className="rounded-md border">
 							<Table className="min-w-[800px]">

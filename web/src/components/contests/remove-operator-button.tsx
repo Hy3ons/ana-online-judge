@@ -35,7 +35,7 @@ export function RemoveOperatorButton({ contestId, userId, username }: RemoveOper
 				setIsOpen(false);
 				router.refresh();
 			} catch (err) {
-				setError(err instanceof Error ? err.message : "운영자 제거 중 오류가 발생했습니다");
+				setError(err instanceof Error ? err.message : "운영진 제거 중 오류가 발생했습니다");
 			}
 		});
 	};
@@ -49,9 +49,9 @@ export function RemoveOperatorButton({ contestId, userId, username }: RemoveOper
 			</DialogTrigger>
 			<DialogContent>
 				<DialogHeader>
-					<DialogTitle>운영자 제거</DialogTitle>
+					<DialogTitle>운영진 제거</DialogTitle>
 					<DialogDescription>
-						정말 &quot;{username}&quot; 사용자를 운영자에서 제거하시겠습니까?
+						정말 &quot;{username}&quot; 사용자를 운영진에서 제거하시겠습니까?
 					</DialogDescription>
 				</DialogHeader>
 				{error && (
