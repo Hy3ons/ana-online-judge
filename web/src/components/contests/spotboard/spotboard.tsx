@@ -6,7 +6,7 @@
 
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ContestLogic, Run, type TeamStatus } from "@/lib/spotboard/contest";
 import type { SpotboardConfig, SpotboardRun } from "@/lib/spotboard/types";
 import { RefreshProgress } from "./refresh-progress";
@@ -21,6 +21,7 @@ interface SpotboardProps {
 	lastUpdate?: Date;
 	refreshIntervalMs?: number;
 	isRefreshing?: boolean;
+	adminToolbar?: ReactNode;
 }
 
 export type FlipPhase = "flip-before" | "flip-after";
@@ -45,6 +46,7 @@ export function Spotboard({
 	lastUpdate,
 	refreshIntervalMs,
 	isRefreshing = false,
+	adminToolbar,
 }: SpotboardProps) {
 	const showRefreshProgress =
 		!isAwardMode && lastUpdate !== undefined && refreshIntervalMs !== undefined;
@@ -318,7 +320,9 @@ export function Spotboard({
 					{isAdmin && <div className="spotboard-admin-badge">(admin)</div>}
 					<div id="contest-title">
 						{config.contestTitle}
-						{hiddenRuns.length > 0 && <span className="text-yellow-600 ml-2">(Frozen)</span>}
+						{(config.isFrozen || hiddenRuns.length > 0) && (
+							<span className="text-muted-foreground ml-2">(Frozen)</span>
+						)}
 					</div>
 				</div>
 				<div className="spotboard-header-right">
@@ -332,11 +336,16 @@ export function Spotboard({
 							isRefreshing={isRefreshing}
 						/>
 					)}
+					{adminToolbar}
 				</div>
 			</div>
 
 			<div id="wrapper">
-				<div id="team-list" style={{ height: `${rankedTeams.length * 2.0}em` }}>
+				{/* Each team row is positioned via `top: i * 2.0em` where em resolves against the team's own
+				    font-size (2em of team-list). That makes the actual stack height = length * 4em in
+				    team-list's em-space, so the container must match — otherwise rows past the midpoint
+				    overflow the wrapper and the page background shows through. */}
+				<div id="team-list" style={{ height: `${rankedTeams.length * 4.0}em` }}>
 					{rankedTeams.map((item, index) => {
 						const team = config.teams.find((t) => t.id === item.teamId);
 						if (!team) return null;

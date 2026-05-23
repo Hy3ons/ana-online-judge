@@ -224,5 +224,6 @@ export async function getSpotboardData(
 		teams: spotboardTeams,
 		runs: spotboardRuns,
 		freezeTime: freezeTimeSeconds,
+		isFrozen: shouldMask,
 	};
 }

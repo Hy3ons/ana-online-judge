@@ -38,6 +38,11 @@ export function ScoreboardPageClient({
 	const [lastUpdate, setLastUpdate] = useState(new Date());
 	const [isRefreshing, setIsRefreshing] = useState(false);
 
+	useEffect(() => {
+		setData(initialData);
+		setLastUpdate(new Date());
+	}, [initialData]);
+
 	// Auto-refresh every 30 seconds — but never while in award mode, since a refresh
 	// re-initializes the Spotboard and wipes the in-progress reveal (focused team,
 	// finalized teams, revealed names, etc.).
@@ -68,9 +73,6 @@ export function ScoreboardPageClient({
 	if (isSpotboard) {
 		return (
 			<div className="w-full min-h-screen bg-white">
-				{isAdmin && (
-					<AdminScoreboardToolbar isAwardMode={isAwardMode} viewAsParticipant={viewAsParticipant} />
-				)}
 				<Spotboard
 					config={data as SpotboardConfig}
 					isAwardMode={isAwardMode}
@@ -78,6 +80,15 @@ export function ScoreboardPageClient({
 					lastUpdate={lastUpdate}
 					refreshIntervalMs={REFRESH_INTERVAL_MS}
 					isRefreshing={isRefreshing}
+					adminToolbar={
+						isAdmin ? (
+							<AdminScoreboardToolbar
+								isAwardMode={isAwardMode}
+								viewAsParticipant={viewAsParticipant}
+								className="text-black"
+							/>
+						) : null
+					}
 				/>
 			</div>
 		);
@@ -87,14 +98,14 @@ export function ScoreboardPageClient({
 
 	return (
 		<div className="w-full h-screen flex flex-col">
-			{isAdmin && (
-				<AdminScoreboardToolbar isAwardMode={isAwardMode} viewAsParticipant={viewAsParticipant} />
-			)}
 			{/* Header */}
 			<div className="border-b border-border bg-header text-header-foreground">
 				<div className="px-6 py-4 flex items-center justify-between">
 					<h1 className="text-2xl font-bold">
 						{contestTitle} - 스코어보드
+						{scoreboardData.isFrozen && (
+							<span className="ml-2 text-base font-medium text-muted-foreground">(Frozen)</span>
+						)}
 						{isAwardMode && " (시상 모드)"}
 					</h1>
 					<div className="flex items-center gap-2">
@@ -110,6 +121,13 @@ export function ScoreboardPageClient({
 						<Badge variant="secondary" className="text-xs">
 							30초마다 자동 갱신
 						</Badge>
+						{isAdmin && (
+							<AdminScoreboardToolbar
+								isAwardMode={isAwardMode}
+								viewAsParticipant={viewAsParticipant}
+								className="text-header-foreground"
+							/>
+						)}
 					</div>
 				</div>
 			</div>

@@ -39,4 +39,5 @@ export interface SpotboardConfig {
 	teams: SpotboardTeam[];
 	runs: SpotboardRun[];
 	freezeTime?: number; // seconds from start
+	isFrozen?: boolean; // whether the viewer currently sees a frozen scoreboard
 }

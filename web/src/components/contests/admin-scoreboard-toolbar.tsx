@@ -9,11 +9,13 @@ import { cn } from "@/lib/utils";
 interface AdminScoreboardToolbarProps {
 	isAwardMode: boolean;
 	viewAsParticipant: boolean;
+	className?: string;
 }
 
 export function AdminScoreboardToolbar({
 	isAwardMode,
 	viewAsParticipant,
+	className,
 }: AdminScoreboardToolbarProps) {
 	const router = useRouter();
 	const pathname = usePathname();
@@ -32,7 +34,7 @@ export function AdminScoreboardToolbar({
 
 	return (
 		<TooltipProvider delayDuration={200}>
-			<div className="fixed top-3 right-3 z-50 flex items-center gap-1 rounded-md border border-border bg-background/80 px-1 py-1 shadow-sm backdrop-blur">
+			<div className={cn("flex items-center gap-1", className)}>
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<Button
@@ -40,7 +42,12 @@ export function AdminScoreboardToolbar({
 							variant="ghost"
 							size="icon"
 							onClick={() => toggleParam("frozen", viewAsParticipant)}
-							className={cn("size-7", viewAsParticipant && "bg-accent text-accent-foreground")}
+							className={cn(
+								"size-7",
+								viewAsParticipant
+									? "bg-accent text-accent-foreground hover:bg-accent hover:text-accent-foreground"
+									: "text-current hover:bg-current/10 hover:text-current"
+							)}
 							aria-pressed={viewAsParticipant}
 							aria-label="프리징 보기 전환"
 						>
@@ -60,7 +67,12 @@ export function AdminScoreboardToolbar({
 							variant="ghost"
 							size="icon"
 							onClick={() => toggleParam("award", isAwardMode)}
-							className={cn("size-7", isAwardMode && "bg-accent text-accent-foreground")}
+							className={cn(
+								"size-7",
+								isAwardMode
+									? "bg-accent text-accent-foreground hover:bg-accent hover:text-accent-foreground"
+									: "text-current hover:bg-current/10 hover:text-current"
+							)}
 							aria-pressed={isAwardMode}
 							aria-label="시상 모드 전환"
 						>
