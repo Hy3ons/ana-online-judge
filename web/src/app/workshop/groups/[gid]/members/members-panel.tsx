@@ -126,14 +126,14 @@ export function MembersPanel({
 					)}
 				</CardHeader>
 				<CardContent>
-					<Table>
+					<Table className="min-w-[720px]">
 						<TableHeader>
 							<TableRow>
-								<TableHead>사용자 아이디</TableHead>
+								<TableHead className="w-[160px]">사용자 아이디</TableHead>
 								<TableHead>이름</TableHead>
-								<TableHead>역할</TableHead>
-								<TableHead>가입일</TableHead>
-								{isOwner && <TableHead className="text-right">작업</TableHead>}
+								<TableHead className="w-[140px]">역할</TableHead>
+								<TableHead className="w-[180px]">가입일</TableHead>
+								{isOwner && <TableHead className="w-[80px] text-right">작업</TableHead>}
 							</TableRow>
 						</TableHeader>
 						<TableBody>
