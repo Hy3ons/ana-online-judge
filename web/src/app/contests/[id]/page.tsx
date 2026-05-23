@@ -19,6 +19,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { UserNameDisplay } from "@/components/user-name-display";
 import { getContestStatus } from "@/lib/contest-utils";
 
 export async function generateMetadata({
@@ -136,18 +137,9 @@ export default async function ContestDetailPage({ params }: { params: Promise<{ 
 						{contest.operators.length > 0 && (
 							<div className="mt-6">
 								<p className="text-sm text-muted-foreground">운영자</p>
-								<div className="mt-2 flex flex-wrap gap-2">
+								<div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
 									{contest.operators.map((op) => (
-										<Link
-											key={op.userId}
-											href={`/profile/${op.user.username}`}
-											className="inline-flex items-center gap-2 border border-border bg-secondary/40 px-2.5 py-1 text-sm hover:border-accent hover:bg-secondary/60 transition-colors"
-										>
-											<span className="font-medium">{op.user.name}</span>
-											<span className="font-mono text-xs text-muted-foreground">
-												@{op.user.username}
-											</span>
-										</Link>
+										<UserNameDisplay key={op.userId} user={op.user} withLink />
 									))}
 								</div>
 							</div>

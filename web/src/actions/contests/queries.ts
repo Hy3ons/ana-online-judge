@@ -12,6 +12,7 @@ import {
 	users,
 } from "@/db/schema";
 import { getSessionInfo } from "@/lib/auth-utils";
+import { userDisplayHandle, userDisplayJoin } from "@/lib/db/user-display";
 import { col } from "@/lib/db-helpers";
 
 type AdminContestsSort = "id" | "startTime";
@@ -207,10 +208,13 @@ export async function getContestById(id: number) {
 			user: {
 				username: users.username,
 				name: users.name,
+				mainExternalSite: users.mainExternalSite,
+				mainExternalRating: userDisplayHandle.rating,
 			},
 		})
 		.from(contestOperators)
 		.innerJoin(users, eq(contestOperators.userId, users.id))
+		.leftJoin(userDisplayJoin.table, userDisplayJoin.on)
 		.where(eq(contestOperators.contestId, id))
 		.orderBy(contestOperators.createdAt);
 

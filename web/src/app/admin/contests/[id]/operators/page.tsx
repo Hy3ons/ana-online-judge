@@ -13,6 +13,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { UserNameDisplay } from "@/components/user-name-display";
 import { formatDate } from "@/lib/contest-utils";
 
 export async function generateMetadata({
@@ -91,7 +92,9 @@ export default async function ContestOperatorsPage({
 										<TableRow key={op.userId}>
 											<TableCell className="font-mono text-muted-foreground">{op.userId}</TableCell>
 											<TableCell className="font-medium">{op.user.username}</TableCell>
-											<TableCell>{op.user.name}</TableCell>
+											<TableCell>
+												<UserNameDisplay user={op.user} />
+											</TableCell>
 											<TableCell className="text-muted-foreground">
 												{formatDate(op.createdAt)}
 											</TableCell>

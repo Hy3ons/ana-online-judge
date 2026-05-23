@@ -1,6 +1,7 @@
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { contestOperators, contests, users } from "@/db/schema";
+import { userDisplayHandle, userDisplayJoin } from "@/lib/db/user-display";
 
 export async function getContestOperators(contestId: number) {
 	return db
@@ -10,10 +11,13 @@ export async function getContestOperators(contestId: number) {
 			user: {
 				username: users.username,
 				name: users.name,
+				mainExternalSite: users.mainExternalSite,
+				mainExternalRating: userDisplayHandle.rating,
 			},
 		})
 		.from(contestOperators)
 		.innerJoin(users, eq(contestOperators.userId, users.id))
+		.leftJoin(userDisplayJoin.table, userDisplayJoin.on)
 		.where(eq(contestOperators.contestId, contestId))
 		.orderBy(asc(contestOperators.createdAt));
 }
