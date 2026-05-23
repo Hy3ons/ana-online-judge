@@ -189,13 +189,14 @@ export function ProblemDetailClient({
 						<dt className="text-muted-foreground shrink-0">출처</dt>
 						<dd className="space-y-1">
 							{sources.map((s, i) => (
-								<SourcePath
-									// biome-ignore lint/suspicious/noArrayIndexKey: sources 는 순서가 안정적
-									key={i}
-									segments={s.segments}
-									leafLabel={s.problemNumber}
-									variant="emphasized"
-								/>
+								// biome-ignore lint/suspicious/noArrayIndexKey: sources 는 순서가 안정적
+								<div key={i}>
+									<SourcePath
+										segments={s.segments}
+										leafLabel={s.problemNumber}
+										variant="emphasized"
+									/>
+								</div>
 							))}
 						</dd>
 					</div>
@@ -212,7 +213,7 @@ export function ProblemDetailClient({
 						<dd>{staffLinks(reviewers)}</dd>
 					</div>
 				)}
-				<TagsRevealRow tags={confirmedTags} />
+				<TagsRevealRow tags={confirmedTags} autoReveal={votePanelData.canViewVotes} />
 				{showFullJudgeNotice && (
 					<div className="flex gap-2">
 						<dd>

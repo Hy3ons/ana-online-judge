@@ -141,8 +141,16 @@ export function MembersPanel({
 								const isLastOwner = m.role === "owner" && ownerCount === 1;
 								return (
 									<TableRow key={m.userId}>
-										<TableCell className="font-medium">{m.username}</TableCell>
-										<TableCell>{m.name}</TableCell>
+										<TableCell className="font-medium">
+											<div className="block truncate" title={m.username}>
+												{m.username}
+											</div>
+										</TableCell>
+										<TableCell>
+											<div className="block truncate" title={m.name}>
+												{m.name}
+											</div>
+										</TableCell>
 										<TableCell>
 											{isOwner ? (
 												<Select

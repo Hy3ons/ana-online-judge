@@ -6,10 +6,11 @@ import type { TagWithPath } from "@/lib/services/algorithm-tags";
 
 interface TagsRevealRowProps {
 	tags: TagWithPath[];
+	autoReveal: boolean;
 }
 
-export function TagsRevealRow({ tags }: TagsRevealRowProps) {
-	const [revealed, setRevealed] = useState(false);
+export function TagsRevealRow({ tags, autoReveal = false }: TagsRevealRowProps) {
+	const [revealed, setRevealed] = useState(autoReveal);
 	if (tags.length === 0) return null;
 	return (
 		<div className="flex gap-2 items-start">
