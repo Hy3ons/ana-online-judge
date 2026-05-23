@@ -5,6 +5,7 @@ import type { GetScoreboardReturn } from "@/actions/scoreboard";
 import { getScoreboard, getSpotboardData } from "@/actions/scoreboard";
 import { Badge } from "@/components/ui/badge";
 import type { SpotboardConfig } from "@/lib/spotboard/types";
+import { AdminScoreboardToolbar } from "./admin-scoreboard-toolbar";
 import { AwardCeremony } from "./award-ceremony";
 import { Scoreboard } from "./scoreboard";
 import { Spotboard } from "./spotboard";
@@ -17,6 +18,7 @@ interface ScoreboardPageClientProps {
 	contestTitle: string;
 	isSpotboard: boolean;
 	isAwardMode: boolean;
+	viewAsParticipant?: boolean;
 	initialData: GetScoreboardReturn | SpotboardConfig;
 	currentUserId?: number | null;
 	isAdmin?: boolean;
@@ -27,6 +29,7 @@ export function ScoreboardPageClient({
 	contestTitle,
 	isSpotboard,
 	isAwardMode,
+	viewAsParticipant = false,
 	initialData,
 	currentUserId = null,
 	isAdmin = false,
@@ -45,8 +48,8 @@ export function ScoreboardPageClient({
 			try {
 				setIsRefreshing(true);
 				const newData = isSpotboard
-					? await getSpotboardData(contestId)
-					: await getScoreboard(contestId);
+					? await getSpotboardData(contestId, viewAsParticipant)
+					: await getScoreboard(contestId, viewAsParticipant);
 				setData(newData);
 				setLastUpdate(new Date());
 			} catch (error) {
@@ -60,11 +63,14 @@ export function ScoreboardPageClient({
 
 		// Cleanup on unmount
 		return () => clearInterval(interval);
-	}, [contestId, isSpotboard, isAwardMode]);
+	}, [contestId, isSpotboard, isAwardMode, viewAsParticipant]);
 
 	if (isSpotboard) {
 		return (
 			<div className="w-full min-h-screen bg-white">
+				{isAdmin && (
+					<AdminScoreboardToolbar isAwardMode={isAwardMode} viewAsParticipant={viewAsParticipant} />
+				)}
 				<Spotboard
 					config={data as SpotboardConfig}
 					isAwardMode={isAwardMode}
@@ -81,6 +87,9 @@ export function ScoreboardPageClient({
 
 	return (
 		<div className="w-full h-screen flex flex-col">
+			{isAdmin && (
+				<AdminScoreboardToolbar isAwardMode={isAwardMode} viewAsParticipant={viewAsParticipant} />
+			)}
 			{/* Header */}
 			<div className="border-b border-border bg-header text-header-foreground">
 				<div className="px-6 py-4 flex items-center justify-between">

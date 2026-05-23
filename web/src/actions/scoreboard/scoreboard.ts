@@ -54,8 +54,11 @@ export interface ScoreboardEntry {
 }
 
 // Get Scoreboard
-export async function getScoreboard(contestId: number) {
+export async function getScoreboard(contestId: number, viewAsParticipant = false) {
 	const { userId, isAdmin } = await getSessionInfo();
+	// Admin can opt into the participant view (frozen masking applied) via viewAsParticipant.
+	// Visibility/auth checks below still use the real isAdmin so private-contest access is preserved.
+	const effectiveAdmin = isAdmin && !viewAsParticipant;
 
 	// Get contest info
 	const [contest] = await db.select().from(contests).where(eq(contests.id, contestId)).limit(1);
@@ -216,7 +219,8 @@ export async function getScoreboard(contestId: number) {
 			if (problemEntry.problemType !== "anigma") continue;
 
 			const submissionTime = new Date(submission.createdAt);
-			const isFrozen = !isAdmin && shouldFreeze && freezeTime && submissionTime >= freezeTime;
+			const isFrozen =
+				!effectiveAdmin && shouldFreeze && freezeTime && submissionTime >= freezeTime;
 			if (isFrozen) continue; // Skip frozen submissions for now
 
 			// Get or create task map for this problem
@@ -263,7 +267,8 @@ export async function getScoreboard(contestId: number) {
 
 			// Check if submission is frozen
 			const submissionTime = new Date(submission.createdAt);
-			const isFrozen = !isAdmin && shouldFreeze && freezeTime && submissionTime >= freezeTime;
+			const isFrozen =
+				!effectiveAdmin && shouldFreeze && freezeTime && submissionTime >= freezeTime;
 
 			// Track max submission time (only for non-frozen submissions)
 			if (!isFrozen) {
@@ -423,7 +428,7 @@ export async function getScoreboard(contestId: number) {
 	return {
 		contest,
 		scoreboard,
-		isFrozen: shouldFreeze && !isAdmin,
+		isFrozen: shouldFreeze && !effectiveAdmin,
 	};
 }
 

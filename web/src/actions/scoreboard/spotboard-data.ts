@@ -20,8 +20,14 @@ import type {
 } from "@/lib/spotboard/types";
 
 // Get Spotboard Data
-export async function getSpotboardData(contestId: number): Promise<SpotboardConfig> {
+export async function getSpotboardData(
+	contestId: number,
+	viewAsParticipant = false
+): Promise<SpotboardConfig> {
 	const { userId, isAdmin } = await getSessionInfo();
+	// Admin can opt into the participant view (frozen masking applied) via viewAsParticipant.
+	// Visibility/auth checks below still use the real isAdmin so private-contest access is preserved.
+	const effectiveAdmin = isAdmin && !viewAsParticipant;
 
 	// Get contest info
 	const [contest] = await db.select().from(contests).where(eq(contests.id, contestId)).limit(1);
@@ -61,7 +67,7 @@ export async function getSpotboardData(contestId: number): Promise<SpotboardConf
 		? new Date(contestEndTime.getTime() - contest.freezeMinutes * 60 * 1000)
 		: null;
 	const shouldMask =
-		!isAdmin &&
+		!effectiveAdmin &&
 		freezeTime !== null &&
 		(isFinished
 			? contest.postContestVisibility === "frozen"

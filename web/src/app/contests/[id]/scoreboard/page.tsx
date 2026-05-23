@@ -29,10 +29,10 @@ export default async function ScoreboardPage({
 	searchParams,
 }: {
 	params: Promise<{ id: string }>;
-	searchParams: Promise<{ award?: string }>;
+	searchParams: Promise<{ award?: string; frozen?: string }>;
 }) {
 	const { id } = await params;
-	const { award } = await searchParams;
+	const { award, frozen } = await searchParams;
 	const contestId = Number.parseInt(id, 10);
 
 	const contest = await getContestById(contestId);
@@ -47,12 +47,16 @@ export default async function ScoreboardPage({
 	// Award mode check
 	const isAwardMode = award === "true";
 
+	// Admin-only: view the scoreboard as a participant would (with freeze masking applied).
+	// Ignored for non-admins, since they already get the participant view.
+	const viewAsParticipant = isAdmin && frozen === "true";
+
 	const isSpotboard = contest.scoreboardType === "spotboard";
 
 	// Load initial data
 	const initialData = isSpotboard
-		? await getSpotboardData(contestId)
-		: await getScoreboard(contestId);
+		? await getSpotboardData(contestId, viewAsParticipant)
+		: await getScoreboard(contestId, viewAsParticipant);
 
 	// Award mode is admin-only until the contest has ended AND the scoreboard is set to
 	// "public" post-contest. While the contest is still running, or while
@@ -80,6 +84,7 @@ export default async function ScoreboardPage({
 			contestTitle={contest.title}
 			isSpotboard={isSpotboard}
 			isAwardMode={isAwardMode}
+			viewAsParticipant={viewAsParticipant}
 			initialData={initialData}
 			currentUserId={currentUserId}
 			isAdmin={isAdmin}
