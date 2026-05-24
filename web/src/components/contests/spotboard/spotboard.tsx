@@ -7,6 +7,8 @@
 "use client";
 
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useServerTime } from "@/hooks/use-server-time";
+import { formatDuration } from "@/lib/contest-utils";
 import { ContestLogic, Run, type TeamStatus } from "@/lib/spotboard/contest";
 import type { SpotboardConfig, SpotboardRun } from "@/lib/spotboard/types";
 import { RefreshProgress } from "./refresh-progress";
@@ -37,6 +39,30 @@ const FLIP_HALF_MS = 250;
 
 function sleep(ms: number) {
 	return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
+function ContestRemainingTime({ startTime, endTime }: { startTime: number; endTime: number }) {
+	const { serverNow } = useServerTime();
+
+	let label: string;
+	let value: string | null;
+	if (serverNow < startTime) {
+		label = "시작까지";
+		value = formatDuration(startTime - serverNow);
+	} else if (serverNow <= endTime) {
+		label = "남은 시간";
+		value = formatDuration(endTime - serverNow);
+	} else {
+		label = "종료됨";
+		value = null;
+	}
+
+	return (
+		<div id="contest-remaining-time">
+			<span className="contest-remaining-label">{label}</span>
+			{value && <span className="contest-remaining-value">{value}</span>}
+		</div>
+	);
 }
 
 export function Spotboard({
@@ -70,6 +96,33 @@ export function Spotboard({
 		});
 		return m;
 	}, [config.teams]);
+
+	// First solver per problem from the currently-visible state. Recomputed whenever rankedTeams
+	// changes (i.e. after refreshes and after award-mode reveals), so the highlight tracks reality.
+	// Ties at the same minute all share the highlight.
+	const firstSolversByProblem = useMemo(() => {
+		const map = new Map<number, Set<number>>();
+		for (const prob of config.problems) {
+			if (prob.problemType === "anigma") continue;
+			let bestTime = Number.POSITIVE_INFINITY;
+			const ids = new Set<number>();
+			for (const { teamId, status } of rankedTeams) {
+				const pStatus = status.getProblemStatus(prob.id, prob.problemType);
+				if (!pStatus.isAccepted()) continue;
+				const t = pStatus.getSolvedTime();
+				if (t === null) continue;
+				if (t < bestTime) {
+					bestTime = t;
+					ids.clear();
+					ids.add(teamId);
+				} else if (t === bestTime) {
+					ids.add(teamId);
+				}
+			}
+			if (ids.size > 0) map.set(prob.id, ids);
+		}
+		return map;
+	}, [rankedTeams, config.problems]);
 
 	// Initialize logic
 	useEffect(() => {
@@ -326,9 +379,9 @@ export function Spotboard({
 					</div>
 				</div>
 				<div className="spotboard-header-right">
-					<div id="system-information">
-						{config.systemName} {config.systemVersion}
-					</div>
+					{config.startTime !== undefined && config.endTime !== undefined && (
+						<ContestRemainingTime startTime={config.startTime} endTime={config.endTime} />
+					)}
 					{showRefreshProgress && (
 						<RefreshProgress
 							lastUpdate={lastUpdate as Date}
@@ -365,6 +418,7 @@ export function Spotboard({
 								anonymousId={anonymousIds.get(team.id) ?? team.id}
 								animating={animating}
 								rankedTeams={rankedTeams}
+								firstSolversByProblem={firstSolversByProblem}
 							/>
 						);
 					})}

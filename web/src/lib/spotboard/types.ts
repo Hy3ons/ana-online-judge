@@ -32,12 +32,12 @@ export interface SpotboardProblem {
 
 export interface SpotboardConfig {
 	contestTitle: string;
-	systemName: string;
-	systemVersion: string;
 	penaltyMinutes: number;
 	problems: SpotboardProblem[];
 	teams: SpotboardTeam[];
 	runs: SpotboardRun[];
 	freezeTime?: number; // seconds from start
 	isFrozen?: boolean; // whether the viewer currently sees a frozen scoreboard
+	startTime?: number; // contest start, epoch ms (for header countdown)
+	endTime?: number; // contest end, epoch ms (for header countdown)
 }

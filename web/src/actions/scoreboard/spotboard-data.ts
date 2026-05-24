@@ -217,13 +217,13 @@ export async function getSpotboardData(
 
 	return {
 		contestTitle: contest.title,
-		systemName: "Ana Online Judge",
-		systemVersion: "1.0",
 		penaltyMinutes: contest.penaltyMinutes,
 		problems: spotboardProblems,
 		teams: spotboardTeams,
 		runs: spotboardRuns,
 		freezeTime: freezeTimeSeconds,
 		isFrozen: shouldMask,
+		startTime: new Date(contest.startTime).getTime(),
+		endTime: contestEndTime.getTime(),
 	};
 }

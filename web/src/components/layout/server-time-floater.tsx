@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useServerTime } from "@/hooks/use-server-time";
+import { formatDuration } from "@/lib/contest-utils";
 import { cn } from "@/lib/utils";
 
 const COLLAPSED_KEY = "aoj.server-time.collapsed";
@@ -43,17 +44,6 @@ function parseContestContext(pathname: string): ContestContext | null {
 	const practiceMatch = pathname.match(/^\/practices\/(\d+)(?:\/|$)/);
 	if (practiceMatch) return { type: "practice", id: Number.parseInt(practiceMatch[1], 10) };
 	return null;
-}
-
-function formatDuration(ms: number): string {
-	const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-	const days = Math.floor(totalSeconds / 86400);
-	const hours = Math.floor((totalSeconds % 86400) / 3600);
-	const minutes = Math.floor((totalSeconds % 3600) / 60);
-	const seconds = totalSeconds % 60;
-	const pad = (n: number) => n.toString().padStart(2, "0");
-	if (days > 0) return `${days}일 ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
-	return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
 }
 
 function useContestTimeInfo(context: ContestContext | null): ContestTimeInfo | null {

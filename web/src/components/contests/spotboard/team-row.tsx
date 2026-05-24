@@ -19,6 +19,7 @@ interface TeamRowProps {
 	anonymousId: number;
 	animating: FlipAnimationState | null;
 	rankedTeams: { teamId: number; status: TeamStatus }[];
+	firstSolversByProblem: Map<number, Set<number>>;
 }
 
 export function TeamRow({
@@ -34,6 +35,7 @@ export function TeamRow({
 	anonymousId,
 	animating,
 	rankedTeams,
+	firstSolversByProblem,
 }: TeamRowProps) {
 	const solved = status.getTotalSolved();
 	const penalty = status.getTotalPenalty();
@@ -90,8 +92,12 @@ export function TeamRow({
 					const isAnigma = prob.problemType === "anigma";
 
 					let className = "problem-result";
-					if (isAccepted) className += " solved";
-					else if (isFailed) className += " failed";
+					if (isAccepted) {
+						className += " solved";
+						if (firstSolversByProblem.get(prob.id)?.has(team.id)) {
+							className += " solved-first";
+						}
+					} else if (isFailed) className += " failed";
 					else if (isPending) className += " pending";
 
 					// Check if frozen (has pending runs that are actually hidden runs?)
@@ -154,7 +160,7 @@ export function TeamRow({
 `;
 							}
 							if (solvedTime !== null) {
-								tooltipText += `해결 시간: ${solvedTime}분`;
+								tooltipText += `해결 시간: ${(solvedTime / 60).toFixed(1)}분`;
 							}
 						} else if (isFailed) {
 							resultText = `-${pStatus.getFailedAttempts()}`;
@@ -200,7 +206,7 @@ export function TeamRow({
 				})}
 			</div>
 
-			<div className="team-name" style={{ float: "left", width: "300px" }}>
+			<div className="team-name">
 				<div className="team-title">
 					{showAnonymous ? (
 						<span className="team-anonymous">User {anonymousId}</span>

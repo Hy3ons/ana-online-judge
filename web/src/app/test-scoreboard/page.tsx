@@ -8,11 +8,12 @@ export default function TestScoreboardPage() {
 	const [isAwardMode, setIsAwardMode] = useState(false);
 
 	// 더미 데이터 생성
+	const now = Date.now();
 	const dummyConfig: SpotboardConfig = {
 		contestTitle: "Test Contest 2025",
-		systemName: "Ana Online Judge",
-		systemVersion: "v1.0",
 		penaltyMinutes: 20,
+		startTime: now - 60 * 60 * 1000, // started 1h ago
+		endTime: now + 2 * 60 * 60 * 1000, // ends in 2h
 		problems: [
 			{ id: 0, title: "A", problemType: "icpc" },
 			{ id: 1, title: "B", problemType: "icpc" },
