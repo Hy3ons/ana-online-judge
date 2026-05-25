@@ -14,6 +14,7 @@ import {
 } from "@/db/schema";
 import { getSessionInfo, requireAdmin } from "@/lib/auth-utils";
 import { userDisplayHandle, userDisplayJoin } from "@/lib/db/user-display";
+import { isContestOperator } from "@/lib/services/contest-operators";
 
 export interface ScoreboardEntry {
 	rank: number;
@@ -56,9 +57,12 @@ export interface ScoreboardEntry {
 // Get Scoreboard
 export async function getScoreboard(contestId: number, viewAsParticipant = false) {
 	const { userId, isAdmin } = await getSessionInfo();
-	// Admin can opt into the participant view (frozen masking applied) via viewAsParticipant.
-	// Visibility/auth checks below still use the real isAdmin so private-contest access is preserved.
-	const effectiveAdmin = isAdmin && !viewAsParticipant;
+	const isOperator = userId ? await isContestOperator(contestId, userId) : false;
+	const isStaff = isAdmin || isOperator;
+	// Staff (admin/operator) can opt into the participant view (frozen masking applied)
+	// via viewAsParticipant. Visibility/auth checks below still use the real isStaff so
+	// private-contest access is preserved.
+	const effectiveStaff = isStaff && !viewAsParticipant;
 
 	// Get contest info
 	const [contest] = await db.select().from(contests).where(eq(contests.id, contestId)).limit(1);
@@ -72,7 +76,7 @@ export async function getScoreboard(contestId: number, viewAsParticipant = false
 	const isFinished = now > contest.endTime;
 
 	// Check access for private contests (only check if contest is not finished)
-	if (contest.visibility === "private" && !isAdmin && !isFinished) {
+	if (contest.visibility === "private" && !isStaff && !isFinished) {
 		// Check if user is a participant
 		if (!userId) {
 			throw new Error("Unauthorized");
@@ -220,7 +224,7 @@ export async function getScoreboard(contestId: number, viewAsParticipant = false
 
 			const submissionTime = new Date(submission.createdAt);
 			const isFrozen =
-				!effectiveAdmin && shouldFreeze && freezeTime && submissionTime >= freezeTime;
+				!effectiveStaff && shouldFreeze && freezeTime && submissionTime >= freezeTime;
 			if (isFrozen) continue; // Skip frozen submissions for now
 
 			// Get or create task map for this problem
@@ -268,7 +272,7 @@ export async function getScoreboard(contestId: number, viewAsParticipant = false
 			// Check if submission is frozen
 			const submissionTime = new Date(submission.createdAt);
 			const isFrozen =
-				!effectiveAdmin && shouldFreeze && freezeTime && submissionTime >= freezeTime;
+				!effectiveStaff && shouldFreeze && freezeTime && submissionTime >= freezeTime;
 
 			// Track max submission time (only for non-frozen submissions)
 			if (!isFrozen) {
@@ -428,7 +432,7 @@ export async function getScoreboard(contestId: number, viewAsParticipant = false
 	return {
 		contest,
 		scoreboard,
-		isFrozen: shouldFreeze && !effectiveAdmin,
+		isFrozen: shouldFreeze && !effectiveStaff,
 	};
 }
 

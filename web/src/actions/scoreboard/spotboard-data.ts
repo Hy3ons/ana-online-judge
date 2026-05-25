@@ -12,6 +12,7 @@ import {
 } from "@/db/schema";
 import { getSessionInfo } from "@/lib/auth-utils";
 import { userDisplayHandle, userDisplayJoin } from "@/lib/db/user-display";
+import { isContestOperator } from "@/lib/services/contest-operators";
 import type {
 	SpotboardConfig,
 	SpotboardProblem,
@@ -25,9 +26,12 @@ export async function getSpotboardData(
 	viewAsParticipant = false
 ): Promise<SpotboardConfig> {
 	const { userId, isAdmin } = await getSessionInfo();
-	// Admin can opt into the participant view (frozen masking applied) via viewAsParticipant.
-	// Visibility/auth checks below still use the real isAdmin so private-contest access is preserved.
-	const effectiveAdmin = isAdmin && !viewAsParticipant;
+	const isOperator = userId ? await isContestOperator(contestId, userId) : false;
+	const isStaff = isAdmin || isOperator;
+	// Staff (admin/operator) can opt into the participant view (frozen masking applied)
+	// via viewAsParticipant. Visibility/auth checks below still use the real isStaff so
+	// private-contest access is preserved.
+	const effectiveStaff = isStaff && !viewAsParticipant;
 
 	// Get contest info
 	const [contest] = await db.select().from(contests).where(eq(contests.id, contestId)).limit(1);
@@ -41,7 +45,7 @@ export async function getSpotboardData(
 	const isFinished = now > contest.endTime;
 
 	// Check access for private contests (only check if contest is not finished)
-	if (contest.visibility === "private" && !isAdmin && !isFinished) {
+	if (contest.visibility === "private" && !isStaff && !isFinished) {
 		if (!userId) {
 			throw new Error("Unauthorized");
 		}
@@ -67,7 +71,7 @@ export async function getSpotboardData(
 		? new Date(contestEndTime.getTime() - contest.freezeMinutes * 60 * 1000)
 		: null;
 	const shouldMask =
-		!effectiveAdmin &&
+		!effectiveStaff &&
 		freezeTime !== null &&
 		(isFinished ? contest.postContestVisibility === "frozen" : now >= freezeTime);
 

@@ -22,6 +22,7 @@ interface ScoreboardPageClientProps {
 	initialData: GetScoreboardReturn | SpotboardConfig;
 	currentUserId?: number | null;
 	isAdmin?: boolean;
+	isStaff?: boolean;
 }
 
 export function ScoreboardPageClient({
@@ -33,6 +34,7 @@ export function ScoreboardPageClient({
 	initialData,
 	currentUserId = null,
 	isAdmin = false,
+	isStaff = false,
 }: ScoreboardPageClientProps) {
 	const [data, setData] = useState(initialData);
 	const [lastUpdate, setLastUpdate] = useState(new Date());
@@ -81,7 +83,7 @@ export function ScoreboardPageClient({
 					refreshIntervalMs={REFRESH_INTERVAL_MS}
 					isRefreshing={isRefreshing}
 					adminToolbar={
-						isAdmin ? (
+						isStaff ? (
 							<AdminScoreboardToolbar
 								isAwardMode={isAwardMode}
 								viewAsParticipant={viewAsParticipant}
@@ -121,7 +123,7 @@ export function ScoreboardPageClient({
 						<Badge variant="secondary" className="text-xs">
 							30초마다 자동 갱신
 						</Badge>
-						{isAdmin && (
+						{isStaff && (
 							<AdminScoreboardToolbar
 								isAwardMode={isAwardMode}
 								viewAsParticipant={viewAsParticipant}

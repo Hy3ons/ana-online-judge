@@ -2,6 +2,7 @@ import { and, asc, count, desc, eq, inArray, or, type SQL, sql } from "drizzle-o
 import { db } from "@/db";
 import {
 	algorithmTags,
+	contestOperators,
 	contestParticipants,
 	contestProblems,
 	contests,
@@ -720,6 +721,24 @@ export async function getProblemById(
 
 	if (!userId) {
 		return null;
+	}
+
+	// Operators of a contest containing this problem can always view it (no start-time gate)
+	const operatorAccess = await db
+		.select({ contestId: contestOperators.contestId })
+		.from(contestOperators)
+		.innerJoin(contestProblems, eq(contestOperators.contestId, contestProblems.contestId))
+		.where(
+			and(
+				eq(contestProblems.problemId, id),
+				eq(contestOperators.userId, userId),
+				contestId ? eq(contestOperators.contestId, contestId) : undefined
+			)
+		)
+		.limit(1);
+
+	if (operatorAccess.length > 0) {
+		return problemWithSources;
 	}
 
 	if (contestId) {

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getContestById } from "@/actions/contests";
+import { getContestById, isUserContestOperator } from "@/actions/contests";
 import { getScoreboard, getSpotboardData } from "@/actions/scoreboard";
 import { auth } from "@/auth";
 import { ScoreboardPageClient } from "@/components/contests/scoreboard-page-client";
@@ -43,13 +43,15 @@ export default async function ScoreboardPage({
 	const session = await auth();
 	const isAdmin = session?.user?.role === "admin";
 	const currentUserId = session?.user?.id ? parseInt(session.user.id, 10) : null;
+	const isOperator = currentUserId ? await isUserContestOperator(contestId, currentUserId) : false;
+	const isStaff = isAdmin || isOperator;
 
 	// Award mode check
 	const isAwardMode = award === "true";
 
-	// Admin-only: view the scoreboard as a participant would (with freeze masking applied).
-	// Ignored for non-admins, since they already get the participant view.
-	const viewAsParticipant = isAdmin && frozen === "true";
+	// Staff-only: view the scoreboard as a participant would (with freeze masking applied).
+	// Ignored for non-staff, since they already get the participant view.
+	const viewAsParticipant = isStaff && frozen === "true";
 
 	const isSpotboard = contest.scoreboardType === "spotboard";
 
@@ -58,10 +60,10 @@ export default async function ScoreboardPage({
 		? await getSpotboardData(contestId, viewAsParticipant)
 		: await getScoreboard(contestId, viewAsParticipant);
 
-	// Award mode is admin-only until the contest has ended AND the scoreboard is set to
+	// Award mode is staff-only until the contest has ended AND the scoreboard is set to
 	// "public" post-contest. While the contest is still running, or while
-	// postContestVisibility="frozen" keeps results masked, non-admins are denied.
-	if (isAwardMode && !isAdmin) {
+	// postContestVisibility="frozen" keeps results masked, non-staff are denied.
+	if (isAwardMode && !isStaff) {
 		const isFinished = new Date() > new Date(contest.endTime);
 		const isPostContestFrozen = contest.postContestVisibility === "frozen";
 
@@ -88,6 +90,7 @@ export default async function ScoreboardPage({
 			initialData={initialData}
 			currentUserId={currentUserId}
 			isAdmin={isAdmin}
+			isStaff={isStaff}
 		/>
 	);
 }
