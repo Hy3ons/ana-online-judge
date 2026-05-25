@@ -2,7 +2,7 @@ import { CheckCircle2, Download } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getContestById, isUserRegistered } from "@/actions/contests";
+import { getContestById, isUserContestOperator, isUserRegistered } from "@/actions/contests";
 import { getProblemRanking, getProblemStats } from "@/actions/problem-stats";
 import { getProblemVotesData } from "@/actions/problem-votes";
 import { getProblemById, getProblemTestcaseCount } from "@/actions/problems";
@@ -72,10 +72,12 @@ export default async function ContestProblemPage({
 	const session = await auth();
 	const isAdmin = session?.user?.role === "admin";
 	const currentUserId = session?.user?.id ? parseInt(session.user.id, 10) : null;
+	const isOperator = currentUserId ? await isUserContestOperator(contestId, currentUserId) : false;
+	const isStaff = isAdmin || isOperator;
 
-	// 대회-스코프 문제 페이지는 등록 참가자 또는 관리자만 접근 가능
+	// 대회-스코프 문제 페이지는 등록 참가자, 운영진, 관리자만 접근 가능
 	// (종료된 대회는 공개 /problems/[id] 로 안내)
-	if (!isAdmin) {
+	if (!isStaff) {
 		if (!currentUserId) {
 			notFound();
 		}
@@ -91,8 +93,8 @@ export default async function ContestProblemPage({
 		notFound();
 	}
 
-	// 대회 진행 중 비관리자는 본인 데이터만 조회
-	const hideOthers = status === "running" && !isAdmin;
+	// 대회 진행 중 비스태프는 본인 데이터만 조회
+	const hideOthers = status === "running" && !isStaff;
 
 	// Parallel data fetch (contest-scoped)
 	const [

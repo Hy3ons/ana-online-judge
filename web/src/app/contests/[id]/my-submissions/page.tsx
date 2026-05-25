@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getContestById, isUserRegistered } from "@/actions/contests";
+import { getContestById, isUserContestOperator, isUserRegistered } from "@/actions/contests";
 import { getSubmissions, type SubmissionListItem } from "@/actions/submissions";
 import { auth } from "@/auth";
 import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
@@ -51,9 +51,13 @@ export default async function ContestMySubmissionsPage({
 	}
 
 	const userId = parseInt(session.user.id, 10);
-	const isRegistered = await isUserRegistered(contestId, userId);
+	const isAdmin = session?.user?.role === "admin";
+	const [isRegistered, isOperator] = await Promise.all([
+		isUserRegistered(contestId, userId),
+		isUserContestOperator(contestId, userId),
+	]);
 
-	if (!isRegistered) {
+	if (!isRegistered && !isOperator && !isAdmin) {
 		notFound();
 	}
 
@@ -67,7 +71,6 @@ export default async function ContestMySubmissionsPage({
 	});
 	const totalPages = Math.ceil(total / 20);
 
-	const isAdmin = session?.user?.role === "admin";
 	const canDownload = isAdmin || userId !== null;
 
 	return (

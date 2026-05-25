@@ -128,25 +128,68 @@ export function Spotboard({
 	useEffect(() => {
 		const l = new ContestLogic(config.teams, config.problems, config.penaltyMinutes);
 
-		let initialRuns = config.runs;
-		let hidden: SpotboardRun[] = [];
+		// Belt-and-suspenders cutoff at contest end. The server query already trims by
+		// createdAt <= endTime, but if anything slips through (e.g. admin shortened
+		// endTime after submissions came in) we don't want stray runs producing rows
+		// or, in award mode, no-op flips.
+		const durationSec =
+			config.startTime !== undefined && config.endTime !== undefined
+				? Math.floor((config.endTime - config.startTime) / 1000)
+				: null;
+		const inContestRuns =
+			durationSec !== null ? config.runs.filter((r) => r.time <= durationSec) : config.runs;
+
+		let initialRuns: SpotboardRun[] = inContestRuns;
+		const hidden: SpotboardRun[] = [];
 
 		if (isAwardMode && config.freezeTime) {
 			// In award mode:
 			// 1. Add runs before freeze time (normal state)
-			initialRuns = config.runs.filter((r) => r.time < config.freezeTime!);
+			const beforeFreeze = inContestRuns.filter((r) => r.time < config.freezeTime!);
+			const afterFreeze = inContestRuns.filter((r) => r.time >= config.freezeTime!);
 
-			// 2. Store frozen runs as hidden (will be revealed one by one)
-			hidden = config.runs.filter((r) => r.time >= config.freezeTime!);
+			// 2. Trim runs that wouldn't change the cell — they'd just trigger no-op flips.
+			//    a) If a (team, problem) is already accepted before freeze, drop all frozen runs.
+			//    b) Otherwise, keep frozen runs up to and including the first "Yes"; drop the rest.
+			//    ANIGMA is a cumulative-score model, so every run can still matter — keep them all.
+			const solvedBeforeFreeze = new Set<string>();
+			for (const r of beforeFreeze) {
+				if (r.result === "Yes") solvedBeforeFreeze.add(`${r.teamId}:${r.problemId}`);
+			}
 
-			// 3. CRITICAL: Add frozen runs as PENDING state to mask them
+			const grouped = new Map<string, SpotboardRun[]>();
+			for (const r of afterFreeze) {
+				const key = `${r.teamId}:${r.problemId}`;
+				let bucket = grouped.get(key);
+				if (!bucket) {
+					bucket = [];
+					grouped.set(key, bucket);
+				}
+				bucket.push(r);
+			}
+
+			for (const [key, runs] of grouped) {
+				const isAnigma = runs[0].problemType === "anigma";
+				if (!isAnigma && solvedBeforeFreeze.has(key)) continue;
+
+				runs.sort((a, b) => a.time - b.time || a.id - b.id);
+				if (isAnigma) {
+					hidden.push(...runs);
+				} else {
+					for (const r of runs) {
+						hidden.push(r);
+						if (r.result === "Yes") break;
+					}
+				}
+			}
+
+			// 3. CRITICAL: Add the (trimmed) frozen runs as PENDING state to mask them
 			const frozenRunsAsPending = hidden.map((r) => ({
 				...r,
 				result: "Pending", // Mask the actual result
 			}));
 
-			// Add pending runs to initial state
-			initialRuns = [...initialRuns, ...frozenRunsAsPending];
+			initialRuns = [...beforeFreeze, ...frozenRunsAsPending];
 		}
 
 		for (const run of initialRuns) {

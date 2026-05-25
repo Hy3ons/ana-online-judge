@@ -36,26 +36,37 @@ export async function getContests(options?: {
 
 	const whereConditions: SQL[] = [];
 
-	// Filter by visibility (admins can see all, users see public or private contests they're registered for)
+	// Filter by visibility (admins can see all, users see public or private contests
+	// they're registered for or operate)
 	if (!isAdmin) {
 		if (userId) {
-			// Get contest IDs where user is registered
-			const registeredContests = await db
-				.select({ contestId: contestParticipants.contestId })
-				.from(contestParticipants)
-				.where(eq(contestParticipants.userId, userId));
+			const [registeredContests, operatedContests] = await Promise.all([
+				db
+					.select({ contestId: contestParticipants.contestId })
+					.from(contestParticipants)
+					.where(eq(contestParticipants.userId, userId)),
+				db
+					.select({ contestId: contestOperators.contestId })
+					.from(contestOperators)
+					.where(eq(contestOperators.userId, userId)),
+			]);
 
-			const registeredContestIds = registeredContests.map((r) => r.contestId);
+			const accessibleContestIds = Array.from(
+				new Set([
+					...registeredContests.map((r) => r.contestId),
+					...operatedContests.map((r) => r.contestId),
+				])
+			);
 
-			// Show public contests OR private contests where user is registered
-			if (registeredContestIds.length > 0) {
+			// Show public contests OR private contests where user is registered/operator
+			if (accessibleContestIds.length > 0) {
 				const visClause = or(
 					eq(contests.visibility, "public"),
-					and(eq(contests.visibility, "private"), inArray(contests.id, registeredContestIds))
+					and(eq(contests.visibility, "private"), inArray(contests.id, accessibleContestIds))
 				);
 				if (visClause) whereConditions.push(visClause);
 			} else {
-				// No registered contests, only show public
+				// No accessible private contests, only show public
 				whereConditions.push(eq(contests.visibility, "public"));
 			}
 		} else {

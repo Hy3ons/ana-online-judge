@@ -198,7 +198,7 @@ export default async function ContestDetailPage({ params }: { params: Promise<{ 
 														<TableCell>
 															<ProblemTitleCell
 																href={
-																	isRegistered && status !== "finished"
+																	(isRegistered || isStaff) && status !== "finished"
 																		? `/contests/${contestId}/problems/${cp.label}`
 																		: `/problems/${cp.problem.id}`
 																}
