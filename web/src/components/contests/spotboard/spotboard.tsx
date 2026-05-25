@@ -320,19 +320,33 @@ export function Spotboard({
 		}
 		if (targetProblemId === null) return;
 
-		// 3. Reveal each run for this problem in time order with flip animations
-		const runsForProblem = myHidden
+		// 3. Reveal every attempt for this problem — both pre-freeze (already applied) and
+		//    post-freeze (currently hidden). We strip pStatus to empty on the first flip so
+		//    the attempt counter ticks up from 0 across the full animation, giving one flip
+		//    per total attempt instead of one flip per frozen attempt only.
+		const hiddenForProblem = myHidden
 			.filter((r) => r.problemId === targetProblemId)
-			.sort((a, b) => a.time - b.time);
+			.sort((a, b) => a.time - b.time || a.id - b.id);
+		const hiddenIds = new Set(hiddenForProblem.map((r) => r.id));
+
+		const pStatus = logic.teamStatuses
+			.get(focusedTeamId)
+			?.getProblemStatus(targetProblemId, hiddenForProblem[0].problemType);
+		const preFreezeRuns: SpotboardRun[] = pStatus
+			? pStatus.runs.filter((r) => !hiddenIds.has(r.id))
+			: [];
+
+		const runsToReveal: SpotboardRun[] = [...preFreezeRuns, ...hiddenForProblem].sort(
+			(a, b) => a.time - b.time || a.id - b.id
+		);
 
 		const oldRank = logic.teamStatuses.get(focusedTeamId)?.rank ?? 0;
-		const hiddenIds = new Set(runsForProblem.map((r) => r.id));
 
 		animatingRef.current = true;
 
 		try {
-			for (let i = 0; i < runsForProblem.length; i++) {
-				const run = runsForProblem[i];
+			for (let i = 0; i < runsToReveal.length; i++) {
+				const run = runsToReveal[i];
 
 				// Phase A: rotateX(0 -> 90deg)
 				setAnimating({
@@ -342,17 +356,14 @@ export function Spotboard({
 				});
 				await sleep(FLIP_HALF_MS);
 
-				// At mid-flip (perpendicular to screen, invisible): apply the run.
-				// On the first iteration also drop the pending placeholders for this problem
-				// (and clear hiddenRuns for it) so the interim count reflects only the runs
-				// revealed so far — otherwise the cell keeps showing "?" because the
-				// remaining placeholders keep isPending=true.
+				// At mid-flip (perpendicular to screen, invisible): apply the run. On the
+				// first iteration also reset pStatus.runs (dropping pre-freeze actuals AND
+				// post-freeze placeholders) and clear hiddenRuns for this problem so the
+				// counter restarts from 0 — otherwise pre-freeze attempts would persist and
+				// the first flip would jump from attempt N to attempt N+1.
 				if (i === 0) {
-					const pStatus = logic.teamStatuses
-						.get(focusedTeamId)
-						?.getProblemStatus(targetProblemId, run.problemType);
 					if (pStatus) {
-						pStatus.runs = pStatus.runs.filter((r) => !hiddenIds.has(r.id));
+						pStatus.runs = [];
 					}
 					setHiddenRuns((prev) =>
 						prev.filter((r) => !(r.teamId === focusedTeamId && r.problemId === targetProblemId))
