@@ -65,7 +65,7 @@ export interface PublicProblemDetail {
 	allowedLanguages: string[] | null;
 	hasSubtasks: boolean;
 	maxScore: number;
-	authors: { username: string; name: string }[];
+	authors: { username: string | null; name: string }[];
 	createdAt: string;
 	examples: Example[];
 }

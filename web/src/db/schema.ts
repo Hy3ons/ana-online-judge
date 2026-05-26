@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
 	type AnyPgColumn,
 	boolean,
+	check,
 	index,
 	integer,
 	jsonb,
@@ -272,38 +273,58 @@ export const problemFavorites = pgTable(
 );
 
 // Problem Authors (junction table) - 문제 출제자 (여러 명)
+// userId(사이트 사용자)와 externalName(외부 인사) 중 정확히 하나만 NOT NULL.
 export const problemAuthors = pgTable(
 	"problem_authors",
 	{
+		id: serial("id").primaryKey(),
 		problemId: integer("problem_id")
 			.references(() => problems.id, { onDelete: "cascade" })
 			.notNull(),
-		userId: integer("user_id")
-			.references(() => users.id, { onDelete: "cascade" })
-			.notNull(),
+		userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+		externalName: text("external_name"),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 	},
 	(t) => ({
-		pk: uniqueIndex("problem_authors_pk").on(t.problemId, t.userId),
+		userUniq: uniqueIndex("problem_authors_user_uniq")
+			.on(t.problemId, t.userId)
+			.where(sql`${t.userId} IS NOT NULL`),
+		externalUniq: uniqueIndex("problem_authors_external_uniq")
+			.on(t.problemId, t.externalName)
+			.where(sql`${t.externalName} IS NOT NULL`),
 		userIdx: index("problem_authors_user_idx").on(t.userId),
+		identityCheck: check(
+			"problem_authors_identity_check",
+			sql`(${t.userId} IS NOT NULL) <> (${t.externalName} IS NOT NULL)`
+		),
 	})
 );
 
 // Problem Reviewers (junction table) - 문제 검수자 (여러 명)
+// userId(사이트 사용자)와 externalName(외부 인사) 중 정확히 하나만 NOT NULL.
 export const problemReviewers = pgTable(
 	"problem_reviewers",
 	{
+		id: serial("id").primaryKey(),
 		problemId: integer("problem_id")
 			.references(() => problems.id, { onDelete: "cascade" })
 			.notNull(),
-		userId: integer("user_id")
-			.references(() => users.id, { onDelete: "cascade" })
-			.notNull(),
+		userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+		externalName: text("external_name"),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 	},
 	(t) => ({
-		pk: uniqueIndex("problem_reviewers_pk").on(t.problemId, t.userId),
+		userUniq: uniqueIndex("problem_reviewers_user_uniq")
+			.on(t.problemId, t.userId)
+			.where(sql`${t.userId} IS NOT NULL`),
+		externalUniq: uniqueIndex("problem_reviewers_external_uniq")
+			.on(t.problemId, t.externalName)
+			.where(sql`${t.externalName} IS NOT NULL`),
 		userIdx: index("problem_reviewers_user_idx").on(t.userId),
+		identityCheck: check(
+			"problem_reviewers_identity_check",
+			sql`(${t.userId} IS NOT NULL) <> (${t.externalName} IS NOT NULL)`
+		),
 	})
 );
 

@@ -241,28 +241,40 @@ export const endpoints: Endpoint[] = [
 		type: "json",
 		method: "POST",
 		path: "problems/:id/staff",
-		description: "Add a problem author or reviewer",
-		body: z.object({
-			userId: z.number().int(),
-			role: z.enum(["author", "reviewer"]),
-		}),
+		description:
+			"Add a problem author or reviewer. Provide exactly one of userId (site user) or externalName (외부 인사).",
+		body: z
+			.object({
+				role: z.enum(["author", "reviewer"]),
+				userId: z.number().int().optional(),
+				externalName: z.string().trim().min(1).optional(),
+			})
+			.refine((d) => (d.userId == null) !== (d.externalName == null), {
+				message: "userId와 externalName 중 정확히 하나만 지정해야 합니다.",
+			}),
 		handler: async ({ pathParams, body }) => {
-			const b = body as { userId: number; role: "author" | "reviewer" };
-			return adminProblems.addProblemStaff(parseInt(pathParams.id, 10), b.userId, b.role);
+			const b = body as {
+				role: "author" | "reviewer";
+				userId?: number;
+				externalName?: string;
+			};
+			const target =
+				b.userId != null ? { userId: b.userId } : { externalName: b.externalName as string };
+			return adminProblems.addProblemStaff(parseInt(pathParams.id, 10), b.role, target);
 		},
 	},
 	{
 		type: "json",
 		method: "DELETE",
-		path: "problems/:id/staff/:userId",
-		description: "Remove a problem author or reviewer",
+		path: "problems/:id/staff/:staffId",
+		description: "Remove a problem author or reviewer by row id",
 		query: z.object({ role: z.enum(["author", "reviewer"]) }),
 		handler: async ({ pathParams, query }) => {
 			const q = query as { role: "author" | "reviewer" };
 			return adminProblems.removeProblemStaff(
 				parseInt(pathParams.id, 10),
-				parseInt(pathParams.userId, 10),
-				q.role
+				q.role,
+				parseInt(pathParams.staffId, 10)
 			);
 		},
 	},

@@ -43,13 +43,13 @@ interface ProblemDetailClientProps {
 	};
 	authors: {
 		name: string;
-		username: string;
+		username: string | null;
 		mainExternalSite: ExternalSite | null;
 		mainExternalRating: number | null;
 	}[];
 	reviewers: {
 		name: string;
-		username: string;
+		username: string | null;
 		mainExternalSite: ExternalSite | null;
 		mainExternalRating: number | null;
 	}[];
@@ -168,17 +168,37 @@ export function ProblemDetailClient({
 	const staffLinks = (
 		people: {
 			name: string;
-			username: string;
+			username: string | null;
 			mainExternalSite: ExternalSite | null;
 			mainExternalRating: number | null;
 		}[]
 	) =>
-		people.map((p, i) => (
-			<span key={p.username}>
-				{i > 0 && ", "}
-				<UserNameDisplay user={p} withLink />
-			</span>
-		));
+		people.map((p, i) => {
+			// 외부 인사: username 없음 → 링크 없이 plain text
+			if (p.username == null) {
+				return (
+					// biome-ignore lint/suspicious/noArrayIndexKey: 외부 인사는 식별자 없음
+					<span key={`ext-${i}`}>
+						{i > 0 && ", "}
+						<span className="text-muted-foreground">{p.name}</span>
+					</span>
+				);
+			}
+			return (
+				<span key={p.username}>
+					{i > 0 && ", "}
+					<UserNameDisplay
+						user={{
+							name: p.name,
+							username: p.username,
+							mainExternalSite: p.mainExternalSite,
+							mainExternalRating: p.mainExternalRating,
+						}}
+						withLink
+					/>
+				</span>
+			);
+		});
 
 	const creditsSection = hasCredits ? (
 		<div className="mt-6">

@@ -597,7 +597,7 @@ export async function getProblems(
 			tier: problems.tier,
 			authorNames: sql<
 				string[]
-			>`COALESCE((SELECT array_agg(${col(users, users.name)}) FROM ${tbl(problemAuthors)} INNER JOIN ${tbl(users)} ON ${col(users, users.id)} = ${col(problemAuthors, problemAuthors.userId)} WHERE ${col(problemAuthors, problemAuthors.problemId)} = ${col(problems, problems.id)}), ARRAY[]::text[])`,
+			>`COALESCE((SELECT array_agg(COALESCE(${col(users, users.name)}, ${col(problemAuthors, problemAuthors.externalName)})) FROM ${tbl(problemAuthors)} LEFT JOIN ${tbl(users)} ON ${col(users, users.id)} = ${col(problemAuthors, problemAuthors.userId)} WHERE ${col(problemAuthors, problemAuthors.problemId)} = ${col(problems, problems.id)}), ARRAY[]::text[])`,
 			createdAt: problems.createdAt,
 			submissionCount: sql<number>`COALESCE(${statsSq.submissionCount}, 0)`,
 			acceptedCount: sql<number>`COALESCE(${statsSq.acceptedCount}, 0)`,
@@ -646,19 +646,19 @@ export async function getProblemById(
 			authors: sql<
 				{
 					name: string;
-					username: string;
+					username: string | null;
 					mainExternalSite: ExternalSite | null;
 					mainExternalRating: number | null;
 				}[]
-			>`COALESCE((SELECT json_agg(json_build_object('name', ${col(users, users.name)}, 'username', ${col(users, users.username)}, 'mainExternalSite', ${col(users, users.mainExternalSite)}, 'mainExternalRating', ${col(userExternalHandles, userExternalHandles.rating)})) FROM ${tbl(problemAuthors)} INNER JOIN ${tbl(users)} ON ${col(users, users.id)} = ${col(problemAuthors, problemAuthors.userId)} LEFT JOIN ${tbl(userExternalHandles)} ON ${col(userExternalHandles, userExternalHandles.userId)} = ${col(users, users.id)} AND ${col(userExternalHandles, userExternalHandles.provider)} = ${col(users, users.mainExternalSite)} WHERE ${col(problemAuthors, problemAuthors.problemId)} = ${col(problems, problems.id)}), '[]'::json)`,
+			>`COALESCE((SELECT json_agg(json_build_object('name', COALESCE(${col(users, users.name)}, ${col(problemAuthors, problemAuthors.externalName)}), 'username', ${col(users, users.username)}, 'mainExternalSite', ${col(users, users.mainExternalSite)}, 'mainExternalRating', ${col(userExternalHandles, userExternalHandles.rating)})) FROM ${tbl(problemAuthors)} LEFT JOIN ${tbl(users)} ON ${col(users, users.id)} = ${col(problemAuthors, problemAuthors.userId)} LEFT JOIN ${tbl(userExternalHandles)} ON ${col(userExternalHandles, userExternalHandles.userId)} = ${col(users, users.id)} AND ${col(userExternalHandles, userExternalHandles.provider)} = ${col(users, users.mainExternalSite)} WHERE ${col(problemAuthors, problemAuthors.problemId)} = ${col(problems, problems.id)}), '[]'::json)`,
 			reviewers: sql<
 				{
 					name: string;
-					username: string;
+					username: string | null;
 					mainExternalSite: ExternalSite | null;
 					mainExternalRating: number | null;
 				}[]
-			>`COALESCE((SELECT json_agg(json_build_object('name', ${col(users, users.name)}, 'username', ${col(users, users.username)}, 'mainExternalSite', ${col(users, users.mainExternalSite)}, 'mainExternalRating', ${col(userExternalHandles, userExternalHandles.rating)})) FROM ${tbl(problemReviewers)} INNER JOIN ${tbl(users)} ON ${col(users, users.id)} = ${col(problemReviewers, problemReviewers.userId)} LEFT JOIN ${tbl(userExternalHandles)} ON ${col(userExternalHandles, userExternalHandles.userId)} = ${col(users, users.id)} AND ${col(userExternalHandles, userExternalHandles.provider)} = ${col(users, users.mainExternalSite)} WHERE ${col(problemReviewers, problemReviewers.problemId)} = ${col(problems, problems.id)}), '[]'::json)`,
+			>`COALESCE((SELECT json_agg(json_build_object('name', COALESCE(${col(users, users.name)}, ${col(problemReviewers, problemReviewers.externalName)}), 'username', ${col(users, users.username)}, 'mainExternalSite', ${col(users, users.mainExternalSite)}, 'mainExternalRating', ${col(userExternalHandles, userExternalHandles.rating)})) FROM ${tbl(problemReviewers)} LEFT JOIN ${tbl(users)} ON ${col(users, users.id)} = ${col(problemReviewers, problemReviewers.userId)} LEFT JOIN ${tbl(userExternalHandles)} ON ${col(userExternalHandles, userExternalHandles.userId)} = ${col(users, users.id)} AND ${col(userExternalHandles, userExternalHandles.provider)} = ${col(users, users.mainExternalSite)} WHERE ${col(problemReviewers, problemReviewers.problemId)} = ${col(problems, problems.id)}), '[]'::json)`,
 			referenceCodePath: problems.referenceCodePath,
 			maxScore: problems.maxScore,
 			createdAt: problems.createdAt,
@@ -784,37 +784,86 @@ export async function getProblemForEdit(id: number) {
 
 type StaffRole = "author" | "reviewer";
 
+export type ProblemStaffEntry = {
+	id: number; // problem_authors/reviewers row id
+	userId: number | null;
+	username: string | null;
+	name: string; // display name: user.name if userId, else externalName
+	externalName: string | null;
+};
+
+export type StaffTarget = { userId: number } | { externalName: string };
+
 function staffTable(role: StaffRole) {
 	return role === "author" ? problemAuthors : problemReviewers;
 }
 
+async function listStaff(
+	table: typeof problemAuthors | typeof problemReviewers,
+	problemId: number
+): Promise<ProblemStaffEntry[]> {
+	const rows = await db
+		.select({
+			id: table.id,
+			userId: table.userId,
+			externalName: table.externalName,
+			username: users.username,
+			userName: users.name,
+			createdAt: table.createdAt,
+		})
+		.from(table)
+		.leftJoin(users, eq(users.id, table.userId))
+		.where(eq(table.problemId, problemId))
+		.orderBy(asc(table.createdAt));
+
+	return rows.map((r) => ({
+		id: r.id,
+		userId: r.userId,
+		username: r.username,
+		name: r.userName ?? r.externalName ?? "",
+		externalName: r.externalName,
+	}));
+}
+
 export async function getProblemStaff(problemId: number) {
 	const [authors, reviewers] = await Promise.all([
-		db
-			.select({ id: users.id, username: users.username, name: users.name })
-			.from(problemAuthors)
-			.innerJoin(users, eq(users.id, problemAuthors.userId))
-			.where(eq(problemAuthors.problemId, problemId))
-			.orderBy(asc(users.username)),
-		db
-			.select({ id: users.id, username: users.username, name: users.name })
-			.from(problemReviewers)
-			.innerJoin(users, eq(users.id, problemReviewers.userId))
-			.where(eq(problemReviewers.problemId, problemId))
-			.orderBy(asc(users.username)),
+		listStaff(problemAuthors, problemId),
+		listStaff(problemReviewers, problemId),
 	]);
 	return { authors, reviewers };
 }
 
-export async function addProblemStaff(problemId: number, userId: number, role: StaffRole) {
+export async function addProblemStaff(
+	problemId: number,
+	role: StaffRole,
+	target: StaffTarget
+): Promise<{ success: boolean }> {
 	const table = staffTable(role);
-	await db.insert(table).values({ problemId, userId }).onConflictDoNothing();
+	if ("userId" in target) {
+		await db
+			.insert(table)
+			.values({ problemId, userId: target.userId, externalName: null })
+			.onConflictDoNothing();
+	} else {
+		const trimmed = target.externalName.trim();
+		if (trimmed.length === 0) {
+			throw new Error("외부 출제자/검수자 이름이 비어있습니다.");
+		}
+		await db
+			.insert(table)
+			.values({ problemId, userId: null, externalName: trimmed })
+			.onConflictDoNothing();
+	}
 	return { success: true };
 }
 
-export async function removeProblemStaff(problemId: number, userId: number, role: StaffRole) {
+export async function removeProblemStaff(
+	problemId: number,
+	role: StaffRole,
+	staffId: number
+): Promise<{ success: boolean }> {
 	const table = staffTable(role);
-	await db.delete(table).where(and(eq(table.problemId, problemId), eq(table.userId, userId)));
+	await db.delete(table).where(and(eq(table.problemId, problemId), eq(table.id, staffId)));
 	return { success: true };
 }
 

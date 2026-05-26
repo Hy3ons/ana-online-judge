@@ -220,11 +220,13 @@ export function ProblemForm({ problem, testcaseCount }: ProblemFormProps) {
 				const newProblem = await createProblem(createData);
 
 				try {
-					for (const user of pendingAuthors) {
-						await addProblemStaff(newProblem.id, user.id, "author");
+					for (const s of pendingAuthors) {
+						const target = s.kind === "user" ? { userId: s.id } : { externalName: s.name };
+						await addProblemStaff(newProblem.id, "author", target);
 					}
-					for (const user of pendingReviewers) {
-						await addProblemStaff(newProblem.id, user.id, "reviewer");
+					for (const s of pendingReviewers) {
+						const target = s.kind === "user" ? { userId: s.id } : { externalName: s.name };
+						await addProblemStaff(newProblem.id, "reviewer", target);
 					}
 					if (pendingSources.length > 0) {
 						await setProblemSourcesAction(
