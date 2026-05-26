@@ -869,6 +869,7 @@ export const sources = pgTable(
 		slug: text("slug").notNull(),
 		name: text("name").notNull(),
 		nameNormalized: text("name_normalized").notNull(),
+		description: text("description"),
 		year: integer("year"),
 		createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
 		updatedBy: integer("updated_by").references(() => users.id, { onDelete: "set null" }),

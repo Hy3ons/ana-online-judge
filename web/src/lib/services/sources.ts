@@ -267,7 +267,13 @@ async function writeAuditLog(
 }
 
 export async function createSource(
-	input: { parentId: number | null; slug: string; name: string; year: number | null },
+	input: {
+		parentId: number | null;
+		slug: string;
+		name: string;
+		year: number | null;
+		description?: string | null;
+	},
 	actorId: number | null
 ): Promise<Source> {
 	return db.transaction(async (tx) => {
@@ -282,6 +288,7 @@ export async function createSource(
 				slug: input.slug,
 				name: input.name,
 				nameNormalized: normalizeSourceName(input.name),
+				description: input.description ?? null,
 				year: input.year,
 				createdBy: actorId,
 				updatedBy: actorId,
@@ -305,6 +312,7 @@ export async function updateSource(
 		slug?: string;
 		name?: string;
 		year?: number | null;
+		description?: string | null;
 	},
 	actorId: number | null
 ): Promise<Source> {
@@ -339,6 +347,7 @@ export async function updateSource(
 				name: patch.name ?? before.name,
 				nameNormalized:
 					patch.name !== undefined ? normalizeSourceName(patch.name) : before.nameNormalized,
+				description: patch.description === undefined ? before.description : patch.description,
 				year: patch.year === undefined ? before.year : patch.year,
 				updatedBy: actorId,
 				updatedAt: new Date(),

@@ -1261,6 +1261,7 @@ export const endpoints: Endpoint[] = [
 			slug: z.string().min(1),
 			name: z.string().min(1),
 			year: z.number().int().nullable(),
+			description: z.string().nullable().optional(),
 		}),
 		handler: async ({ body }) =>
 			adminSources.createSource(body as Parameters<typeof adminSources.createSource>[0], null),
@@ -1286,6 +1287,7 @@ export const endpoints: Endpoint[] = [
 			slug: z.string().optional(),
 			name: z.string().optional(),
 			year: z.number().int().nullable().optional(),
+			description: z.string().nullable().optional(),
 		}),
 		handler: async ({ pathParams, body }) =>
 			adminSources.updateSource(

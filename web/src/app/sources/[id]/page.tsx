@@ -14,6 +14,7 @@ import { getUserProblemStatuses } from "@/actions/submissions";
 import { auth } from "@/auth";
 import { ContestListTable } from "@/components/contests/contest-list-table";
 import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
+import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { ProblemListTable } from "@/components/problems/problem-list-table";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -92,6 +93,7 @@ export default async function SourceDetailPage({ params }: Props) {
 			<Card>
 				<CardHeader>
 					<CardTitle className="text-2xl">{source.name}</CardTitle>
+					{source.description && <MarkdownRenderer content={source.description} className="mt-2" />}
 				</CardHeader>
 				<CardContent className="space-y-6">
 					{children.length > 0 && (

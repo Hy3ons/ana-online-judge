@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import type { Source } from "@/db/schema";
 
 interface Props {
@@ -142,6 +143,7 @@ function CreateDialog({
 	const [slug, setSlug] = useState("");
 	const [name, setName] = useState("");
 	const [year, setYear] = useState("");
+	const [description, setDescription] = useState("");
 	const [loading, setLoading] = useState(false);
 
 	return (
@@ -166,6 +168,15 @@ function CreateDialog({
 						<Label>연도 (선택)</Label>
 						<Input type="number" value={year} onChange={(e) => setYear(e.target.value)} />
 					</div>
+					<div>
+						<Label>설명 (선택, Markdown)</Label>
+						<Textarea
+							value={description}
+							onChange={(e) => setDescription(e.target.value)}
+							rows={5}
+							placeholder="이 출처에 대한 설명을 Markdown 으로 작성합니다."
+						/>
+					</div>
 				</div>
 				<DialogFooter>
 					<Button variant="ghost" onClick={onClose}>
@@ -181,6 +192,7 @@ function CreateDialog({
 									slug,
 									name,
 									year: year ? Number.parseInt(year, 10) : null,
+									description: description.trim() ? description : null,
 								});
 								await onCreated();
 								onClose();
@@ -214,6 +226,7 @@ function EditDialog({
 	const [slug, setSlug] = useState(source.slug);
 	const [name, setName] = useState(source.name);
 	const [year, setYear] = useState(source.year?.toString() ?? "");
+	const [description, setDescription] = useState(source.description ?? "");
 	const [parentId, setParentId] = useState<number | null>(source.parentId);
 	const [loading, setLoading] = useState(false);
 
@@ -235,6 +248,15 @@ function EditDialog({
 					<div>
 						<Label>연도</Label>
 						<Input type="number" value={year} onChange={(e) => setYear(e.target.value)} />
+					</div>
+					<div>
+						<Label>설명 (Markdown)</Label>
+						<Textarea
+							value={description}
+							onChange={(e) => setDescription(e.target.value)}
+							rows={5}
+							placeholder="이 출처에 대한 설명을 Markdown 으로 작성합니다."
+						/>
 					</div>
 					<div>
 						<Label>부모 노드 (이동)</Label>
@@ -260,6 +282,7 @@ function EditDialog({
 									slug,
 									name,
 									year: year ? Number.parseInt(year, 10) : null,
+									description: description.trim() ? description : null,
 									parentId,
 								});
 								await onUpdated();
