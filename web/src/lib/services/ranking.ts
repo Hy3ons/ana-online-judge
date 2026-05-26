@@ -73,7 +73,7 @@ export async function getUserRanking(options?: {
 			FROM users u
 			LEFT JOIN sub_stats subs ON subs.user_id = u.id
 			LEFT JOIN solve_stats ss ON ss.user_id = u.id
-			WHERE u.contest_account_only = false
+			WHERE u.contest_id IS NULL
 				AND u.is_active = true
 			ORDER BY "solvedCount" DESC, "submissionCount" ASC
 			LIMIT ${limit} OFFSET ${offset}
@@ -81,7 +81,7 @@ export async function getUserRanking(options?: {
 		db.execute<{ count: number }>(sql`
 			SELECT COUNT(*)::int AS "count"
 			FROM users
-			WHERE contest_account_only = false AND is_active = true
+			WHERE contest_id IS NULL AND is_active = true
 		`),
 	]);
 

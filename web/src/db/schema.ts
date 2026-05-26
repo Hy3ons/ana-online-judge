@@ -97,8 +97,7 @@ export const users = pgTable("users", {
 	rating: integer("rating").default(0),
 	playgroundQuota: integer("playground_quota").notNull().default(3), // Playground 최대 세션 수
 	workshopQuota: integer("workshop_quota").notNull().default(5), // Workshop (창작마당) 최대 문제 수
-	contestAccountOnly: boolean("contest_account_only").default(false), // Contest-only account
-	contestId: integer("contest_id"), // Will reference contests.id
+	contestId: integer("contest_id"), // 대회 계정이 묶인 contest. NULL이면 일반 계정.
 	isActive: boolean("is_active").default(true), // Account active status
 	mustChangePassword: boolean("must_change_password").notNull().default(false),
 	defaultSubmissionVisibility: submissionVisibilityEnum("default_submission_visibility")

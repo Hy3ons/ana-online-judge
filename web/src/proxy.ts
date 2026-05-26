@@ -33,61 +33,12 @@ export async function proxy(request: NextRequest) {
 		});
 	}
 
-	// If user is not a contest-only account, allow normal flow
-	if (!session.user.contestAccountOnly) {
-		return NextResponse.next({
-			request: {
-				headers: requestHeaders,
-			},
-		});
-	}
-
-	// Contest-only account restrictions
-
-	// Allowed paths for contest-only accounts
-	const allowedPaths = [
-		"/logout",
-		"/api/auth", // NextAuth routes
-		"/api/submissions/", // Submission status and stream endpoints for live updates
-	];
-
-	// Check if path is allowed
-	if (allowedPaths.some((path) => pathname.startsWith(path))) {
-		return NextResponse.next({
-			request: {
-				headers: requestHeaders,
-			},
-		});
-	}
-
-	// Allow access to the contest they're assigned to
-	if (session.user.contestId) {
-		const contestPath = `/contests/${session.user.contestId}`;
-		if (pathname.startsWith(contestPath)) {
-			return NextResponse.next({
-				request: {
-					headers: requestHeaders,
-				},
-			});
-		}
-	}
-
-	// Allow access to submissions pages (their own)
-	if (pathname.startsWith("/submissions/")) {
-		return NextResponse.next({
-			request: {
-				headers: requestHeaders,
-			},
-		});
-	}
-
-	// Redirect to their contest page
-	if (session.user.contestId) {
-		return NextResponse.redirect(new URL(`/contests/${session.user.contestId}`, request.url));
-	}
-
-	// If no contest assigned, redirect to login (shouldn't happen)
-	return NextResponse.redirect(new URL("/login", request.url));
+	return NextResponse.next({
+		request: {
+			headers: requestHeaders,
+		},
+	});
+	// 대회 계정 라우팅 제거됨 (임시)
 }
 
 // Configure which routes to run proxy on

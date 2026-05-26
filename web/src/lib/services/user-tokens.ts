@@ -63,7 +63,7 @@ export async function validateAccessToken(
 				eq(userApiTokens.tokenHash, tokenHash),
 				isNull(userApiTokens.revokedAt),
 				eq(users.isActive, true),
-				eq(users.contestAccountOnly, false)
+				isNull(users.contestId)
 			)
 		)
 		.limit(1);

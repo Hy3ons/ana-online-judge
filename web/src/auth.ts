@@ -4,7 +4,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import { db } from "@/db";
-import { userExternalHandles, users } from "@/db/schema";
+import { contests, userExternalHandles, users } from "@/db/schema";
 import { isGoogleRegistrationOpen } from "@/lib/auth-utils";
 import { serverEnv } from "@/lib/env";
 import { clearImpersonationCookie, getImpersonationTarget } from "@/lib/impersonation";
@@ -23,6 +23,19 @@ async function getMainExternalRating(
 		.where(and(eq(userExternalHandles.userId, userId), eq(userExternalHandles.provider, mainSite)))
 		.limit(1);
 	return row?.rating ?? null;
+}
+
+/**
+ * 대회 계정의 contest 종료 시간을 조회. contestId가 null이면 null 반환.
+ */
+async function getContestEndTime(contestId: number | null | undefined): Promise<string | null> {
+	if (!contestId) return null;
+	const [row] = await db
+		.select({ endTime: contests.endTime })
+		.from(contests)
+		.where(eq(contests.id, contestId))
+		.limit(1);
+	return row?.endTime?.toISOString() ?? null;
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -71,14 +84,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 					user[0].id,
 					user[0].mainExternalSite
 				);
+				const contestEndTime = await getContestEndTime(user[0].contestId);
 				return {
 					id: user[0].id.toString(),
 					email: user[0].email ?? undefined,
 					name: user[0].name,
 					username: user[0].username,
 					role: user[0].role,
-					contestAccountOnly: user[0].contestAccountOnly ?? undefined,
 					contestId: user[0].contestId ?? undefined,
+					contestEndTime,
 					mustChangePassword: user[0].mustChangePassword ?? false,
 					avatarUrl: user[0].avatarUrl ?? null,
 					mainExternalSite: user[0].mainExternalSite ?? null,
@@ -177,12 +191,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 							dbUser[0].id,
 							dbUser[0].mainExternalSite
 						);
+						const contestEndTime = await getContestEndTime(dbUser[0].contestId);
 						token.id = dbUser[0].id.toString();
 						token.username = dbUser[0].username;
 						token.name = dbUser[0].name;
 						token.role = dbUser[0].role;
-						token.contestAccountOnly = dbUser[0].contestAccountOnly;
 						token.contestId = dbUser[0].contestId;
+						token.contestEndTime = contestEndTime;
 						token.mustChangePassword = false; // OAuth 계정은 비밀번호 없음
 						token.avatarUrl = dbUser[0].avatarUrl ?? null;
 						token.mainExternalSite = dbUser[0].mainExternalSite ?? null;
@@ -194,8 +209,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 					token.username = user.username;
 					token.name = user.name;
 					token.role = user.role;
-					token.contestAccountOnly = user.contestAccountOnly;
 					token.contestId = user.contestId;
+					token.contestEndTime = user.contestEndTime ?? null;
 					token.mustChangePassword = user.mustChangePassword ?? false;
 					token.avatarUrl = user.avatarUrl ?? null;
 					token.mainExternalSite = user.mainExternalSite ?? null;
@@ -227,8 +242,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 				session.user.username = token.username as string;
 				session.user.name = (token.name as string | null | undefined) ?? session.user.name;
 				session.user.role = token.role as string;
-				session.user.contestAccountOnly = token.contestAccountOnly as boolean;
 				session.user.contestId = token.contestId as number | null;
+				session.user.contestEndTime = (token.contestEndTime as string | null) ?? null;
 				session.user.mustChangePassword = (token.mustChangePassword as boolean) ?? false;
 				session.user.avatarUrl = (token.avatarUrl as string | null | undefined) ?? null;
 				session.user.mainExternalSite =
@@ -250,6 +265,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 								targetUser.id,
 								targetUser.mainExternalSite
 							);
+							const targetContestEndTime = await getContestEndTime(targetUser.contestId);
 							session.user.impersonator = {
 								id: token.id as string,
 								username: token.username as string,
@@ -259,8 +275,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 							session.user.name = targetUser.name;
 							session.user.email = targetUser.email ?? "";
 							session.user.role = targetUser.role;
-							session.user.contestAccountOnly = targetUser.contestAccountOnly ?? false;
 							session.user.contestId = targetUser.contestId ?? null;
+							session.user.contestEndTime = targetContestEndTime;
 							session.user.mustChangePassword = targetUser.mustChangePassword ?? false;
 							session.user.avatarUrl = targetUser.avatarUrl ?? null;
 							session.user.mainExternalSite = targetUser.mainExternalSite ?? null;

@@ -1,0 +1,1 @@
+ALTER TABLE "users" DROP COLUMN "contest_account_only";

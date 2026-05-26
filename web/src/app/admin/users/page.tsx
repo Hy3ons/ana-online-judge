@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { getAdminUsers } from "@/actions/admin";
+import { listContestsForAssignment } from "@/actions/contest-accounts";
 import {
 	AdminFilterSelect,
 	AdminListToolbar,
@@ -19,6 +20,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { CsvUserUpload } from "../settings/csv-user-upload";
+import { BulkContestAssign } from "./bulk-contest-assign";
 import { DeleteUserButton } from "./delete-user-button";
 import { QuotaStepper } from "./quota-stepper";
 import { ResetPasswordButton } from "./reset-password-button";
@@ -50,15 +52,18 @@ export default async function AdminUsersPage({
 }) {
 	const params = await searchParams;
 	const page = parseInt(params.page || "1", 10);
-	const { users, total } = await getAdminUsers({
-		page,
-		limit: 20,
-		search: params.q,
-		role: params.role,
-		accountType: params.accountType,
-		sort: params.sort,
-		order: params.order,
-	});
+	const [{ users, total }, assignableContests] = await Promise.all([
+		getAdminUsers({
+			page,
+			limit: 20,
+			search: params.q,
+			role: params.role,
+			accountType: params.accountType,
+			sort: params.sort,
+			order: params.order,
+		}),
+		listContestsForAssignment(),
+	]);
 	const totalPages = Math.ceil(total / 20);
 
 	const buildPageHref = (target: number) => {
@@ -87,6 +92,19 @@ export default async function AdminUsersPage({
 				</CardHeader>
 				<CardContent>
 					<CsvUserUpload />
+				</CardContent>
+			</Card>
+
+			<Card>
+				<CardHeader>
+					<CardTitle>대회 계정 일괄 지정</CardTitle>
+					<CardDescription>
+						선택한 사용자를 특정 대회의 대회 계정으로 지정합니다. 지정된 계정은 본인 대회 외에는
+						제출할 수 없고, 대회 종료 후에도 제출이 차단됩니다.
+					</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<BulkContestAssign contests={assignableContests} />
 				</CardContent>
 			</Card>
 

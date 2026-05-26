@@ -7,8 +7,8 @@ declare module "next-auth" {
 			id: string;
 			username: string;
 			role: string;
-			contestAccountOnly: boolean;
 			contestId: number | null;
+			contestEndTime: string | null; // ISO; null이면 일반 계정
 			mustChangePassword: boolean;
 			avatarUrl: string | null;
 			mainExternalSite: ExternalSite | null;
@@ -20,8 +20,8 @@ declare module "next-auth" {
 	interface User {
 		username?: string;
 		role?: string;
-		contestAccountOnly?: boolean;
 		contestId?: number | null;
+		contestEndTime?: string | null;
 		mustChangePassword?: boolean;
 		avatarUrl?: string | null;
 		mainExternalSite?: ExternalSite | null;
@@ -34,8 +34,8 @@ declare module "next-auth/jwt" {
 		id?: string;
 		username?: string;
 		role?: string;
-		contestAccountOnly?: boolean;
 		contestId?: number | null;
+		contestEndTime?: string | null;
 		mustChangePassword?: boolean;
 		avatarUrl?: string | null;
 		mainExternalSite?: ExternalSite | null;

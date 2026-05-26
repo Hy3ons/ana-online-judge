@@ -29,7 +29,7 @@ export async function getPracticeQuotaStatus(userId: number): Promise<{
 	activeCount: number;
 }> {
 	const [user] = await db
-		.select({ role: users.role, contestAccountOnly: users.contestAccountOnly })
+		.select({ role: users.role, contestId: users.contestId })
 		.from(users)
 		.where(eq(users.id, userId))
 		.limit(1);
@@ -37,7 +37,7 @@ export async function getPracticeQuotaStatus(userId: number): Promise<{
 	if (user.role === "admin") {
 		return { canCreate: true, todayCount: 0, activeCount: 0 };
 	}
-	if (user.contestAccountOnly) {
+	if (user.contestId !== null) {
 		return { canCreate: false, reason: "contest_only_account", todayCount: 0, activeCount: 0 };
 	}
 	const todayStart = getKstStartOfToday();
@@ -60,14 +60,14 @@ export async function getPracticeQuotaStatus(userId: number): Promise<{
 
 async function assertCanCreatePractice(userId: number, tx: Tx): Promise<void> {
 	const [row] = await tx
-		.select({ role: users.role, contestAccountOnly: users.contestAccountOnly })
+		.select({ role: users.role, contestId: users.contestId })
 		.from(users)
 		.where(eq(users.id, userId))
 		.for("update")
 		.limit(1);
 	if (!row) throw new Error("사용자를 찾을 수 없습니다");
 	if (row.role === "admin") return;
-	if (row.contestAccountOnly) {
+	if (row.contestId !== null) {
 		throw new Error("이 계정은 연습을 생성할 수 없습니다");
 	}
 	const todayStart = getKstStartOfToday();

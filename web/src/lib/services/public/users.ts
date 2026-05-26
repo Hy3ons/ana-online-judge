@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, count, desc, eq, ilike, or, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, isNull, or, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 
@@ -31,7 +31,7 @@ export async function listPublicUsers(input: {
 	const sort = input.sort ?? "rating";
 	const order = input.order ?? "desc";
 
-	const conditions: SQL[] = [eq(users.isActive, true), eq(users.contestAccountOnly, false)];
+	const conditions: SQL[] = [eq(users.isActive, true), isNull(users.contestId)];
 	if (input.search) {
 		const term = `%${input.search.trim()}%`;
 		conditions.push(or(ilike(users.username, term), ilike(users.name, term))!);
@@ -95,13 +95,13 @@ export async function getPublicUserByUsername(username: string): Promise<PublicU
 			rating: users.rating,
 			createdAt: users.createdAt,
 			isActive: users.isActive,
-			contestAccountOnly: users.contestAccountOnly,
+			contestId: users.contestId,
 		})
 		.from(users)
 		.where(eq(users.username, username))
 		.limit(1);
 
-	if (!row || !row.isActive || row.contestAccountOnly) return null;
+	if (!row || !row.isActive || row.contestId !== null) return null;
 
 	return {
 		username: row.username,

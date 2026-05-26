@@ -1,19 +1,18 @@
 "use server";
 
-import { and, count, eq, sql } from "drizzle-orm";
+import { and, count, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { users } from "@/db/schema";
+import { contests, users } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth-utils";
 
-// Set Account as Contest-Only
+// 사용자를 특정 대회에 묶어 대회 계정으로 지정.
 export async function setAccountAsContestOnly(userId: number, contestId: number) {
 	await requireAdmin();
 
 	const [updatedUser] = await db
 		.update(users)
 		.set({
-			contestAccountOnly: true,
 			contestId: contestId,
 			updatedAt: new Date(),
 		})
@@ -26,14 +25,13 @@ export async function setAccountAsContestOnly(userId: number, contestId: number)
 	return updatedUser;
 }
 
-// Set Account as Normal (remove contest-only restriction)
+// 대회 계정에서 일반 계정으로 환원.
 export async function setAccountAsNormal(userId: number) {
 	await requireAdmin();
 
 	const [updatedUser] = await db
 		.update(users)
 		.set({
-			contestAccountOnly: false,
 			contestId: null,
 			updatedAt: new Date(),
 		})
@@ -46,7 +44,7 @@ export async function setAccountAsNormal(userId: number) {
 	return updatedUser;
 }
 
-// Toggle Account Active Status
+// 계정 활성/비활성 토글
 export async function toggleAccountActive(userId: number) {
 	await requireAdmin();
 
@@ -70,11 +68,10 @@ export async function toggleAccountActive(userId: number) {
 	return updatedUser;
 }
 
-// Bulk Set Contest Accounts
+// 선택한 사용자들의 contestId 를 일괄 지정.
 export async function bulkSetContestAccounts(userIds: number[], contestId: number) {
 	await requireAdmin();
 
-	// 입력 유효성 검사
 	if (userIds.length === 0) {
 		throw new Error("사용자 ID 목록이 비어있습니다");
 	}
@@ -83,13 +80,11 @@ export async function bulkSetContestAccounts(userIds: number[], contestId: numbe
 		throw new Error("유효하지 않은 대회 ID입니다");
 	}
 
-	// 트랜잭션으로 일괄 처리
 	await db.transaction(async (tx) => {
 		for (const userId of userIds) {
 			await tx
 				.update(users)
 				.set({
-					contestAccountOnly: true,
 					contestId: contestId,
 					updatedAt: new Date(),
 				})
@@ -103,11 +98,11 @@ export async function bulkSetContestAccounts(userIds: number[], contestId: numbe
 	return { success: true, count: userIds.length };
 }
 
-// Get Contest-Only Accounts
+// 대회 계정 목록 조회 (contestId 필터 가능)
 export async function getContestAccounts(contestId?: number) {
 	await requireAdmin();
 
-	const whereConditions = [eq(users.contestAccountOnly, true)];
+	const whereConditions = [isNotNull(users.contestId)];
 
 	if (contestId !== undefined) {
 		whereConditions.push(eq(users.contestId, contestId));
@@ -130,7 +125,7 @@ export async function getContestAccounts(contestId?: number) {
 	return accounts;
 }
 
-// Get All Contest-Only Accounts (with contest info)
+// 모든 대회 계정 조회 (contest info 포함)
 export async function getAllContestAccounts() {
 	await requireAdmin();
 
@@ -142,17 +137,16 @@ export async function getAllContestAccounts() {
 			email: users.email,
 			contestId: users.contestId,
 			isActive: users.isActive,
-			contestAccountOnly: users.contestAccountOnly,
 			createdAt: users.createdAt,
 		})
 		.from(users)
-		.where(eq(users.contestAccountOnly, true))
+		.where(isNotNull(users.contestId))
 		.orderBy(users.createdAt);
 
 	return accounts;
 }
 
-// Get Contest-Only Account Stats
+// 특정 대회의 계정 통계
 export async function getContestAccountStats(contestId: number) {
 	await requireAdmin();
 
@@ -163,13 +157,87 @@ export async function getContestAccountStats(contestId: number) {
 			inactive: sql<number>`SUM(CASE WHEN ${users.isActive} = false THEN 1 ELSE 0 END)`,
 		})
 		.from(users)
-		.where(and(eq(users.contestAccountOnly, true), eq(users.contestId, contestId)));
+		.where(and(isNotNull(users.contestId), eq(users.contestId, contestId)));
 
 	return {
 		total: stats.total,
 		active: Number(stats.active) || 0,
 		inactive: Number(stats.inactive) || 0,
 	};
+}
+
+// usernames 로 일괄 contestId 지정 — 못 찾은 username은 missing 에 담아 반환.
+export async function bulkAssignContestByUsernames(rawInput: string, contestId: number) {
+	await requireAdmin();
+
+	const usernames = Array.from(
+		new Set(
+			rawInput
+				.split(/[\n,]/)
+				.map((s) => s.trim())
+				.filter((s) => s.length > 0)
+		)
+	);
+
+	if (usernames.length === 0) {
+		throw new Error("사용자명을 입력해주세요");
+	}
+
+	if (!contestId || contestId <= 0) {
+		throw new Error("유효하지 않은 대회 ID입니다");
+	}
+
+	const [contest] = await db
+		.select({ id: contests.id })
+		.from(contests)
+		.where(eq(contests.id, contestId))
+		.limit(1);
+	if (!contest) {
+		throw new Error("대회를 찾을 수 없습니다");
+	}
+
+	const found = await db
+		.select({ id: users.id, username: users.username })
+		.from(users)
+		.where(inArray(users.username, usernames));
+
+	const foundUsernames = new Set(found.map((u) => u.username));
+	const missing = usernames.filter((u) => !foundUsernames.has(u));
+
+	if (found.length > 0) {
+		await db
+			.update(users)
+			.set({ contestId, updatedAt: new Date() })
+			.where(
+				inArray(
+					users.id,
+					found.map((u) => u.id)
+				)
+			);
+	}
+
+	revalidatePath("/admin/users");
+	revalidatePath("/admin/contests");
+
+	return {
+		assigned: found.map((u) => u.username),
+		missing,
+	};
+}
+
+// 활성/예정 대회 + 최근 종료 대회를 함께 선택지로 제공.
+export async function listContestsForAssignment() {
+	await requireAdmin();
+	return db
+		.select({
+			id: contests.id,
+			title: contests.title,
+			startTime: contests.startTime,
+			endTime: contests.endTime,
+		})
+		.from(contests)
+		.orderBy(sql`${contests.startTime} DESC`)
+		.limit(100);
 }
 
 export type GetContestAccountsReturn = Awaited<ReturnType<typeof getContestAccounts>>;

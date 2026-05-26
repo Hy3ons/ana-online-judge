@@ -59,6 +59,19 @@ export async function submitCode(data: {
 			return { error: "코드가 너무 깁니다 (최대 1MB)." };
 		}
 
+		// 대회 계정은 본인 대회 진행 중에만 제출 가능. 종료된 대회나 다른 대회/일반 문제는 차단.
+		const [submitter] = await db
+			.select({ contestId: users.contestId })
+			.from(users)
+			.where(eq(users.id, data.userId))
+			.limit(1);
+
+		if (submitter?.contestId != null) {
+			if (data.contestId !== submitter.contestId) {
+				return { error: "대회 계정은 본인 대회 제출만 가능합니다." };
+			}
+		}
+
 		if (data.contestId) {
 			const validation = await validateContestSubmission({
 				contestId: data.contestId,
