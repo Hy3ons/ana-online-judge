@@ -37,9 +37,28 @@ export async function getProblemStats(
 
 	const acceptedConditions = and(baseConditions, eq(submissions.verdict, "accepted"));
 
+	const contestFilter = contestId ? sql`AND s.contest_id = ${contestId}` : sql``;
+
+	// 정답 비율: "최초 AC까지의 제출만" 분모에 카운트
+	const acceptRateQuery = db.execute<{ solved_users: number; effective_submissions: number }>(sql`
+		SELECT
+			COUNT(DISTINCT ranked.user_id) FILTER (WHERE ranked.first_ac_id IS NOT NULL)::int
+				AS solved_users,
+			COUNT(*) FILTER (WHERE ranked.first_ac_id IS NULL OR ranked.id <= ranked.first_ac_id)::int
+				AS effective_submissions
+		FROM (
+			SELECT
+				s.user_id, s.id,
+				MIN(s.id) FILTER (WHERE s.verdict = 'accepted')
+					OVER (PARTITION BY s.user_id) AS first_ac_id
+			FROM submissions s
+			WHERE s.problem_id = ${problemId}
+			  ${contestFilter}
+		) ranked
+	`);
+
 	// 맞힌 사람 수는 canonical 정의로 계산:
 	// 일반 문제: MAX(score) = p.max_score / Anigma: Task1+Task2 ≥ 70
-	const contestFilter = contestId ? sql`AND s.contest_id = ${contestId}` : sql``;
 	const acceptedUsersQuery = db.execute<{ cnt: number }>(sql`
 		SELECT COUNT(*)::int AS cnt FROM (
 			SELECT s.user_id
@@ -58,17 +77,24 @@ export async function getProblemStats(
 		) solvers
 	`);
 
-	const [totalResult, acceptedResult, acceptedUsersResult] = await Promise.all([
+	const [totalResult, acceptedResult, acceptedUsersResult, acceptRateResult] = await Promise.all([
 		db.select({ count: count() }).from(submissions).where(baseConditions),
 		db.select({ count: count() }).from(submissions).where(acceptedConditions),
 		acceptedUsersQuery,
+		acceptRateQuery,
 	]);
 
 	const totalSubmissions = totalResult[0].count;
 	const acceptedSubmissions = acceptedResult[0].count;
 	const acceptedUsers = (acceptedUsersResult as unknown as { cnt: number }[])[0]?.cnt ?? 0;
+
+	const acceptRateRow = (
+		acceptRateResult as unknown as { solved_users: number; effective_submissions: number }[]
+	)[0];
+	const solvedUsers = Number(acceptRateRow?.solved_users ?? 0);
+	const effectiveSubmissions = Number(acceptRateRow?.effective_submissions ?? 0);
 	const acceptRate =
-		totalSubmissions > 0 ? ((acceptedSubmissions / totalSubmissions) * 100).toFixed(1) : "0.0";
+		effectiveSubmissions > 0 ? ((solvedUsers / effectiveSubmissions) * 100).toFixed(1) : "0.0";
 
 	return { totalSubmissions, acceptedSubmissions, acceptedUsers, acceptRate };
 }

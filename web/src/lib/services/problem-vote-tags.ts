@@ -1,15 +1,12 @@
-import { and, count, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
-import {
-	type ProblemType,
-	problemConfirmedTags,
-	problems,
-	problemVoteTags,
-	submissions,
-} from "@/db/schema";
+import { type ProblemType, problemConfirmedTags, problems, problemVoteTags } from "@/db/schema";
 import type { TagWithPath } from "@/lib/services/algorithm-tags";
 import type { ProblemByTagSort, SortOrder } from "@/lib/services/problem-list-sort";
-import { makeCanonicalSolverStatsSubquery } from "@/lib/services/solved-clause";
+import {
+	makeAcceptRateStatsSubquery,
+	makeCanonicalSolverStatsSubquery,
+} from "@/lib/services/solved-clause";
 import { getAncestorChain } from "@/lib/tags/tree-queries";
 
 export const MAX_TAGS_PER_VOTE = 10;
@@ -141,7 +138,8 @@ export interface ProblemByTagRow {
 	isPublic: boolean;
 	tier: number;
 	submissionCount: number;
-	acceptedCount: number;
+	effectiveSubmissions: number;
+	solvedUsers: number;
 	solverCount: number;
 }
 
@@ -162,16 +160,7 @@ export async function listProblemsByTag(
 	const sort = options.sort ?? "solverCount";
 	const order = options.order ?? "desc";
 
-	const statsSq = db
-		.select({
-			problemId: submissions.problemId,
-			submissionCount: count().as("sc"),
-			acceptedCount:
-				sql<number>`count(case when ${submissions.verdict} = 'accepted' then 1 end)`.as("ac"),
-		})
-		.from(submissions)
-		.groupBy(submissions.problemId)
-		.as("stats");
+	const statsSq = makeAcceptRateStatsSubquery();
 
 	const solverStatsSq = makeCanonicalSolverStatsSubquery();
 
@@ -180,13 +169,14 @@ export async function listProblemsByTag(
 			case "title":
 				return sql`${problems.displayTitle}`;
 			case "acceptedCount":
-				return sql`COALESCE(${statsSq.acceptedCount}, 0)`;
+				// "정답 수" 정렬 → 새 모델에선 AC친 distinct 유저 수(분자)에 대응.
+				return sql`COALESCE(${statsSq.solvedUsers}, 0)`;
 			case "submissionCount":
-				return sql`COALESCE(${statsSq.submissionCount}, 0)`;
+				return sql`COALESCE(${statsSq.totalSubmissions}, 0)`;
 			case "solverCount":
 				return sql`COALESCE(${solverStatsSq.solverCount}, 0)`;
 			case "acceptRate":
-				return sql`COALESCE(${statsSq.acceptedCount}::float / NULLIF(${statsSq.submissionCount}, 0), 0)`;
+				return sql`COALESCE(${statsSq.solvedUsers}::float / NULLIF(${statsSq.effectiveSubmissions}, 0), 0)`;
 			default:
 				return sql`${problems.id}`;
 		}
@@ -204,8 +194,9 @@ export async function listProblemsByTag(
 			useFullJudge: problems.useFullJudge,
 			isPublic: problems.isPublic,
 			tier: problems.tier,
-			submissionCount: sql<number>`COALESCE(${statsSq.submissionCount}, 0)`,
-			acceptedCount: sql<number>`COALESCE(${statsSq.acceptedCount}, 0)`,
+			submissionCount: sql<number>`COALESCE(${statsSq.totalSubmissions}, 0)`,
+			effectiveSubmissions: sql<number>`COALESCE(${statsSq.effectiveSubmissions}, 0)`,
+			solvedUsers: sql<number>`COALESCE(${statsSq.solvedUsers}, 0)`,
 			solverCount: sql<number>`COALESCE(${solverStatsSq.solverCount}, 0)`,
 		})
 		.from(problemConfirmedTags)

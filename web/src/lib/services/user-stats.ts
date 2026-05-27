@@ -1,7 +1,10 @@
-import { and, count, eq, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { db } from "@/db";
-import { submissions } from "@/db/schema";
-import { ANIGMA_SOLVED_THRESHOLD, userSolvedCountSql } from "@/lib/services/solved-clause";
+import {
+	ANIGMA_SOLVED_THRESHOLD,
+	userAcceptStatsSql,
+	userSolvedCountSql,
+} from "@/lib/services/solved-clause";
 
 export type UserStats = {
 	solvedCount: number;
@@ -9,23 +12,32 @@ export type UserStats = {
 	acceptRate: string;
 };
 
+type UserAcceptStatsRow = {
+	submission_count: number;
+	effective_submissions: number;
+	solved_problems: number;
+};
+
 export async function getUserStats(userId: number): Promise<UserStats> {
 	const solvedCountSubquery = userSolvedCountSql(userId);
 
-	const [submissionResult, acceptedResult, solvedResult] = await Promise.all([
-		db.select({ count: count() }).from(submissions).where(eq(submissions.userId, userId)),
-		db
-			.select({ count: count() })
-			.from(submissions)
-			.where(and(eq(submissions.userId, userId), eq(submissions.verdict, "accepted"))),
+	// 정답률: "최초 AC까지의 제출만" 카운트 (userAcceptStatsSql, ranking.ts / problem-stats.ts와 일관):
+	//   분자 = AC친 distinct 문제 수, 분모 = Σ(문제별 최초 AC까지의 제출 수).
+	const [acceptStatsResult, solvedResult] = await Promise.all([
+		db.execute<UserAcceptStatsRow>(sql`
+			SELECT submission_count, effective_submissions, solved_problems
+			FROM ${userAcceptStatsSql(sql`s.user_id = ${userId}`)} aus
+		`),
 		db.execute<{ cnt: number }>(sql`SELECT ${solvedCountSubquery} AS cnt`),
 	]);
 
-	const submissionCount = submissionResult[0].count;
-	const acceptedCount = acceptedResult[0].count;
+	const statsRow = (acceptStatsResult as unknown as UserAcceptStatsRow[])[0];
+	const submissionCount = Number(statsRow?.submission_count ?? 0);
+	const effectiveSubmissions = Number(statsRow?.effective_submissions ?? 0);
+	const solvedProblems = Number(statsRow?.solved_problems ?? 0);
 	const solvedCount = (solvedResult as unknown as { cnt: number }[])[0]?.cnt ?? 0;
 	const acceptRate =
-		submissionCount > 0 ? ((acceptedCount / submissionCount) * 100).toFixed(1) : "0.0";
+		effectiveSubmissions > 0 ? ((solvedProblems / effectiveSubmissions) * 100).toFixed(1) : "0.0";
 
 	return { solvedCount, submissionCount, acceptRate };
 }

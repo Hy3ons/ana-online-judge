@@ -1,8 +1,11 @@
 import { and, asc, count, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { type ProblemType, problems, problemVotes, submissions } from "@/db/schema";
+import { type ProblemType, problems, problemVotes } from "@/db/schema";
 import { PROBLEM_TABLE_SORT_KEYS, type SortOrder } from "@/lib/services/problem-list-sort";
-import { makeCanonicalSolverStatsSubquery } from "@/lib/services/solved-clause";
+import {
+	makeAcceptRateStatsSubquery,
+	makeCanonicalSolverStatsSubquery,
+} from "@/lib/services/solved-clause";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -108,7 +111,8 @@ export interface ProblemByTierRow {
 	isPublic: boolean;
 	tier: number;
 	submissionCount: number;
-	acceptedCount: number;
+	effectiveSubmissions: number;
+	solvedUsers: number;
 	solverCount: number;
 }
 
@@ -130,16 +134,7 @@ export async function listProblemsByTier(
 	const sort = options.sort ?? "solverCount";
 	const order = options.order ?? "desc";
 
-	const statsSq = db
-		.select({
-			problemId: submissions.problemId,
-			submissionCount: count().as("sc"),
-			acceptedCount:
-				sql<number>`count(case when ${submissions.verdict} = 'accepted' then 1 end)`.as("ac"),
-		})
-		.from(submissions)
-		.groupBy(submissions.problemId)
-		.as("stats");
+	const statsSq = makeAcceptRateStatsSubquery();
 
 	const solverStatsSq = makeCanonicalSolverStatsSubquery();
 
@@ -148,21 +143,22 @@ export async function listProblemsByTier(
 			case "title":
 				return order === "asc" ? asc(problems.displayTitle) : desc(problems.displayTitle);
 			case "acceptedCount":
+				// "정답 수" 정렬 → 새 모델에선 AC친 distinct 유저 수(분자)에 대응.
 				return order === "asc"
-					? sql`COALESCE(${statsSq.acceptedCount}, 0) ASC`
-					: sql`COALESCE(${statsSq.acceptedCount}, 0) DESC`;
+					? sql`COALESCE(${statsSq.solvedUsers}, 0) ASC`
+					: sql`COALESCE(${statsSq.solvedUsers}, 0) DESC`;
 			case "submissionCount":
 				return order === "asc"
-					? sql`COALESCE(${statsSq.submissionCount}, 0) ASC`
-					: sql`COALESCE(${statsSq.submissionCount}, 0) DESC`;
+					? sql`COALESCE(${statsSq.totalSubmissions}, 0) ASC`
+					: sql`COALESCE(${statsSq.totalSubmissions}, 0) DESC`;
 			case "solverCount":
 				return order === "asc"
 					? sql`COALESCE(${solverStatsSq.solverCount}, 0) ASC`
 					: sql`COALESCE(${solverStatsSq.solverCount}, 0) DESC`;
 			case "acceptRate":
 				return order === "asc"
-					? sql`COALESCE(${statsSq.acceptedCount}::float / NULLIF(${statsSq.submissionCount}, 0), 0) ASC`
-					: sql`COALESCE(${statsSq.acceptedCount}::float / NULLIF(${statsSq.submissionCount}, 0), 0) DESC`;
+					? sql`COALESCE(${statsSq.solvedUsers}::float / NULLIF(${statsSq.effectiveSubmissions}, 0), 0) ASC`
+					: sql`COALESCE(${statsSq.solvedUsers}::float / NULLIF(${statsSq.effectiveSubmissions}, 0), 0) DESC`;
 			default:
 				return order === "asc" ? asc(problems.id) : desc(problems.id);
 		}
@@ -181,8 +177,9 @@ export async function listProblemsByTier(
 			useFullJudge: problems.useFullJudge,
 			isPublic: problems.isPublic,
 			tier: problems.tier,
-			submissionCount: sql<number>`COALESCE(${statsSq.submissionCount}, 0)`,
-			acceptedCount: sql<number>`COALESCE(${statsSq.acceptedCount}, 0)`,
+			submissionCount: sql<number>`COALESCE(${statsSq.totalSubmissions}, 0)`,
+			effectiveSubmissions: sql<number>`COALESCE(${statsSq.effectiveSubmissions}, 0)`,
+			solvedUsers: sql<number>`COALESCE(${statsSq.solvedUsers}, 0)`,
 			solverCount: sql<number>`COALESCE(${solverStatsSq.solverCount}, 0)`,
 		})
 		.from(problems)

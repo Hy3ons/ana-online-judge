@@ -27,6 +27,7 @@ import { PROBLEM_TABLE_SORT_KEYS, type SortOrder } from "@/lib/services/problem-
 import { parseProblemSearchQuery } from "@/lib/services/problem-search-query";
 import {
 	ANIGMA_SOLVED_THRESHOLD,
+	makeAcceptRateStatsSubquery,
 	makeCanonicalSolverStatsSubquery,
 	userSolvedProblemFilterSql,
 } from "@/lib/services/solved-clause";
@@ -515,21 +516,10 @@ export async function getProblems(
 		}
 	}
 
-	// Submission stats subquery (submission-level metrics).
+	// 정답률 stats subquery: "최초 AC까지의 제출만" 분모에 카운트 (makeAcceptRateStatsSubquery 참고).
 	// solverCount는 canonical solved 정의(Anigma Task1+Task2≥70 / 일반 score=max_score)를
 	// 사용해야 하므로 별도의 makeCanonicalSolverStatsSubquery로 분리.
-	const statsSq = db
-		.select({
-			problemId: submissions.problemId,
-			submissionCount: count().as("submission_count"),
-			acceptedCount:
-				sql<number>`count(case when ${submissions.verdict} = 'accepted' then 1 end)`.as(
-					"accepted_count"
-				),
-		})
-		.from(submissions)
-		.groupBy(submissions.problemId)
-		.as("stats");
+	const statsSq = makeAcceptRateStatsSubquery();
 
 	const solverStatsSq = makeCanonicalSolverStatsSubquery();
 
@@ -563,14 +553,14 @@ export async function getProblems(
 		case "acceptRate":
 			orderBy =
 				order === "asc"
-					? sql`COALESCE(${statsSq.acceptedCount}::float / NULLIF(${statsSq.submissionCount}, 0), 0) ASC`
-					: sql`COALESCE(${statsSq.acceptedCount}::float / NULLIF(${statsSq.submissionCount}, 0), 0) DESC`;
+					? sql`COALESCE(${statsSq.solvedUsers}::float / NULLIF(${statsSq.effectiveSubmissions}, 0), 0) ASC`
+					: sql`COALESCE(${statsSq.solvedUsers}::float / NULLIF(${statsSq.effectiveSubmissions}, 0), 0) DESC`;
 			break;
 		case "submissionCount":
 			orderBy =
 				order === "asc"
-					? sql`COALESCE(${statsSq.submissionCount}, 0) ASC`
-					: sql`COALESCE(${statsSq.submissionCount}, 0) DESC`;
+					? sql`COALESCE(${statsSq.totalSubmissions}, 0) ASC`
+					: sql`COALESCE(${statsSq.totalSubmissions}, 0) DESC`;
 			break;
 		case "solverCount":
 			orderBy =
@@ -603,8 +593,9 @@ export async function getProblems(
 				string[]
 			>`COALESCE((SELECT array_agg(COALESCE(${col(users, users.name)}, ${col(problemAuthors, problemAuthors.externalName)})) FROM ${tbl(problemAuthors)} LEFT JOIN ${tbl(users)} ON ${col(users, users.id)} = ${col(problemAuthors, problemAuthors.userId)} WHERE ${col(problemAuthors, problemAuthors.problemId)} = ${col(problems, problems.id)}), ARRAY[]::text[])`,
 			createdAt: problems.createdAt,
-			submissionCount: sql<number>`COALESCE(${statsSq.submissionCount}, 0)`,
-			acceptedCount: sql<number>`COALESCE(${statsSq.acceptedCount}, 0)`,
+			submissionCount: sql<number>`COALESCE(${statsSq.totalSubmissions}, 0)`,
+			effectiveSubmissions: sql<number>`COALESCE(${statsSq.effectiveSubmissions}, 0)`,
+			solvedUsers: sql<number>`COALESCE(${statsSq.solvedUsers}, 0)`,
 			solverCount: sql<number>`COALESCE(${solverStatsSq.solverCount}, 0)`,
 		})
 		.from(problems)

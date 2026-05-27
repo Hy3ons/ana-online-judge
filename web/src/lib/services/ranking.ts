@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
-import { ANIGMA_SOLVED_THRESHOLD } from "@/lib/services/solved-clause";
+import { ANIGMA_SOLVED_THRESHOLD, userAcceptStatsSql } from "@/lib/services/solved-clause";
 
 export type RankingItem = {
 	userId: number;
@@ -26,7 +26,7 @@ export async function getUserRanking(options?: {
 	const offset = (page - 1) * limit;
 
 	// solvedCount는 canonical 정의(일반: MAX(score)=max_score / Anigma: Task1+Task2≥70)로 계산.
-	// acceptRate는 "accepted 제출 수 / 전체 제출 수"로 통일 (user-stats.ts / problem-stats.ts와 일관).
+	// acceptRate는 "최초 AC까지의 제출만" 카운트
 	const [rankings, totalResult] = await Promise.all([
 		db.execute<RankingItem>(sql`
 			WITH user_solved AS (
@@ -42,14 +42,6 @@ export async function getUserRanking(options?: {
 						  + COALESCE(MAX(CASE WHEN s.anigma_task_type = 2 THEN s.score END), 0)
 						  >= ${ANIGMA_SOLVED_THRESHOLD})
 			),
-			sub_stats AS (
-				SELECT
-					user_id,
-					COUNT(*)::int AS submission_count,
-					COUNT(CASE WHEN verdict = 'accepted' THEN 1 END)::int AS accepted_count
-				FROM submissions
-				GROUP BY user_id
-			),
 			solve_stats AS (
 				SELECT user_id, COUNT(*)::int AS solved_count
 				FROM user_solved
@@ -61,17 +53,17 @@ export async function getUserRanking(options?: {
 				u.name AS "name",
 				u.avatar_url AS "avatarUrl",
 				COALESCE(ss.solved_count, 0)::int AS "solvedCount",
-				COALESCE(subs.submission_count, 0)::int AS "submissionCount",
+				COALESCE(aus.submission_count, 0)::int AS "submissionCount",
 				CASE
-					WHEN COALESCE(subs.submission_count, 0) > 0
+					WHEN COALESCE(aus.effective_submissions, 0) > 0
 					THEN ROUND(
-						COALESCE(subs.accepted_count, 0)::numeric
-						/ subs.submission_count * 100, 1
+						COALESCE(aus.solved_problems, 0)::numeric
+						/ aus.effective_submissions * 100, 1
 					)::text
 					ELSE '0.0'
 				END AS "acceptRate"
 			FROM users u
-			LEFT JOIN sub_stats subs ON subs.user_id = u.id
+			LEFT JOIN ${userAcceptStatsSql()} aus ON aus.user_id = u.id
 			LEFT JOIN solve_stats ss ON ss.user_id = u.id
 			WHERE u.contest_id IS NULL
 				AND u.is_active = true

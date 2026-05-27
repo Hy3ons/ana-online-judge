@@ -131,6 +131,70 @@ export function makeCanonicalSolverStatsSubquery() {
 }
 
 /**
+ * 문제별 "정답률" 집계 subquery를 생성.
+ *
+ * 정답률 = (최초 AC를 친 distinct 유저 수) / Σ(유저별 "최초 AC까지의 제출 수")
+ */
+export function makeAcceptRateStatsSubquery() {
+	// (user, problem) 파티션별 최초 AC submission id를 윈도우 함수로 계산.
+	const ranked = db
+		.select({
+			userId: submissions.userId,
+			problemId: submissions.problemId,
+			id: submissions.id,
+			firstAcId: sql<
+				number | null
+			>`MIN(${submissions.id}) FILTER (WHERE ${submissions.verdict} = 'accepted') OVER (PARTITION BY ${submissions.userId}, ${submissions.problemId})`.as(
+				"first_ac_id"
+			),
+		})
+		.from(submissions)
+		.as("ranked");
+
+	return db
+		.select({
+			problemId: ranked.problemId,
+			totalSubmissions: count().as("total_submissions"),
+			effectiveSubmissions:
+				sql<number>`COUNT(*) FILTER (WHERE ${ranked.firstAcId} IS NULL OR ${ranked.id} <= ${ranked.firstAcId})::int`.as(
+					"effective_submissions"
+				),
+			solvedUsers:
+				sql<number>`COUNT(DISTINCT ${ranked.userId}) FILTER (WHERE ${ranked.firstAcId} IS NOT NULL)::int`.as(
+					"solved_users"
+				),
+		})
+		.from(ranked)
+		.groupBy(ranked.problemId)
+		.as("accept_stats");
+}
+
+/**
+ * 유저별 "정답률" 통계를 계산하는 raw SQL subquery (parenthesized).
+ */
+export function userAcceptStatsSql(userFilter?: SQL): SQL {
+	const whereClause = userFilter ? sql`WHERE ${userFilter}` : sql``;
+	return sql`(
+		SELECT
+			ranked.user_id,
+			COUNT(*)::int AS submission_count,
+			COUNT(*) FILTER (WHERE ranked.first_ac_id IS NULL OR ranked.id <= ranked.first_ac_id)::int
+				AS effective_submissions,
+			COUNT(DISTINCT ranked.problem_id) FILTER (WHERE ranked.first_ac_id IS NOT NULL)::int
+				AS solved_problems
+		FROM (
+			SELECT
+				s.user_id, s.problem_id, s.id,
+				MIN(s.id) FILTER (WHERE s.verdict = 'accepted')
+					OVER (PARTITION BY s.user_id, s.problem_id) AS first_ac_id
+			FROM submissions s
+			${whereClause}
+		) ranked
+		GROUP BY ranked.user_id
+	)`;
+}
+
+/**
  * 한 사용자가 canonical 기준으로 "푼 문제 수"를 반환하는 스칼라 SQL.
  * ranking/profile 등에서 `SELECT ... (this) AS solved_count ...` 형태로 사용.
  */

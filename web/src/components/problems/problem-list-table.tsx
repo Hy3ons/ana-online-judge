@@ -22,7 +22,8 @@ export interface ProblemListRow {
 	useFullJudge?: boolean;
 	isPublic: boolean;
 	submissionCount: number;
-	acceptedCount: number;
+	effectiveSubmissions: number;
+	solvedUsers: number;
 	solverCount: number;
 	tier: number;
 }
@@ -37,9 +38,11 @@ interface Props {
 	numberColumnLabel?: string;
 }
 
-function getAcceptRate(submissionCount: number, acceptedCount: number) {
-	if (submissionCount === 0) return "-";
-	return `${((acceptedCount / submissionCount) * 100).toFixed(1)}%`;
+function getAcceptRate(effectiveSubmissions: number, solvedUsers: number) {
+	const denom = Number(effectiveSubmissions);
+	const num = Number(solvedUsers);
+	if (!Number.isFinite(denom) || denom <= 0 || !Number.isFinite(num)) return "-";
+	return `${((num / denom) * 100).toFixed(1)}%`;
 }
 
 export function ProblemListTable({
@@ -154,7 +157,7 @@ export function ProblemListTable({
 									{problem.solverCount}
 								</TableCell>
 								<TableCell className="text-right text-muted-foreground">
-									{getAcceptRate(problem.submissionCount, problem.acceptedCount)}
+									{getAcceptRate(problem.effectiveSubmissions, problem.solvedUsers)}
 								</TableCell>
 							</TableRow>
 						);
