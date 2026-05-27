@@ -1,0 +1,1 @@
+ALTER TABLE "problems" ADD COLUMN "show_checker_output" boolean DEFAULT false NOT NULL;

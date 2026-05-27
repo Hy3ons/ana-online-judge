@@ -183,6 +183,7 @@ export async function createProblem(data: {
 	problemType?: ProblemType;
 	useFullJudge?: boolean;
 	passThreshold?: number | null;
+	showCheckerOutput: boolean;
 	allowedLanguages?: string[] | null;
 	referenceCodeBuffer?: Buffer | null;
 	solutionCodeBuffer?: Buffer | null;
@@ -230,6 +231,7 @@ export async function createProblem(data: {
 			problemType: data.problemType ?? "icpc",
 			useFullJudge: data.useFullJudge ?? false,
 			passThreshold: data.passThreshold ?? null,
+			showCheckerOutput: data.showCheckerOutput,
 			allowedLanguages: data.allowedLanguages ?? null,
 			referenceCodePath: referenceCodePath,
 			solutionCodePath: solutionCodePath,
@@ -256,6 +258,7 @@ export async function updateProblem(
 		problemType?: ProblemType;
 		useFullJudge?: boolean;
 		passThreshold?: number | null;
+		showCheckerOutput?: boolean;
 		checkerPath?: string | null;
 		validatorPath?: string | null;
 		allowedLanguages?: string[] | null;
@@ -309,6 +312,7 @@ export async function updateProblem(
 		problemType?: ProblemType;
 		useFullJudge?: boolean;
 		passThreshold?: number | null;
+		showCheckerOutput?: boolean;
 		checkerPath?: string | null;
 		validatorPath?: string | null;
 		allowedLanguages?: string[] | null;

@@ -269,6 +269,7 @@ export async function getSubmissionById(id: number) {
 			problemType: problems.problemType,
 			problemIsPublic: problems.isPublic,
 			problemUseFullJudge: problems.useFullJudge,
+			problemShowCheckerOutput: problems.showCheckerOutput,
 			problemTier: problems.tier,
 			maxScore: problems.maxScore,
 			hasSubtasks: problems.hasSubtasks,

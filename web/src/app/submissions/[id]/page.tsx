@@ -58,6 +58,12 @@ export default async function SubmissionDetailPage({ params }: Props) {
 	const isOwnSubmission = currentUserId !== null && submission.userId === currentUserId;
 	const canViewEditDistance = isAdmin || isOwnSubmission;
 
+	// 체커 출력: 제출자에게는 문제 설정(showCheckerOutput)이 켜진 경우에만 공개.
+	// 관리자는 설정과 무관하게 항상 보되, 공개 OFF 상태면 "(admin)" 접두로 표시.
+	const checkerOutputPublic = submission.problemShowCheckerOutput;
+	const canSeeCheckerOutput = isAdmin || checkerOutputPublic;
+	const checkerOutputAdminOnly = isAdmin && !checkerOutputPublic;
+
 	return (
 		<div className="page-container py-8">
 			<PageBreadcrumb
@@ -206,8 +212,9 @@ export default async function SubmissionDetailPage({ params }: Props) {
 															score={submission.score ?? undefined}
 															// maxScore={submission.maxScore}
 														/>
-														{isAdmin && result.checkerMessage && (
+														{canSeeCheckerOutput && result.checkerMessage && (
 															<pre className="text-xs font-mono text-muted-foreground whitespace-pre-wrap max-w-md truncate">
+																{checkerOutputAdminOnly && "(admin) "}
 																{result.checkerMessage}
 															</pre>
 														)}

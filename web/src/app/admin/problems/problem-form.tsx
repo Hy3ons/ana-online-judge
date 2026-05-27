@@ -52,6 +52,7 @@ interface ProblemFormProps {
 		allowedLanguages: string[] | null;
 		useFullJudge: boolean;
 		passThreshold: number | null;
+		showCheckerOutput: boolean;
 	};
 	testcaseCount?: number;
 }
@@ -94,6 +95,9 @@ export function ProblemForm({ problem, testcaseCount }: ProblemFormProps) {
 	const hasSubtasks = problem?.hasSubtasks ?? false;
 	const [useFullJudge, setUseFullJudge] = useState<boolean>(problem?.useFullJudge ?? false);
 	const [passThreshold, setPassThreshold] = useState<number | null>(problem?.passThreshold ?? null);
+	const [showCheckerOutput, setShowCheckerOutput] = useState<boolean>(
+		problem?.showCheckerOutput ?? false
+	);
 	const [pendingAuthors, setPendingAuthors] = useState<StaffUser[]>([]);
 	const [pendingReviewers, setPendingReviewers] = useState<StaffUser[]>([]);
 	const [pendingSources, setPendingSources] = useState<PendingSourceEntry[]>([]);
@@ -147,6 +151,7 @@ export function ProblemForm({ problem, testcaseCount }: ProblemFormProps) {
 			problemType?: "icpc" | "special_judge" | "anigma" | "interactive";
 			useFullJudge: boolean;
 			passThreshold: number | null;
+			showCheckerOutput: boolean;
 			allowedLanguages?: string[] | null;
 			referenceCodeFile?: File | null;
 			solutionCodeFile?: File | null;
@@ -161,6 +166,7 @@ export function ProblemForm({ problem, testcaseCount }: ProblemFormProps) {
 			problemType?: "icpc" | "special_judge" | "anigma" | "interactive";
 			useFullJudge: boolean;
 			passThreshold: number | null;
+			showCheckerOutput: boolean;
 			allowedLanguages?: string[] | null;
 			referenceCodeFile?: File | null;
 			solutionCodeFile?: File | null;
@@ -175,6 +181,11 @@ export function ProblemForm({ problem, testcaseCount }: ProblemFormProps) {
 			problemType,
 			useFullJudge,
 			passThreshold: useFullJudge ? passThreshold : null,
+			// 체커 출력 공개는 스페셜 저지/인터랙티브에만 의미가 있으므로 그 외 유형은 강제 false.
+			showCheckerOutput:
+				problemType === "special_judge" || problemType === "interactive"
+					? showCheckerOutput
+					: false,
 			allowedLanguages: allowedLanguages.length > 0 ? allowedLanguages : null,
 		};
 
@@ -469,16 +480,31 @@ export function ProblemForm({ problem, testcaseCount }: ProblemFormProps) {
 					</div>
 
 					{(problemType === "special_judge" || problemType === "interactive") && (
-						<div className="p-4 border rounded-md bg-muted/50">
+						<div className="p-4 border rounded-md bg-muted/50 space-y-4">
 							<p className="text-sm text-muted-foreground">
 								{problemType === "interactive" ? "인터랙티브" : "스페셜 저지"} 문제입니다. 문제 저장
 								후 &quot;설정&quot; 탭에서 체커를 업로드해주세요.
 							</p>
 							{problem?.checkerPath && (
-								<p className="text-sm text-green-600 mt-2">
+								<p className="text-sm text-green-600">
 									✓ 체커가 설정되어 있습니다: {problem.checkerPath}
 								</p>
 							)}
+							<div className="space-y-2">
+								<div className="flex items-center space-x-2">
+									<Switch
+										id="showCheckerOutput"
+										checked={showCheckerOutput}
+										onCheckedChange={setShowCheckerOutput}
+										disabled={isSubmitting}
+									/>
+									<Label htmlFor="showCheckerOutput">체커 출력 제출자에게 공개</Label>
+								</div>
+								<p className="text-xs text-muted-foreground">
+									끄면(기본값) 체커 출력은 관리자에게만 보입니다. 켜면 제출자도 자신의 제출 상세에서
+									체커 출력을 볼 수 있습니다.
+								</p>
+							</div>
 						</div>
 					)}
 

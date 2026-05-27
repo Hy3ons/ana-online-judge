@@ -32,6 +32,7 @@ export async function createProblem(data: {
 	problemType?: ProblemType;
 	useFullJudge?: boolean;
 	passThreshold?: number | null;
+	showCheckerOutput: boolean;
 	allowedLanguages?: string[] | null;
 	referenceCodeFile?: File | null;
 	solutionCodeFile?: File | null;
@@ -68,6 +69,7 @@ export async function updateProblem(
 		problemType?: ProblemType;
 		useFullJudge?: boolean;
 		passThreshold?: number | null;
+		showCheckerOutput?: boolean;
 		checkerPath?: string | null;
 		validatorPath?: string | null;
 		allowedLanguages?: string[] | null;
