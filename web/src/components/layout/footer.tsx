@@ -56,7 +56,14 @@ export function Footer() {
 							rel="noopener noreferrer"
 							className="hover:text-foreground transition-colors underline underline-offset-2"
 						>
-							조서현 (csh1668)
+							조서현
+						</Link>{" "}
+						문의:{" "}
+						<Link
+							href="mailto:csh1668@gmail.com"
+							className="hover:text-foreground transition-colors underline underline-offset-2"
+						>
+							csh1668@gmail.com
 						</Link>
 					</p>
 					<p className="text-xs text-muted-foreground">
