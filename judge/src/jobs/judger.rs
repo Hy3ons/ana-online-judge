@@ -132,6 +132,19 @@ fn first_failure_verdict(results: &[TestcaseResult]) -> Verdict {
     Verdict::WrongAnswer
 }
 
+fn parse_verdict(s: &str) -> Verdict {
+    match s {
+        "accepted" => Verdict::Accepted,
+        "wrong_answer" => Verdict::WrongAnswer,
+        "time_limit_exceeded" => Verdict::TimeLimitExceeded,
+        "memory_limit_exceeded" => Verdict::MemoryLimitExceeded,
+        "runtime_error" => Verdict::RuntimeError,
+        "presentation_error" => Verdict::PresentationError,
+        "skipped" => Verdict::Skipped,
+        _ => Verdict::SystemError,
+    }
+}
+
 /// Process a judge job
 pub async fn process_judge_job(
     job: &JudgeJob,
@@ -318,18 +331,6 @@ pub async fn process_judge_job(
     let _ = redis
         .publish_progress(job.submission_id, 0, total_testcases)
         .await;
-
-    fn parse_verdict(s: &str) -> Verdict {
-        match s {
-            "accepted" => Verdict::Accepted,
-            "wrong_answer" => Verdict::WrongAnswer,
-            "time_limit_exceeded" => Verdict::TimeLimitExceeded,
-            "memory_limit_exceeded" => Verdict::MemoryLimitExceeded,
-            "runtime_error" => Verdict::RuntimeError,
-            "skipped" => Verdict::Skipped,
-            _ => Verdict::SystemError,
-        }
-    }
 
     let overall_verdict: Verdict;
     let final_score: i64;
@@ -951,6 +952,38 @@ mod tests {
         let job: JudgeJob = serde_json::from_str(json).unwrap();
         assert!(!job.use_full_judge);
         assert_eq!(job.pass_threshold, None);
+    }
+
+    #[test]
+    fn test_parse_verdict_preserves_presentation_error() {
+        // Regression: a special-judge testcase returning PE must aggregate as
+        // PresentationError, not collapse into SystemError.
+        assert_eq!(
+            parse_verdict("presentation_error"),
+            Verdict::PresentationError
+        );
+    }
+
+    #[test]
+    fn test_parse_verdict_known_values() {
+        assert_eq!(parse_verdict("accepted"), Verdict::Accepted);
+        assert_eq!(parse_verdict("wrong_answer"), Verdict::WrongAnswer);
+        assert_eq!(
+            parse_verdict("time_limit_exceeded"),
+            Verdict::TimeLimitExceeded
+        );
+        assert_eq!(
+            parse_verdict("memory_limit_exceeded"),
+            Verdict::MemoryLimitExceeded
+        );
+        assert_eq!(parse_verdict("runtime_error"), Verdict::RuntimeError);
+        assert_eq!(parse_verdict("skipped"), Verdict::Skipped);
+    }
+
+    #[test]
+    fn test_parse_verdict_unknown_defaults_to_system_error() {
+        assert_eq!(parse_verdict("system_error"), Verdict::SystemError);
+        assert_eq!(parse_verdict("nonsense"), Verdict::SystemError);
     }
 
     #[test]
