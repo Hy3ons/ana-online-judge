@@ -75,7 +75,7 @@ export async function upsertVote(input: {
 	isAdmin?: boolean;
 }): Promise<void> {
 	const { userId, problemId, level, comment, isAdmin = false } = input;
-	if (level !== null && (level < 1 || level > 30 || !Number.isInteger(level))) {
+	if (level !== null && (level < 0 || level > 30 || !Number.isInteger(level))) {
 		throw new Error("Invalid level");
 	}
 	const check = await checkCanVote(userId, problemId, isAdmin);

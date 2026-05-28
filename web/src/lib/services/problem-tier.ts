@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { type ProblemType, problems, problemVotes } from "@/db/schema";
 import { PROBLEM_TABLE_SORT_KEYS, type SortOrder } from "@/lib/services/problem-list-sort";
@@ -11,9 +11,11 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * 현재 problem_votes로부터 문제 티어를 재계산해 problems.tier/tierUpdatedAt에 반영한다.
- * - not_ratable 의견(level === null)이 과반이면 tier = -1
- * - 의견 0개면 tier = 0 (unrated)
- * - 그 외: 위/아래 10% 절사(의견 > 5개일 때만) → 시간 가중평균 → round → clamp(1,30)
+ * - level === null 의견은 "난이도 매기지 못하겠음" → 계산에서 제외
+ * - level === 0 의견은 "not_ratable" (PS 문제 아님)
+ * - 유효 의견(level !== null) 중 not_ratable이 50% 이상이면 tier = -1
+ * - 유효 의견이 0개면 tier = 0 (unrated)
+ * - 그 외: level >= 1 의견만 사용해 위/아래 10% 절사(>5개일 때만) → 시간 가중평균 → round → clamp(1,30)
  * 반환: 새 tier 정수
  *
  * NOTE (single-instance assumption): SELECT votes → UPDATE problems가 트랜잭션/락 없이 수행된다.
@@ -24,15 +26,17 @@ export async function recomputeProblemTier(problemId: number): Promise<number> {
 	const votes = await db
 		.select({ level: problemVotes.level, updatedAt: problemVotes.updatedAt })
 		.from(problemVotes)
-		.where(eq(problemVotes.problemId, problemId));
+		.where(and(eq(problemVotes.problemId, problemId), isNotNull(problemVotes.level)));
 
 	let newTier = 0;
 
 	if (votes.length === 0) {
 		newTier = 0;
 	} else {
-		const notRatable = votes.filter((v) => v.level === null);
-		const ratable = votes.filter((v): v is { level: number; updatedAt: Date } => v.level !== null);
+		const notRatable = votes.filter((v) => v.level === 0);
+		const ratable = votes.filter(
+			(v): v is { level: number; updatedAt: Date } => v.level !== null && v.level >= 1
+		);
 
 		if (notRatable.length > votes.length / 2) {
 			newTier = -1;

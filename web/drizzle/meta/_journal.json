@@ -323,6 +323,13 @@
       "when": 1779862786607,
       "tag": "0045_acoustic_hammerhead",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1780000000000,
+      "tag": "0046_lethal_dazzler",
+      "breakpoints": true
     }
   ]
 }

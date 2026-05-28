@@ -176,7 +176,7 @@ export const problemVotes = pgTable(
 		userId: integer("user_id")
 			.references(() => users.id, { onDelete: "cascade" })
 			.notNull(),
-		level: integer("level"), // 1~30, null = not_ratable 의견
+		level: integer("level"), // 1~30 = 난이도 투표, 0 = not_ratable (PS 문제 아님), null = 난이도 매기지 못하겠음 (의견/태그만)
 		comment: text("comment"), // 사용자 의견 텍스트 (nullable)
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at").defaultNow().notNull(),

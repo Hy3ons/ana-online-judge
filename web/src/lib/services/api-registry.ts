@@ -515,9 +515,9 @@ export const endpoints: Endpoint[] = [
 		method: "PUT",
 		path: "problems/:id/votes/:userId",
 		description:
-			"Upsert a user's difficulty vote and algorithm tags. level=1..30 (난이도), null=판단 불가. tagIds 미지정 시 기존 태그 유지.",
+			"Upsert a user's difficulty vote and algorithm tags. level=1..30 (난이도), 0=not_ratable (PS 문제 아님), null=난이도 매기지 못하겠음. tagIds 미지정 시 기존 태그 유지.",
 		body: z.object({
-			level: z.number().int().min(1).max(30).nullable(),
+			level: z.number().int().min(0).max(30).nullable(),
 			comment: z.string().nullable().optional(),
 			tagIds: z.array(z.number().int()).optional(),
 		}),

@@ -18,6 +18,7 @@ import { TagSearchDialog } from "@/components/tags/tag-search-dialog";
 import { TierBadge } from "@/components/tier/tier-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { PaginationLinks } from "@/components/ui/pagination-links";
 import { Textarea } from "@/components/ui/textarea";
 import type { TagWithPath } from "@/lib/services/algorithm-tags";
@@ -30,15 +31,11 @@ interface TierVotePanelProps {
 	data: ProblemVotePanelData;
 }
 
-// Slider 값(0~30) ↔ DB level(null=not_ratable, 1~30)
-function sliderToLevel(v: number): number | null {
-	return v === 0 ? null : v;
-}
+// Slider 값(0~30) ↔ DB level(0=not_ratable, 1~30=정상)
+// level=null은 난이도 매기지 못하겠음
 function levelToSlider(level: number | null | undefined): number {
 	return level == null ? 0 : level;
 }
-
-const DEFAULT_SLIDER_POS = 15; // 미투표 사용자의 기본 슬라이더 위치 (Gold V 근처)
 
 const MAX_TAGS_PER_VOTE = 10;
 
@@ -62,7 +59,10 @@ const TIER_TRACK_GRADIENT = (() => {
 
 export function TierVotePanel({ problemId, currentTier, tierUpdatedAt, data }: TierVotePanelProps) {
 	const [sliderValue, setSliderValue] = useState<number>(
-		data.myVote ? levelToSlider(data.myVote.level) : DEFAULT_SLIDER_POS
+		data.myVote ? levelToSlider(data.myVote.level) : currentTier
+	);
+	const [unsureLevel, setUnsureLevel] = useState<boolean>(
+		data.myVote != null && data.myVote.level === null
 	);
 	const [comment, setComment] = useState<string>(data.myVote?.comment ?? "");
 	const [pending, startTransition] = useTransition();
@@ -133,9 +133,9 @@ export function TierVotePanel({ problemId, currentTier, tierUpdatedAt, data }: T
 	const hasVoted = data.myVote != null;
 	const canVote = data.canVote.ok;
 
-	// 미리보기 tier 정수 (슬라이더 0 → -1=not_ratable, 1~30 → 그대로)
+	// 미리보기 (슬라이더 0 → -1=not_ratable, 1~30 → 그대로; 단 unsureLevel이면 별도 표시)
 	const previewTier = sliderValue === 0 ? -1 : sliderValue;
-	const previewLabel = tierLabel(previewTier, "problem");
+	const previewLabel = unsureLevel ? "" : tierLabel(previewTier, "problem");
 
 	const disabledReason = (() => {
 		if (!data.isLoggedIn) return "로그인 후 AC 받으면 투표할 수 있습니다.";
@@ -156,7 +156,7 @@ export function TierVotePanel({ problemId, currentTier, tierUpdatedAt, data }: T
 			try {
 				await voteOnProblemAction({
 					problemId,
-					level: sliderToLevel(sliderValue),
+					level: unsureLevel ? null : sliderValue,
 					comment: comment.trim() || null,
 					tagIds: tagChips.map((t) => t.id),
 				});
@@ -171,7 +171,8 @@ export function TierVotePanel({ problemId, currentTier, tierUpdatedAt, data }: T
 		startTransition(async () => {
 			try {
 				await removeVoteAction(problemId);
-				setSliderValue(DEFAULT_SLIDER_POS);
+				setSliderValue(currentTier);
+				setUnsureLevel(false);
 				setComment("");
 				setTagChips([]);
 				toast.success("투표를 철회했습니다");
@@ -202,18 +203,28 @@ export function TierVotePanel({ problemId, currentTier, tierUpdatedAt, data }: T
 					<div className="space-y-4">
 						{/* 현재 슬라이더 위치 미리보기 */}
 						<div className="flex items-center justify-center gap-2 text-base font-medium">
-							<TierBadge tier={previewTier} kind="problem" size="md" showTooltip={false} />
-							<span>{previewLabel}</span>
+							<TierBadge
+								tier={unsureLevel ? 0 : previewTier}
+								kind="problem"
+								size="md"
+								showTooltip={false}
+							/>
+							<span className={unsureLevel ? "text-muted-foreground" : undefined}>
+								{previewLabel}
+							</span>
 						</div>
 
 						{/* 슬라이더 (0=N/R, 1~30=Bronze 5~Ruby 1) — 트랙에 티어 그룹 색상 칠 */}
 						<Slider.Root
-							className="relative flex w-full touch-none select-none items-center py-2"
+							className={`relative flex w-full touch-none select-none items-center py-2 ${
+								unsureLevel ? "opacity-40 pointer-events-none" : ""
+							}`}
 							min={0}
 							max={30}
 							step={1}
 							value={[sliderValue]}
 							onValueChange={(v) => setSliderValue(v[0])}
+							disabled={unsureLevel}
 							aria-label="난이도 선택 슬라이더"
 						>
 							<Slider.Track
@@ -222,6 +233,20 @@ export function TierVotePanel({ problemId, currentTier, tierUpdatedAt, data }: T
 							/>
 							<Slider.Thumb className="block h-5 w-5 rounded-full border-2 border-primary bg-background shadow transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" />
 						</Slider.Root>
+
+						<div className="flex items-center gap-2 text-sm">
+							<Checkbox
+								id="vote-unsure-level"
+								checked={unsureLevel}
+								onCheckedChange={(v) => setUnsureLevel(v === true)}
+							/>
+							<label
+								htmlFor="vote-unsure-level"
+								className="cursor-pointer select-none text-muted-foreground"
+							>
+								난이도를 매기지 못하겠음
+							</label>
+						</div>
 
 						<Textarea
 							value={comment}
@@ -297,7 +322,11 @@ export function TierVotePanel({ problemId, currentTier, tierUpdatedAt, data }: T
 									key={v.username}
 									className="flex items-start gap-2 rounded border px-3 py-2 text-sm"
 								>
-									<TierBadge tier={v.level ?? -1} kind="problem" size="sm" />
+									<TierBadge
+										tier={v.level === null ? 0 : v.level === 0 ? -1 : v.level}
+										kind="problem"
+										size="sm"
+									/>
 									<div className="flex-1">
 										<div className="flex items-center gap-2">
 											<span className="font-medium">{v.name}</span>
