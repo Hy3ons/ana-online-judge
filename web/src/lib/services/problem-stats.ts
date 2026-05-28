@@ -1,6 +1,6 @@
 import { and, count, countDistinct, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { type Language, submissions } from "@/db/schema";
+import { type Language, type SubmissionVisibility, submissions } from "@/db/schema";
 import { ANIGMA_SOLVED_THRESHOLD } from "@/lib/services/solved-clause";
 
 export type ProblemStats = {
@@ -20,6 +20,8 @@ export type ProblemRankingItem = {
 	codeLength: number | null;
 	createdAt: Date;
 	bestPassed?: number | null;
+	contestId: number | null;
+	visibility: SubmissionVisibility;
 };
 
 export type ProblemRanking = {
@@ -153,6 +155,8 @@ export async function getProblemRanking(
 			codeLength: number | null;
 			createdAt: Date;
 			bestPassed: number | null;
+			contestId: number | null;
+			visibility: SubmissionVisibility;
 		}>(sql`
 			SELECT
 				best_ac.id,
@@ -163,6 +167,8 @@ export async function getProblemRanking(
 				best_ac."memoryUsed",
 				best_ac."codeLength",
 				best_ac."createdAt",
+				best_ac."contestId",
+				best_ac."visibility",
 				per_user.best_passed AS "bestPassed"
 			FROM (
 				SELECT
@@ -185,7 +191,9 @@ export async function getProblemRanking(
 					s2.execution_time AS "executionTime",
 					s2.memory_used AS "memoryUsed",
 					s2.code_length AS "codeLength",
-					s2.created_at AS "createdAt"
+					s2.created_at AS "createdAt",
+					s2.contest_id AS "contestId",
+					s2.visibility AS "visibility"
 				FROM submissions s2
 				INNER JOIN users u ON s2.user_id = u.id
 				WHERE s2.user_id = per_user.user_id
@@ -193,7 +201,7 @@ export async function getProblemRanking(
 					AND s2.verdict = 'accepted'
 					${languageFilter}
 					${contestFilter}
-				ORDER BY s2.user_id, s2.execution_time ASC NULLS LAST
+				ORDER BY s2.user_id, s2.execution_time ASC NULLS LAST, s2.memory_used ASC NULLS LAST
 				LIMIT 1
 			) best_ac ON TRUE
 			ORDER BY per_user.best_passed DESC, per_user.first_ac_time ASC
@@ -206,8 +214,16 @@ export async function getProblemRanking(
 		};
 	}
 
-	const sortColumnName = sortBy === "executionTime" ? "execution_time" : "code_length";
-	const sortByField = sortBy === "executionTime" ? "executionTime" : "codeLength";
+	// Tiebreaker: when sorting by execution_time, ties are broken by memory_used ASC.
+	// When sorting by code_length, ties are broken by execution_time ASC for stability.
+	const innerOrderBy =
+		sortBy === "executionTime"
+			? sql`s.execution_time ASC NULLS LAST, s.memory_used ASC NULLS LAST`
+			: sql`s.code_length ASC NULLS LAST, s.execution_time ASC NULLS LAST`;
+	const outerOrderBy =
+		sortBy === "executionTime"
+			? sql`sub."executionTime" ASC NULLS LAST, sub."memoryUsed" ASC NULLS LAST`
+			: sql`sub."codeLength" ASC NULLS LAST, sub."executionTime" ASC NULLS LAST`;
 
 	// Get best submission per user using DISTINCT ON, then re-order
 	const result = await db.execute<{
@@ -219,6 +235,8 @@ export async function getProblemRanking(
 		memoryUsed: number | null;
 		codeLength: number | null;
 		createdAt: Date;
+		contestId: number | null;
+		visibility: SubmissionVisibility;
 	}>(sql`
 		SELECT * FROM (
 			SELECT DISTINCT ON (s.user_id)
@@ -229,16 +247,18 @@ export async function getProblemRanking(
 				s.execution_time AS "executionTime",
 				s.memory_used AS "memoryUsed",
 				s.code_length AS "codeLength",
-				s.created_at AS "createdAt"
+				s.created_at AS "createdAt",
+				s.contest_id AS "contestId",
+				s.visibility AS "visibility"
 			FROM submissions s
 			INNER JOIN users u ON s.user_id = u.id
 			WHERE s.problem_id = ${problemId}
 				AND s.verdict = 'accepted'
 				${languageFilter}
 				${contestFilter}
-			ORDER BY s.user_id, s.${sql.raw(sortColumnName)} ASC NULLS LAST
+			ORDER BY s.user_id, ${innerOrderBy}
 		) sub
-		ORDER BY sub.${sql.raw(`"${sortByField}"`)} ASC NULLS LAST
+		ORDER BY ${outerOrderBy}
 		LIMIT ${limit} OFFSET ${offset}
 	`);
 

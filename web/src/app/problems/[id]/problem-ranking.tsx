@@ -1,7 +1,9 @@
 "use client";
 
+import { ChevronRight, Download } from "lucide-react";
+import Link from "next/link";
 import { useState, useTransition } from "react";
-import { getProblemRanking } from "@/actions/problem-stats";
+import { getProblemRanking, type ProblemRankingItemWithAccess } from "@/actions/problem-stats";
 import { LANGUAGE_LABELS } from "@/components/submissions/submission-row";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,18 +22,28 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getLanguageOptions } from "@/lib/languages";
-import type { ProblemRankingItem } from "@/lib/services/problem-stats";
 
 interface ProblemRankingProps {
 	problemId: number;
-	initialRankings: ProblemRankingItem[];
+	initialRankings: ProblemRankingItemWithAccess[];
 	initialTotal: number;
 	currentUserId?: number | null;
 	contestId?: number;
 	useFullJudge?: boolean;
 	totalTestcases?: number;
 }
+
+const ACCESS_DENIED_LABELS: Record<string, string> = {
+	contest_running: "대회 진행 중인 제출",
+	contest_submission: "대회 제출은 비공개",
+	anonymous: "로그인 후 열람 가능",
+	not_solved: "이 문제를 풀어야 열람 가능",
+	private: "비공개 제출",
+	not_yet_ac: "아직 만점이 아닌 제출",
+	judging: "채점 중",
+};
 
 export function ProblemRanking({
 	problemId,
@@ -65,10 +77,11 @@ export function ProblemRanking({
 		});
 	};
 
-	const handleSortChange = (value: "executionTime" | "codeLength") => {
-		setSortBy(value);
+	const handleSortChange = (value: string) => {
+		const next = value as "executionTime" | "codeLength";
+		setSortBy(next);
 		setPage(1);
-		reload(value, language, 1);
+		reload(next, language, 1);
 	};
 
 	const handleLanguageChange = (value: string) => {
@@ -92,18 +105,15 @@ export function ProblemRanking({
 	return (
 		<div>
 			{/* Filters */}
-			<div className="flex items-center gap-3 mb-4">
+			<div className="flex flex-wrap items-center gap-3 mb-4">
 				{!useFullJudge && (
 					<>
-						<Select value={sortBy} onValueChange={handleSortChange}>
-							<SelectTrigger className="w-[140px]">
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="executionTime">실행 시간순</SelectItem>
-								<SelectItem value="codeLength">코드 길이순</SelectItem>
-							</SelectContent>
-						</Select>
+						<Tabs value={sortBy} onValueChange={handleSortChange}>
+							<TabsList>
+								<TabsTrigger value="executionTime">실행 시간</TabsTrigger>
+								<TabsTrigger value="codeLength">숏코딩</TabsTrigger>
+							</TabsList>
+						</Tabs>
 
 						<Select value={language} onValueChange={handleLanguageChange}>
 							<SelectTrigger className="w-[120px]">
@@ -137,20 +147,41 @@ export function ProblemRanking({
 				<Table>
 					<TableHeader>
 						<TableRow>
+							<TableHead className="w-[80px]">#</TableHead>
 							<TableHead className="w-[60px]">순위</TableHead>
 							<TableHead className="w-[120px]">사용자</TableHead>
 							<TableHead className="w-[80px]">언어</TableHead>
 							<TableHead className="w-[80px] text-right">시간</TableHead>
 							<TableHead className="w-[80px] text-right">메모리</TableHead>
 							<TableHead className="w-[80px] text-right">코드 길이</TableHead>
+							<TableHead className="w-[100px]" />
 						</TableRow>
 					</TableHeader>
 					<TableBody>
 						{rankings.map((item, idx) => {
 							const rank = (page - 1) * limit + idx + 1;
 							const isMe = currentUserId !== null && item.userId === currentUserId;
+							const canAccessDetail = item.codeAccess.allowed;
+							const deniedReason = !item.codeAccess.allowed ? item.codeAccess.reason : null;
 							return (
 								<TableRow key={item.id} className={isMe ? "bg-primary/5" : ""}>
+									<TableCell>
+										{canAccessDetail ? (
+											<Link
+												href={`/submissions/${item.id}`}
+												className="font-mono text-primary hover:underline"
+											>
+												{item.id}
+											</Link>
+										) : (
+											<span
+												className="font-mono text-muted-foreground/60"
+												title={deniedReason ? ACCESS_DENIED_LABELS[deniedReason] : undefined}
+											>
+												{item.id}
+											</span>
+										)}
+									</TableCell>
 									<TableCell className="font-mono">
 										{rank === 1
 											? "\u{1F947}"
@@ -188,6 +219,31 @@ export function ProblemRanking({
 									</TableCell>
 									<TableCell className="text-right text-muted-foreground">
 										{item.codeLength !== null ? `${item.codeLength}B` : "-"}
+									</TableCell>
+									<TableCell className="text-right">
+										<div className="flex items-center justify-end gap-2">
+											{canAccessDetail && (
+												<>
+													<Button
+														variant="ghost"
+														size="icon"
+														className="h-8 w-8"
+														onClick={() => {
+															window.location.href = `/api/submissions/${item.id}/download`;
+														}}
+														title="파일 다운로드"
+													>
+														<Download className="h-4 w-4" />
+													</Button>
+													<Link
+														href={`/submissions/${item.id}`}
+														className="inline-flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"
+													>
+														<ChevronRight className="h-4 w-4" />
+													</Link>
+												</>
+											)}
+										</div>
 									</TableCell>
 								</TableRow>
 							);

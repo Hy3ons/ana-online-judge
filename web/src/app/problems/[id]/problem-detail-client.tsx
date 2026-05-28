@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
+import type { ProblemRankingItemWithAccess } from "@/actions/problem-stats";
 import type { ProblemVotePanelData } from "@/actions/problem-votes";
 import type { SubmissionListItem } from "@/actions/submissions";
 import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
@@ -14,7 +15,7 @@ import { UserNameDisplay } from "@/components/user-name-display";
 import type { ExternalSite, ProblemType } from "@/db/schema";
 import { useProblemLayout } from "@/hooks/use-problem-layout";
 import type { TagWithPath } from "@/lib/services/algorithm-tags";
-import type { ProblemRankingItem, ProblemStats } from "@/lib/services/problem-stats";
+import type { ProblemStats } from "@/lib/services/problem-stats";
 import { AllSubmissions } from "./all-submissions";
 import { LayoutToggle } from "./layout-toggle";
 import { MySubmissions } from "./my-submissions";
@@ -57,7 +58,7 @@ interface ProblemDetailClientProps {
 	stats: ProblemStats;
 	mySubmissions: SubmissionListItem[];
 	allSubmissions: { submissions: SubmissionListItem[]; total: number };
-	rankings: { rankings: ProblemRankingItem[]; total: number };
+	rankings: { rankings: ProblemRankingItemWithAccess[]; total: number };
 	currentUserId: number | null;
 	isAdmin: boolean;
 	contestId?: number;
