@@ -3,7 +3,7 @@ import { checkRateLimit, extractClientIp, rateLimitHeaders } from "@/lib/rate-li
 import { dispatchApiRequest } from "@/lib/services/api-router";
 import { publicEndpoints } from "@/lib/services/public-api-registry";
 
-const DEFAULT_PER_MINUTE = 60;
+const DEFAULT_PER_MINUTE = 600;
 const WINDOW_MS = 60_000;
 
 type RouteParams = { params: Promise<{ path: string[] }> };
