@@ -2,7 +2,7 @@
 
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { type ExternalSite, submissions, submissionViews, users } from "@/db/schema";
+import { type ExternalSite, problems, submissions, submissionViews, users } from "@/db/schema";
 import { getSessionInfo } from "@/lib/auth-utils";
 import { userDisplayHandle, userDisplayJoin } from "@/lib/db/user-display";
 import { createNotification } from "@/lib/services/notifications";
@@ -23,8 +23,10 @@ export async function recordSubmissionView(submissionId: number): Promise<void> 
 			contestId: submissions.contestId,
 			visibility: submissions.visibility,
 			verdict: submissions.verdict,
+			problemTitle: problems.displayTitle,
 		})
 		.from(submissions)
+		.innerJoin(problems, eq(problems.id, submissions.problemId))
 		.where(eq(submissions.id, submissionId))
 		.limit(1);
 	if (!sub) return;
@@ -52,7 +54,7 @@ export async function recordSubmissionView(submissionId: number): Promise<void> 
 		.where(eq(users.id, userId))
 		.limit(1);
 	const viewerName = viewer?.name || viewer?.username || "누군가";
-	const body = `[${viewerName}](/profile/${viewer?.username ?? ""})님이 회원님의 [제출 #${submissionId}](/submissions/${submissionId})을 확인했습니다.`;
+	const body = `[${viewerName}](/profile/${viewer?.username ?? ""})님이 회원님의 [${sub.problemTitle}](/problems/${sub.problemId}) 문제에 대한 [제출 #${submissionId}](/submissions/${submissionId})을 확인했습니다.`;
 	await createNotification(sub.userId, "submission_viewed", body);
 }
 

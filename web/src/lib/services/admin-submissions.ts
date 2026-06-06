@@ -304,6 +304,7 @@ export async function rejudgeSubmissionsByIds(
 			id: submissions.id,
 			userId: submissions.userId,
 			problemId: submissions.problemId,
+			problemTitle: problems.displayTitle,
 			code: submissions.code,
 			language: submissions.language,
 			verdict: submissions.verdict,
@@ -413,20 +414,33 @@ export async function rejudgeSubmissionsByIds(
 		enqueued++;
 	}
 
-	// 사용자별 알림 1건(배치 단위로 묶음). targets(실제 enqueue된 것)만 대상.
-	const byUser = new Map<number, number[]>();
+	// 사용자·문제별 알림 1건. targets(실제 enqueue된 것)만 대상.
+	const byUserProblem = new Map<
+		string,
+		{ userId: number; problemId: number; problemTitle: string; subIds: number[] }
+	>();
 	for (const t of targets) {
-		const arr = byUser.get(t.userId) ?? [];
-		arr.push(t.id);
-		byUser.set(t.userId, arr);
+		const key = `${t.userId}:${t.problemId}`;
+		const entry = byUserProblem.get(key) ?? {
+			userId: t.userId,
+			problemId: t.problemId,
+			problemTitle: t.problemTitle,
+			subIds: [],
+		};
+		entry.subIds.push(t.id);
+		byUserProblem.set(key, entry);
 	}
-	const notifRows = [...byUser.entries()].map(([userId, subIds]) => {
-		const body =
-			subIds.length === 1
-				? `회원님의 [제출 #${subIds[0]}](/submissions/${subIds[0]})이 재채점되었습니다. (사유: ${opts.reason})`
-				: `회원님의 [제출 ${subIds.length}건](/submissions?me=true)이 재채점되었습니다. (사유: ${opts.reason})`;
-		return { userId, type: "rejudge" as const, body };
-	});
+	const notifRows = [...byUserProblem.values()].map(
+		({ userId, problemId, problemTitle, subIds }) => {
+			const problemLink = `[${problemTitle}](/problems/${problemId})`;
+			const subRef =
+				subIds.length === 1
+					? `[제출 #${subIds[0]}](/submissions/${subIds[0]})`
+					: `[제출 ${subIds.length}건](/submissions?me=true)`;
+			const body = `${problemLink} 문제가 재채점되었습니다. (${subRef}, 사유: ${opts.reason})`;
+			return { userId, type: "rejudge" as const, body };
+		}
+	);
 	await createNotificationsBulk(notifRows);
 
 	return { enqueued, skipped };

@@ -9,16 +9,16 @@ import {
 
 export function NotificationsList({ initial }: { initial: NotificationItemData[] }) {
 	// 진입 시점에 미확인이던 것만 하이라이트로 고정.
-	const [highlightIds] = useState<Set<number>>(
+	const [newIds] = useState<Set<number>>(
 		() => new Set(initial.filter((n) => n.readAt === null).map((n) => n.id))
 	);
 	const done = useRef(false);
 	useEffect(() => {
 		if (done.current) return;
 		done.current = true;
-		const ids = [...highlightIds];
+		const ids = [...newIds];
 		if (ids.length > 0) markNotificationsReadAction(ids);
-	}, [highlightIds]);
+	}, [newIds]);
 
 	if (initial.length === 0) {
 		return (
@@ -28,7 +28,7 @@ export function NotificationsList({ initial }: { initial: NotificationItemData[]
 	return (
 		<div>
 			{initial.map((n) => (
-				<NotificationItem key={n.id} data={n} highlight={highlightIds.has(n.id)} />
+				<NotificationItem key={n.id} data={n} alreadyRead={!newIds.has(n.id)} />
 			))}
 		</div>
 	);

@@ -26,7 +26,7 @@ export function NotificationBell() {
 	const { status } = useSession();
 	const [unread, setUnread] = useState(0);
 	const [items, setItems] = useState<NotificationItemData[]>([]);
-	const [highlightIds, setHighlightIds] = useState<Set<number>>(new Set());
+	const [newIds, setNewIds] = useState<Set<number>>(new Set());
 
 	const refreshCount = useCallback(async () => {
 		if (document.visibilityState !== "visible") return;
@@ -57,7 +57,7 @@ export function NotificationBell() {
 		}));
 		const freshUnread = data.filter((n) => n.readAt === null).map((n) => n.id);
 		setItems(data);
-		setHighlightIds(new Set(freshUnread));
+		setNewIds(new Set(freshUnread));
 		if (freshUnread.length > 0) {
 			await markNotificationsReadAction(freshUnread);
 			setUnread(0);
@@ -92,7 +92,7 @@ export function NotificationBell() {
 						</div>
 					) : (
 						items.map((n) => (
-							<NotificationItem key={n.id} data={n} highlight={highlightIds.has(n.id)} />
+							<NotificationItem key={n.id} data={n} alreadyRead={!newIds.has(n.id)} />
 						))
 					)}
 				</div>
