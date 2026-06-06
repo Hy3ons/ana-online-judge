@@ -21,6 +21,7 @@ import { LayoutToggle } from "./layout-toggle";
 import { MySubmissions } from "./my-submissions";
 import { ProblemRanking } from "./problem-ranking";
 import { ProblemStatsBar } from "./problem-stats-bar";
+import { RejudgeHistoryPanel } from "./rejudge-history-panel";
 import { ProblemSubmitSection } from "./submit-section";
 import { TagsRevealRow } from "./tags-reveal-row";
 import { TierVotePanel } from "./tier-vote-panel";
@@ -156,6 +157,8 @@ export function ProblemDetailClient({
 		/>
 	);
 
+	const rejudgeSection = <RejudgeHistoryPanel problemId={problem.id} />;
+
 	const showFullJudgeNotice = Boolean(
 		problem.useFullJudge && problem.passThreshold && problem.totalTestcases
 	);
@@ -288,6 +291,7 @@ export function ProblemDetailClient({
 								<TabsTrigger value="vote">난이도 투표</TabsTrigger>
 								<TabsTrigger value="all">전체 제출</TabsTrigger>
 								<TabsTrigger value="ranking">맞은 사람</TabsTrigger>
+								{isAdmin && <TabsTrigger value="rejudge">재채점</TabsTrigger>}
 							</TabsList>
 							<div className="flex-1 overflow-y-auto mt-2">
 								<TabsContent
@@ -315,6 +319,16 @@ export function ProblemDetailClient({
 								<TabsContent forceMount value="all" className="mt-0" hidden={activeTab !== "all"}>
 									{allSubmissionsSection}
 								</TabsContent>
+								{isAdmin && (
+									<TabsContent
+										forceMount
+										value="rejudge"
+										className="mt-0"
+										hidden={activeTab !== "rejudge"}
+									>
+										{rejudgeSection}
+									</TabsContent>
+								)}
 							</div>
 						</Tabs>
 					</div>
@@ -373,6 +387,15 @@ export function ProblemDetailClient({
 				</CardHeader>
 				<CardContent>{allSubmissionsSection}</CardContent>
 			</Card>
+
+			{isAdmin && (
+				<Card>
+					<CardHeader>
+						<CardTitle>재채점</CardTitle>
+					</CardHeader>
+					<CardContent>{rejudgeSection}</CardContent>
+				</Card>
+			)}
 		</div>
 	);
 }
