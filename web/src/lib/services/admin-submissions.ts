@@ -32,6 +32,10 @@ export type AdminSubmissionFilter = {
 	dateFrom?: Date;
 	dateTo?: Date;
 	visibility?: AdminSubmissionVisibilityFilter;
+	// 특정 재채점 배치의 멤버십으로 필터(before/after 단계의 verdict 기준).
+	rejudgeBatchId?: number;
+	rejudgePhase?: "before" | "after";
+	rejudgeVerdict?: Verdict;
 };
 
 export type AdminSubmissionsSort = "id" | "createdAt" | "executionTime" | "memoryUsed";
@@ -66,6 +70,19 @@ export function buildSubmissionFilterWhere(filter: AdminSubmissionFilter): SQL |
 	}
 	if (filter.visibility && filter.visibility !== "all") {
 		conds.push(eq(submissions.visibility, filter.visibility));
+	}
+	if (filter.rejudgeBatchId !== undefined && filter.rejudgeVerdict !== undefined) {
+		const col =
+			filter.rejudgePhase === "before"
+				? rejudgeBatchItems.beforeVerdict
+				: rejudgeBatchItems.afterVerdict;
+		const sub = db
+			.select({ submissionId: rejudgeBatchItems.submissionId })
+			.from(rejudgeBatchItems)
+			.where(
+				and(eq(rejudgeBatchItems.batchId, filter.rejudgeBatchId), eq(col, filter.rejudgeVerdict))
+			);
+		conds.push(inArray(submissions.id, sub));
 	}
 	return conds.length > 0 ? and(...conds) : undefined;
 }
@@ -151,6 +168,9 @@ export function parseAdminSubmissionFilter(params: {
 	dateFrom?: string;
 	dateTo?: string;
 	visibility?: string;
+	rejudgeBatch?: string;
+	phase?: string;
+	verdict?: string;
 }): AdminSubmissionFilter {
 	const userIds = params.userIds
 		? params.userIds
@@ -188,6 +208,17 @@ export function parseAdminSubmissionFilter(params: {
 	else if (params.visibility && visSet.has(params.visibility))
 		visibility = params.visibility as SubmissionVisibility;
 
+	// 재채점 배치 멤버십 필터. rejudgeBatch가 있으면 verdict(단수)는 배치 단계의 결과로 해석한다.
+	let rejudgeBatchId: number | undefined;
+	if (params.rejudgeBatch) {
+		const n = Number.parseInt(params.rejudgeBatch, 10);
+		if (Number.isFinite(n)) rejudgeBatchId = n;
+	}
+	const rejudgePhase =
+		params.phase === "before" || params.phase === "after" ? params.phase : undefined;
+	const rejudgeVerdict =
+		params.verdict && verdictSet.has(params.verdict) ? (params.verdict as Verdict) : undefined;
+
 	return {
 		userIds: userIds && userIds.length > 0 ? userIds : undefined,
 		problemId: problemId && Number.isFinite(problemId) ? problemId : undefined,
@@ -197,6 +228,9 @@ export function parseAdminSubmissionFilter(params: {
 		dateFrom,
 		dateTo,
 		visibility,
+		rejudgeBatchId,
+		rejudgePhase,
+		rejudgeVerdict,
 	};
 }
 
@@ -464,4 +498,57 @@ export async function updateRejudgeBatchItemResult(
 		.update(rejudgeBatchItems)
 		.set({ afterVerdict: verdict })
 		.where(eq(rejudgeBatchItems.id, open.id));
+}
+
+export type RejudgeHistoryEntry = {
+	batchId: number;
+	reason: string;
+	adminName: string | null;
+	createdAt: Date;
+	total: number;
+	beforeCounts: Record<string, number>;
+	afterCounts: Record<string, number>;
+};
+
+/**
+ * 특정 문제에 대한 재채점 이력을 배치별로 반환한다(최신순). 각 배치마다 이 문제에
+ * 해당하는 아이템들의 before/after verdict 분포를 집계한다.
+ */
+export async function getRejudgeHistoryForProblem(
+	problemId: number
+): Promise<RejudgeHistoryEntry[]> {
+	const batches = await db
+		.select({
+			batchId: rejudgeBatches.id,
+			reason: rejudgeBatches.reason,
+			adminName: users.name,
+			createdAt: rejudgeBatches.createdAt,
+		})
+		.from(rejudgeBatchItems)
+		.innerJoin(rejudgeBatches, eq(rejudgeBatches.id, rejudgeBatchItems.batchId))
+		.leftJoin(users, eq(users.id, rejudgeBatches.adminId))
+		.where(eq(rejudgeBatchItems.problemId, problemId))
+		.groupBy(rejudgeBatches.id, users.name)
+		.orderBy(desc(rejudgeBatches.createdAt));
+
+	const result: RejudgeHistoryEntry[] = [];
+	for (const b of batches) {
+		const items = await db
+			.select({
+				beforeVerdict: rejudgeBatchItems.beforeVerdict,
+				afterVerdict: rejudgeBatchItems.afterVerdict,
+			})
+			.from(rejudgeBatchItems)
+			.where(
+				and(eq(rejudgeBatchItems.batchId, b.batchId), eq(rejudgeBatchItems.problemId, problemId))
+			);
+		const beforeCounts: Record<string, number> = {};
+		const afterCounts: Record<string, number> = {};
+		for (const it of items) {
+			beforeCounts[it.beforeVerdict] = (beforeCounts[it.beforeVerdict] ?? 0) + 1;
+			afterCounts[it.afterVerdict] = (afterCounts[it.afterVerdict] ?? 0) + 1;
+		}
+		result.push({ ...b, total: items.length, beforeCounts, afterCounts });
+	}
+	return result;
 }

@@ -30,6 +30,9 @@ export default async function AdminSubmissionsPage({
 		dateFrom?: string;
 		dateTo?: string;
 		visibility?: string;
+		rejudgeBatch?: string;
+		phase?: string;
+		verdict?: string;
 		sort?: AdminSubmissionsSort;
 		order?: "asc" | "desc";
 	}>;
@@ -57,6 +60,9 @@ export default async function AdminSubmissionsPage({
 			"dateFrom",
 			"dateTo",
 			"visibility",
+			"rejudgeBatch",
+			"phase",
+			"verdict",
 			"sort",
 			"order",
 		] as const) {

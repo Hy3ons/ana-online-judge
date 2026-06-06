@@ -22,6 +22,11 @@ export async function countAdminSubmissionsAction(filter: svc.AdminSubmissionFil
 	return svc.countSubmissionsByFilter(filter);
 }
 
+export async function getRejudgeHistoryAction(problemId: number) {
+	await requireAdmin();
+	return svc.getRejudgeHistoryForProblem(problemId);
+}
+
 export async function rejudgeByIdsAction(ids: number[], reason: string) {
 	const admin = await requireAdmin();
 	const adminId = Number.parseInt(admin.id, 10);
