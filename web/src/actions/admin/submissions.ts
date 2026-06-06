@@ -22,16 +22,18 @@ export async function countAdminSubmissionsAction(filter: svc.AdminSubmissionFil
 	return svc.countSubmissionsByFilter(filter);
 }
 
-export async function rejudgeByIdsAction(ids: number[]) {
-	await requireAdmin();
-	const result = await svc.rejudgeSubmissionsByIds(ids);
+export async function rejudgeByIdsAction(ids: number[], reason: string) {
+	const admin = await requireAdmin();
+	const adminId = Number.parseInt(admin.id, 10);
+	const result = await svc.rejudgeSubmissionsByIds(ids, { reason, adminId });
 	revalidatePath("/admin/submissions");
 	return result;
 }
 
-export async function rejudgeByFilterAction(filter: svc.AdminSubmissionFilter) {
-	await requireAdmin();
-	const result = await svc.rejudgeSubmissionsByFilter(filter);
+export async function rejudgeByFilterAction(filter: svc.AdminSubmissionFilter, reason: string) {
+	const admin = await requireAdmin();
+	const adminId = Number.parseInt(admin.id, 10);
+	const result = await svc.rejudgeSubmissionsByFilter(filter, { reason, adminId });
 	revalidatePath("/admin/submissions");
 	return result;
 }

@@ -5,6 +5,7 @@ import { Redis } from "ioredis";
 import { db } from "@/db";
 import { submissionResults, submissions, type Verdict } from "@/db/schema";
 import { serverEnv } from "@/lib/env";
+import { updateRejudgeBatchItemResult } from "@/lib/services/admin-submissions";
 import { notifySubmissionUpdate } from "./sse-manager";
 
 interface JudgeResult {
@@ -139,6 +140,9 @@ class RedisSubscriber {
 			}
 
 			await db.update(submissions).set(updateValues).where(eq(submissions.id, submissionId));
+
+			// 재채점 배치 이력의 afterVerdict 갱신(재채점이 아니면 no-op)
+			await updateRejudgeBatchItemResult(submissionId, result.verdict as Verdict);
 
 			// Insert testcase results
 			if (result.testcase_results && result.testcase_results.length > 0) {

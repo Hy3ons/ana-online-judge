@@ -36,10 +36,12 @@ export function RejudgeShell({
 		deleteMode === "selected" ? sel.rowIds.size : deleteMode === "filter" ? totalCount : 0;
 
 	const onConfirm = async () => {
+		// 사유 입력 UI는 후속 작업(Task 4.4)에서 추가된다. 그 전까지 기본 사유를 전달한다.
+		const reason = "관리자 재채점";
 		if (dialogMode === "selected") {
-			return rejudgeByIdsAction(Array.from(sel.rowIds));
+			return rejudgeByIdsAction(Array.from(sel.rowIds), reason);
 		}
-		return rejudgeByFilterAction(filter);
+		return rejudgeByFilterAction(filter, reason);
 	};
 
 	const onConfirmDelete = async () => {
