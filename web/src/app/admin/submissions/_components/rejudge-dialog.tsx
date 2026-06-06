@@ -13,15 +13,21 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 export function RejudgeDialog({
 	open,
 	count,
+	reason,
+	onReasonChange,
 	onCancel,
 	onConfirm,
 }: {
 	open: boolean;
 	count: number;
+	reason: string;
+	onReasonChange: (v: string) => void;
 	onCancel: () => void;
 	onConfirm: () => Promise<RejudgeResult>;
 }) {
@@ -64,10 +70,23 @@ export function RejudgeDialog({
 							</p>
 						</div>
 					</AlertDialogDescription>
+					<div className="space-y-2 pt-2">
+						<Label htmlFor="rejudge-reason">재채점 사유 *</Label>
+						<Textarea
+							id="rejudge-reason"
+							value={reason}
+							onChange={(e) => onReasonChange(e.target.value)}
+							placeholder="재채점 사유를 입력하세요 (사용자 알림에 포함됩니다)"
+							rows={3}
+						/>
+					</div>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
 					<AlertDialogCancel disabled={pending || busy}>취소</AlertDialogCancel>
-					<AlertDialogAction onClick={handleConfirm} disabled={pending || busy}>
+					<AlertDialogAction
+						onClick={handleConfirm}
+						disabled={pending || busy || reason.trim().length === 0}
+					>
 						{pending || busy ? "처리 중..." : "재채점"}
 					</AlertDialogAction>
 				</AlertDialogFooter>
