@@ -12,6 +12,7 @@ import {
 	serial,
 	text,
 	timestamp,
+	unique,
 	uniqueIndex,
 	uuid,
 } from "drizzle-orm/pg-core";
@@ -978,6 +979,83 @@ export const userApiTokens = pgTable(
 	})
 );
 
+// =========================
+// Notifications tables
+// =========================
+
+export const notificationTypeEnum = pgEnum("notification_type", [
+	"submission_viewed",
+	"rejudge",
+	"admin_announcement",
+	"board_comment",
+]);
+
+export const notifications = pgTable(
+	"notifications",
+	{
+		id: serial("id").primaryKey(),
+		userId: integer("user_id")
+			.references(() => users.id, { onDelete: "cascade" })
+			.notNull(),
+		type: notificationTypeEnum("type").notNull(),
+		body: text("body").notNull(),
+		readAt: timestamp("read_at"),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+	},
+	(t) => ({
+		userCreatedIdx: index("notifications_user_created_idx").on(t.userId, t.createdAt),
+		userReadIdx: index("notifications_user_read_idx").on(t.userId, t.readAt),
+	})
+);
+
+export const submissionViews = pgTable(
+	"submission_views",
+	{
+		id: serial("id").primaryKey(),
+		submissionId: integer("submission_id")
+			.references(() => submissions.id, { onDelete: "cascade" })
+			.notNull(),
+		viewerId: integer("viewer_id")
+			.references(() => users.id, { onDelete: "cascade" })
+			.notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+	},
+	(t) => ({
+		uniqViewer: unique("submission_views_submission_viewer_uniq").on(t.submissionId, t.viewerId),
+	})
+);
+
+export const rejudgeBatches = pgTable("rejudge_batches", {
+	id: serial("id").primaryKey(),
+	adminId: integer("admin_id")
+		.references(() => users.id)
+		.notNull(),
+	reason: text("reason").notNull(),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const rejudgeBatchItems = pgTable(
+	"rejudge_batch_items",
+	{
+		id: serial("id").primaryKey(),
+		batchId: integer("batch_id")
+			.references(() => rejudgeBatches.id, { onDelete: "cascade" })
+			.notNull(),
+		submissionId: integer("submission_id")
+			.references(() => submissions.id, { onDelete: "cascade" })
+			.notNull(),
+		problemId: integer("problem_id")
+			.references(() => problems.id, { onDelete: "cascade" })
+			.notNull(),
+		beforeVerdict: verdictEnum("before_verdict").notNull(),
+		afterVerdict: verdictEnum("after_verdict").default("pending").notNull(),
+	},
+	(t) => ({
+		problemBatchIdx: index("rejudge_items_problem_batch_idx").on(t.problemId, t.batchId),
+		submissionIdx: index("rejudge_items_submission_idx").on(t.submissionId),
+	})
+);
+
 // Type exports for insert/select
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -1055,6 +1133,11 @@ export type UserExternalHandle = typeof userExternalHandles.$inferSelect;
 export type NewUserExternalHandle = typeof userExternalHandles.$inferInsert;
 export type UserApiToken = typeof userApiTokens.$inferSelect;
 export type NewUserApiToken = typeof userApiTokens.$inferInsert;
+export type Notification = typeof notifications.$inferSelect;
+export type NotificationType = (typeof notificationTypeEnum.enumValues)[number];
+export type SubmissionView = typeof submissionViews.$inferSelect;
+export type RejudgeBatch = typeof rejudgeBatches.$inferSelect;
+export type RejudgeBatchItem = typeof rejudgeBatchItems.$inferSelect;
 
 export type UserRole = (typeof userRoleEnum.enumValues)[number];
 export type Verdict = (typeof verdictEnum.enumValues)[number];

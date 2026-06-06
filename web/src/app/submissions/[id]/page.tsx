@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSubmissionById } from "@/actions/submissions";
+import { getSubmissionViewers } from "@/actions/submissions/views";
 import { auth } from "@/auth";
 import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
 import { CodeEditor } from "@/components/problems/code-editor";
@@ -18,8 +19,10 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { RecordView } from "./record-view";
 import { SubmissionCodeBlocked } from "./submission-code-blocked";
 import { SubmissionStatus } from "./submission-status";
+import { ViewerList } from "./viewer-list";
 import { VisibilityControl } from "./visibility-control";
 
 function groupBySubtask<T extends { subtaskGroup: number | null }>(rows: T[]): T[][] {
@@ -65,7 +68,8 @@ export default async function SubmissionDetailPage({ params }: Props) {
 	const checkerOutputAdminOnly = isAdmin && !checkerOutputPublic;
 
 	return (
-		<div className="page-container py-8">
+		<div className="page-container py-8 space-y-6">
+			{submission.codeAccess.allowed && <RecordView submissionId={submission.id} />}
 			<PageBreadcrumb
 				items={[{ label: "제출 현황", href: "/submissions" }, { label: `#${submission.id}` }]}
 			/>
@@ -235,6 +239,10 @@ export default async function SubmissionDetailPage({ params }: Props) {
 					)}
 				</CardContent>
 			</Card>
+
+			{(isOwnSubmission || isAdmin) && (
+				<ViewerList viewers={await getSubmissionViewers(submission.id)} />
+			)}
 		</div>
 	);
 }

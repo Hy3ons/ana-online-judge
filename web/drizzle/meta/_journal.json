@@ -330,6 +330,13 @@
       "when": 1780000000000,
       "tag": "0046_lethal_dazzler",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1780729574148,
+      "tag": "0047_happy_betty_ross",
+      "breakpoints": true
     }
   ]
 }

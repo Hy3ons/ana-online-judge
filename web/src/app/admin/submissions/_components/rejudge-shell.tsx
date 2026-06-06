@@ -29,6 +29,7 @@ export function RejudgeShell({
 	const sel = useSelection();
 	const [dialogMode, setDialogMode] = useState<Mode>(null);
 	const [deleteMode, setDeleteMode] = useState<Mode>(null);
+	const [reason, setReason] = useState("");
 
 	const dialogCount =
 		dialogMode === "selected" ? sel.rowIds.size : dialogMode === "filter" ? totalCount : 0;
@@ -37,9 +38,9 @@ export function RejudgeShell({
 
 	const onConfirm = async () => {
 		if (dialogMode === "selected") {
-			return rejudgeByIdsAction(Array.from(sel.rowIds));
+			return rejudgeByIdsAction(Array.from(sel.rowIds), reason);
 		}
-		return rejudgeByFilterAction(filter);
+		return rejudgeByFilterAction(filter, reason);
 	};
 
 	const onConfirmDelete = async () => {
@@ -53,6 +54,7 @@ export function RejudgeShell({
 	const close = () => {
 		setDialogMode(null);
 		setDeleteMode(null);
+		setReason("");
 		sel.clear();
 		router.refresh();
 	};
@@ -82,6 +84,8 @@ export function RejudgeShell({
 			<RejudgeDialog
 				open={dialogMode !== null}
 				count={dialogCount}
+				reason={reason}
+				onReasonChange={setReason}
 				onCancel={close}
 				onConfirm={onConfirm}
 			/>

@@ -1194,7 +1194,11 @@ export const endpoints: Endpoint[] = [
 		}),
 		handler: async ({ body }) => {
 			const { ids } = body as { ids: number[] };
-			return adminBulkSubmissions.rejudgeSubmissionsByIds(ids);
+			const adminId = await adminBulkSubmissions.resolveSystemAdminId();
+			return adminBulkSubmissions.rejudgeSubmissionsByIds(ids, {
+				reason: "API를 통한 재채점",
+				adminId,
+			});
 		},
 	},
 	{
@@ -1216,7 +1220,11 @@ export const endpoints: Endpoint[] = [
 			const filter = adminBulkSubmissions.parseAdminSubmissionFilter(
 				body as Parameters<typeof adminBulkSubmissions.parseAdminSubmissionFilter>[0]
 			);
-			return adminBulkSubmissions.rejudgeSubmissionsByFilter(filter);
+			const adminId = await adminBulkSubmissions.resolveSystemAdminId();
+			return adminBulkSubmissions.rejudgeSubmissionsByFilter(filter, {
+				reason: "API를 통한 재채점",
+				adminId,
+			});
 		},
 	},
 	{
