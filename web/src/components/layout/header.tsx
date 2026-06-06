@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { UserMenu } from "@/components/auth/user-menu";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./theme-toggle";
@@ -139,6 +140,7 @@ export function Header({ activeCounts }: { activeCounts?: HeaderActiveCounts }) 
 				{/* Right side — Auth & Theme */}
 				<div className="flex items-center gap-2">
 					<ThemeToggle />
+					<NotificationBell />
 					<div className="hidden md:block">
 						<UserMenu />
 					</div>
