@@ -165,6 +165,23 @@ export async function checkSubmissionCodeAccess(params: {
 	);
 }
 
+/**
+ * 관리자 권한 우회를 제외하고, 일반 사용자 접근 규칙으로 평가했을 때
+ * viewer가 이 제출의 코드를 볼 자격이 있는지. 열람 기록/알림의 "정당성" 판정에 사용.
+ * 본인 열람은 호출 측에서 별도로 제외한다(여기선 true가 됨).
+ */
+export async function isLegitimateCodeView(params: {
+	submission: AccessRow;
+	viewerUserId: number;
+}): Promise<boolean> {
+	const result = await checkSubmissionCodeAccess({
+		submission: params.submission,
+		viewerUserId: params.viewerUserId,
+		isAdmin: false,
+	});
+	return result.allowed;
+}
+
 // ============================================================
 // List 가시성 (서비스 외부에서 컴포지션할 수 있도록 빌더 형태로 제공)
 // ============================================================
