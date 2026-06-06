@@ -13,6 +13,42 @@ import { col, tbl } from "@/lib/db-helpers";
 
 type AdminUsersSort = "id" | "createdAt" | "rating" | "submissionCount";
 
+/**
+ * admin/users 목록과 공지 수신자 해석이 공유하는 필터(검색/권한/계정유형).
+ * where 절 멤버십에 영향을 주는 필드만 포함한다(정렬/페이지는 별도).
+ */
+export type AdminUsersFilter = {
+	search?: string;
+	role?: "user" | "admin";
+	accountType?: "oauth" | "local";
+};
+
+/** admin 사용자 목록과 동일한 where 절을 구성한다. 조건이 없으면 undefined. */
+function buildAdminUsersWhere(filter: AdminUsersFilter): SQL | undefined {
+	const conditions: SQL[] = [];
+	if (filter.search) {
+		const term = `%${filter.search.trim()}%`;
+		conditions.push(
+			or(ilike(users.username, term), ilike(users.name, term), ilike(users.email, term))!
+		);
+	}
+	if (filter.role) conditions.push(eq(users.role, filter.role));
+	if (filter.accountType === "oauth") conditions.push(sql`${users.password} IS NULL`);
+	else if (filter.accountType === "local") conditions.push(sql`${users.password} IS NOT NULL`);
+
+	return conditions.length > 0 ? and(...conditions) : undefined;
+}
+
+/**
+ * 필터에 매칭되는 모든 사용자 id 목록. admin/users 목록과 동일한 where 절을 사용해
+ * "필터로 전체 선택" 공지가 목록 페이지와 같은 대상 집합을 갖도록 보장한다.
+ */
+export async function listAdminUserIds(filter: AdminUsersFilter): Promise<number[]> {
+	const whereClause = buildAdminUsersWhere(filter);
+	const rows = await db.select({ id: users.id }).from(users).where(whereClause);
+	return rows.map((r) => r.id);
+}
+
 export async function getAdminUsers(options?: {
 	page?: number;
 	limit?: number;
@@ -44,18 +80,11 @@ export async function getAdminUsers(options?: {
 		WHERE submissions.user_id = ${col(users, users.id)}
 	)`;
 
-	const conditions: SQL[] = [];
-	if (options?.search) {
-		const term = `%${options.search.trim()}%`;
-		conditions.push(
-			or(ilike(users.username, term), ilike(users.name, term), ilike(users.email, term))!
-		);
-	}
-	if (options?.role) conditions.push(eq(users.role, options.role));
-	if (options?.accountType === "oauth") conditions.push(sql`${users.password} IS NULL`);
-	else if (options?.accountType === "local") conditions.push(sql`${users.password} IS NOT NULL`);
-
-	const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+	const whereClause = buildAdminUsersWhere({
+		search: options?.search,
+		role: options?.role,
+		accountType: options?.accountType,
+	});
 
 	let orderBy: SQL;
 	switch (sort) {

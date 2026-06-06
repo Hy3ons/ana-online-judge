@@ -61,6 +61,18 @@ export async function getNotifications(
 	return { items, total: row?.count ?? 0 };
 }
 
+/**
+ * 관리자 공지를 수신자에게 발송한다. id 중복은 제거하고, 발송한 수신자 수를 반환한다.
+ * 빈 목록이면 0을 반환한다(no-op).
+ */
+export async function sendAnnouncement(userIds: number[], body: string): Promise<number> {
+	const unique = [...new Set(userIds)];
+	await createNotificationsBulk(
+		unique.map((userId) => ({ userId, type: "admin_announcement" as const, body }))
+	);
+	return unique.length;
+}
+
 /** 지정 알림을 읽음 처리(소유자 검증 포함). 이미 읽은 것은 변화 없음. */
 export async function markNotificationsRead(userId: number, ids: number[]): Promise<void> {
 	if (ids.length === 0) return;
