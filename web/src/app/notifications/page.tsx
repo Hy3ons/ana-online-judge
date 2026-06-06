@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getMyNotifications } from "@/actions/notifications";
 import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PaginationLinks } from "@/components/ui/pagination-links";
 import { getSessionInfo } from "@/lib/auth-utils";
 import { NotificationsList } from "./notifications-list";
 
@@ -20,7 +21,8 @@ export default async function NotificationsPage({
 
 	const { page } = await searchParams;
 	const pageNum = Math.max(1, Number(page) || 1);
-	const { items } = await getMyNotifications(pageNum);
+	const { items, total } = await getMyNotifications(pageNum);
+	const totalPages = Math.ceil(total / 20);
 
 	return (
 		<div className="page-container py-8">
@@ -33,6 +35,13 @@ export default async function NotificationsPage({
 					<NotificationsList initial={items} />
 				</CardContent>
 			</Card>
+			{items.length > 0 && (
+				<PaginationLinks
+					currentPage={pageNum}
+					totalPages={totalPages}
+					buildHref={(p) => `/notifications?page=${p}`}
+				/>
+			)}
 		</div>
 	);
 }
