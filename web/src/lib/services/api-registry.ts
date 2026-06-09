@@ -28,6 +28,7 @@ import * as adminTestcases from "./testcases";
 import * as adminUsers from "./users";
 import * as workshopAdminSvc from "./workshop-admin";
 import * as workshopCheckerSvc from "./workshop-checker";
+import * as workshopDisplaySvc from "./workshop-display";
 import * as workshopGeneratorsSvc from "./workshop-generators";
 import * as workshopGroupsSvc from "./workshop-groups";
 import * as workshopInvocationsSvc from "./workshop-invocations";
@@ -1555,7 +1556,12 @@ export const endpoints: Endpoint[] = [
 				},
 				b.userId
 			);
-			await ensureWorkshopDraft(problem.id, b.userId);
+			await ensureWorkshopDraft(problem.id, b.userId, {
+				title: b.title,
+				problemType: b.problemType,
+				timeLimit: b.timeLimit,
+				memoryLimit: b.memoryLimit,
+			});
 			return problem;
 		},
 	},
@@ -1574,7 +1580,8 @@ export const endpoints: Endpoint[] = [
 				false
 			);
 			if (!problem) throw new NotFoundError("Workshop problem not found or user has no access");
-			return problem;
+			const header = await workshopDisplaySvc.resolveDisplayHeader(parseInt(pathParams.id, 10));
+			return { ...problem, ...header };
 		},
 	},
 	{
