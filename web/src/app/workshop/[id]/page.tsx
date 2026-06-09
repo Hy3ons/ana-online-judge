@@ -17,6 +17,7 @@ import {
 	type WorkshopExpectedVerdict,
 } from "@/lib/workshop/expected-verdict";
 import { WorkshopLimitsEditor } from "./_components/limits-editor";
+import { WorkshopProblemTypeEditor } from "./_components/problem-type-editor";
 import { PublishedBanner } from "./_components/published-banner";
 import { StaleDraftWarning } from "./_components/stale-draft-warning";
 import { WorkshopProblemNav } from "./nav";
@@ -121,6 +122,11 @@ export default async function WorkshopProblemDashboardPage({
 					problemId={problem.id}
 					initialTimeLimit={draft.timeLimit}
 					initialMemoryLimit={draft.memoryLimit}
+				/>
+				<WorkshopProblemTypeEditor
+					problemId={problem.id}
+					problemType={draft.problemType}
+					hasChecker={draft.checkerPath != null}
 				/>
 			</div>
 			{problem.publishedProblemId !== null && (
