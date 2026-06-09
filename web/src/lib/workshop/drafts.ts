@@ -162,12 +162,22 @@ export async function ensureWorkshopDraft(
 	userId: number,
 	bootstrap?: DraftBootstrap
 ): Promise<WorkshopDraft> {
-	// Compute the header values for the (possible) new row before inserting.
-	// If the row already exists this is discarded by ON CONFLICT DO NOTHING.
-	const header = await resolveNewDraftHeader(problemId, bootstrap);
+	// Fast path: if the draft already exists, return it without resolving a
+	// bootstrap header — ensureWorkshopDraft is on the hot path (every workshop
+	// page load), so avoid the snapshot/creator-draft lookups when not inserting.
+	const [preexisting] = await db
+		.select()
+		.from(workshopDrafts)
+		.where(and(eq(workshopDrafts.workshopProblemId, problemId), eq(workshopDrafts.userId, userId)))
+		.limit(1);
+	if (preexisting) {
+		await ensureDefaultCheckerSeeded(problemId, userId);
+		return preexisting;
+	}
 
-	// Attempt upsert-style: INSERT ... ON CONFLICT DO NOTHING.
-	// If the row already exists, `returning()` yields an empty array.
+	// No draft yet — compute the header and insert. ON CONFLICT DO NOTHING guards
+	// against a concurrent first-open by the same user.
+	const header = await resolveNewDraftHeader(problemId, bootstrap);
 	const inserted = await db
 		.insert(workshopDrafts)
 		.values({ workshopProblemId: problemId, userId, ...header })
@@ -181,7 +191,7 @@ export async function ensureWorkshopDraft(
 		return inserted[0];
 	}
 
-	// Row already existed — fetch it.
+	// Lost the race — another caller created the row between our SELECT and INSERT.
 	const [existing] = await db
 		.select()
 		.from(workshopDrafts)
