@@ -1618,14 +1618,17 @@ export const endpoints: Endpoint[] = [
 		path: "workshop/problems/:id/statement",
 		description: "Update workshop problem statement (title + markdown description)",
 		body: z.object({
+			userId: z.number().int(),
 			title: z.string().min(1).max(200),
 			description: z.string().max(200_000),
 		}),
-		handler: async ({ pathParams, body }) =>
-			workshopStatementSvc.updateStatement(
-				parseInt(pathParams.id, 10),
-				body as { title: string; description: string }
-			),
+		handler: async ({ pathParams, body }) => {
+			const b = body as { userId: number; title: string; description: string };
+			return workshopStatementSvc.updateStatement(parseInt(pathParams.id, 10), b.userId, {
+				title: b.title,
+				description: b.description,
+			});
+		},
 	},
 
 	// ---------- Members ----------
@@ -2125,8 +2128,11 @@ export const endpoints: Endpoint[] = [
 		method: "GET",
 		path: "workshop/problems/:id/validator",
 		description: "Get the current validator source (or null if unset)",
-		handler: async ({ pathParams }) =>
-			workshopValidatorSvc.getValidatorSource(parseInt(pathParams.id, 10)),
+		query: z.object({ userId: z.coerce.number().int() }),
+		handler: async ({ pathParams, query }) => {
+			const q = query as { userId: number };
+			return workshopValidatorSvc.getValidatorSource(parseInt(pathParams.id, 10), q.userId);
+		},
 	},
 	{
 		type: "json",
@@ -2157,8 +2163,11 @@ export const endpoints: Endpoint[] = [
 		method: "DELETE",
 		path: "workshop/problems/:id/validator",
 		description: "Delete the validator",
-		handler: async ({ pathParams }) =>
-			workshopValidatorSvc.deleteValidator(parseInt(pathParams.id, 10)),
+		body: z.object({ userId: z.number().int() }),
+		handler: async ({ pathParams, body }) => {
+			const b = body as { userId: number };
+			return workshopValidatorSvc.deleteValidator(parseInt(pathParams.id, 10), b.userId);
+		},
 	},
 
 	// ---------- Checker ----------
@@ -2167,8 +2176,11 @@ export const endpoints: Endpoint[] = [
 		method: "GET",
 		path: "workshop/problems/:id/checker",
 		description: "Get the current checker source",
-		handler: async ({ pathParams }) =>
-			workshopCheckerSvc.getCheckerSource(parseInt(pathParams.id, 10)),
+		query: z.object({ userId: z.coerce.number().int() }),
+		handler: async ({ pathParams, query }) => {
+			const q = query as { userId: number };
+			return workshopCheckerSvc.getCheckerSource(parseInt(pathParams.id, 10), q.userId);
+		},
 	},
 	{
 		type: "json",

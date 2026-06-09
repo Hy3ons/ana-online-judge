@@ -2,8 +2,8 @@ import { randomUUID } from "node:crypto";
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import {
-	type WorkshopProblem,
-	workshopProblems,
+	type WorkshopDraft,
+	workshopDrafts,
 	workshopResources,
 	workshopTestcases,
 } from "@/db/schema";
@@ -30,24 +30,26 @@ export type ValidatorState = {
 	source: string | null;
 };
 
-export async function getValidatorSource(problemId: number): Promise<ValidatorState> {
+export async function getValidatorSource(
+	problemId: number,
+	userId: number
+): Promise<ValidatorState> {
 	const [row] = await db
 		.select({
-			id: workshopProblems.id,
-			validatorLanguage: workshopProblems.validatorLanguage,
-			validatorPath: workshopProblems.validatorPath,
+			validatorLanguage: workshopDrafts.validatorLanguage,
+			validatorPath: workshopDrafts.validatorPath,
 		})
-		.from(workshopProblems)
-		.where(eq(workshopProblems.id, problemId))
+		.from(workshopDrafts)
+		.where(and(eq(workshopDrafts.workshopProblemId, problemId), eq(workshopDrafts.userId, userId)))
 		.limit(1);
-	if (!row) throw new Error("문제를 찾을 수 없습니다");
+	if (!row) throw new Error("드래프트를 찾을 수 없습니다");
 	if (!row.validatorPath || !row.validatorLanguage) {
-		return { problemId: row.id, language: null, path: null, source: null };
+		return { problemId, language: null, path: null, source: null };
 	}
 	const language = (row.validatorLanguage === "python" ? "python" : "cpp") as ValidatorLanguage;
 	const content = await downloadFile(row.validatorPath);
 	return {
-		problemId: row.id,
+		problemId,
 		language,
 		path: row.validatorPath,
 		source: content.toString("utf-8"),
@@ -59,7 +61,7 @@ export async function saveValidatorSource(params: {
 	userId: number;
 	language: ValidatorLanguage;
 	source: string;
-}): Promise<WorkshopProblem> {
+}): Promise<WorkshopDraft> {
 	const { problemId, userId, language, source } = params;
 	const bytes = Buffer.byteLength(source, "utf-8");
 	if (bytes === 0) {
@@ -71,25 +73,25 @@ export async function saveValidatorSource(params: {
 
 	const [existing] = await db
 		.select({
-			validatorLanguage: workshopProblems.validatorLanguage,
-			validatorPath: workshopProblems.validatorPath,
+			validatorLanguage: workshopDrafts.validatorLanguage,
+			validatorPath: workshopDrafts.validatorPath,
 		})
-		.from(workshopProblems)
-		.where(eq(workshopProblems.id, problemId))
+		.from(workshopDrafts)
+		.where(and(eq(workshopDrafts.workshopProblemId, problemId), eq(workshopDrafts.userId, userId)))
 		.limit(1);
-	if (!existing) throw new Error("문제를 찾을 수 없습니다");
+	if (!existing) throw new Error("드래프트를 찾을 수 없습니다");
 
 	const newPath = workshopDraftValidatorPath(problemId, userId, extForLanguage(language));
 	await uploadFile(newPath, Buffer.from(source, "utf-8"), contentTypeForLanguage(language));
 
 	const [updated] = await db
-		.update(workshopProblems)
+		.update(workshopDrafts)
 		.set({
 			validatorPath: newPath,
 			validatorLanguage: language,
 			updatedAt: new Date(),
 		})
-		.where(eq(workshopProblems.id, problemId))
+		.where(and(eq(workshopDrafts.workshopProblemId, problemId), eq(workshopDrafts.userId, userId)))
 		.returning();
 
 	// Best-effort: delete old object AFTER DB update succeeds.
@@ -107,15 +109,15 @@ export async function saveValidatorSource(params: {
 	return updated;
 }
 
-export async function deleteValidator(problemId: number): Promise<WorkshopProblem> {
+export async function deleteValidator(problemId: number, userId: number): Promise<WorkshopDraft> {
 	const [existing] = await db
 		.select({
-			validatorPath: workshopProblems.validatorPath,
+			validatorPath: workshopDrafts.validatorPath,
 		})
-		.from(workshopProblems)
-		.where(eq(workshopProblems.id, problemId))
+		.from(workshopDrafts)
+		.where(and(eq(workshopDrafts.workshopProblemId, problemId), eq(workshopDrafts.userId, userId)))
 		.limit(1);
-	if (!existing) throw new Error("문제를 찾을 수 없습니다");
+	if (!existing) throw new Error("드래프트를 찾을 수 없습니다");
 	if (existing.validatorPath) {
 		try {
 			await deleteFile(existing.validatorPath);
@@ -127,9 +129,9 @@ export async function deleteValidator(problemId: number): Promise<WorkshopProble
 		}
 	}
 	const [updated] = await db
-		.update(workshopProblems)
+		.update(workshopDrafts)
 		.set({ validatorPath: null, validatorLanguage: null, updatedAt: new Date() })
-		.where(eq(workshopProblems.id, problemId))
+		.where(and(eq(workshopDrafts.workshopProblemId, problemId), eq(workshopDrafts.userId, userId)))
 		.returning();
 	return updated;
 }
@@ -158,18 +160,18 @@ export async function runFullValidation(params: {
 }): Promise<QueuedValidationJob[]> {
 	const { problemId, userId, draftId } = params;
 
-	const [problem] = await db
+	const [draft] = await db
 		.select({
-			validatorLanguage: workshopProblems.validatorLanguage,
-			validatorPath: workshopProblems.validatorPath,
-			timeLimit: workshopProblems.timeLimit,
-			memoryLimit: workshopProblems.memoryLimit,
+			validatorLanguage: workshopDrafts.validatorLanguage,
+			validatorPath: workshopDrafts.validatorPath,
+			timeLimit: workshopDrafts.timeLimit,
+			memoryLimit: workshopDrafts.memoryLimit,
 		})
-		.from(workshopProblems)
-		.where(eq(workshopProblems.id, problemId))
+		.from(workshopDrafts)
+		.where(and(eq(workshopDrafts.workshopProblemId, problemId), eq(workshopDrafts.userId, userId)))
 		.limit(1);
-	if (!problem) throw new Error("문제를 찾을 수 없습니다");
-	if (!problem.validatorPath || !problem.validatorLanguage) {
+	if (!draft) throw new Error("드래프트를 찾을 수 없습니다");
+	if (!draft.validatorPath || !draft.validatorLanguage) {
 		throw new Error("밸리데이터가 설정되지 않았습니다");
 	}
 
@@ -204,12 +206,12 @@ export async function runFullValidation(params: {
 			problemId,
 			userId,
 			testcaseId: tc.id,
-			language: problem.validatorLanguage,
-			validatorSourcePath: problem.validatorPath,
+			language: draft.validatorLanguage,
+			validatorSourcePath: draft.validatorPath,
 			inputPath: tc.inputPath,
 			resources: resources.map((r) => ({ name: r.name, storage_path: r.path })),
 			timeLimitMs: 30_000,
-			memoryLimitMb: problem.memoryLimit * 2 + 256,
+			memoryLimitMb: draft.memoryLimit * 2 + 256,
 		});
 		queued.push({ jobId, testcaseId: tc.id, testcaseIndex: tc.index });
 	}

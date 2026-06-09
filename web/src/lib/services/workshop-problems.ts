@@ -4,12 +4,14 @@ import { db } from "@/db";
 import {
 	users,
 	type WorkshopProblem,
+	workshopDrafts,
 	workshopGroupMembers,
 	workshopProblemMembers,
 	workshopProblems,
 } from "@/db/schema";
 import { assertCanCreateWorkshop } from "@/lib/services/quota";
 import { deleteAllWithPrefix } from "@/lib/storage/operations";
+import { ensureWorkshopDraft } from "@/lib/workshop/drafts";
 
 export type CreateWorkshopProblemInput = {
 	title: string;
@@ -175,10 +177,11 @@ export async function updateWorkshopProblemLimits(
 			.limit(1);
 		if (!membership) throw new Error("문제를 찾을 수 없거나 접근 권한이 없습니다");
 	}
+	await ensureWorkshopDraft(problemId, userId);
 	await db
-		.update(workshopProblems)
+		.update(workshopDrafts)
 		.set({ timeLimit, memoryLimit, updatedAt: new Date() })
-		.where(eq(workshopProblems.id, problemId));
+		.where(and(eq(workshopDrafts.workshopProblemId, problemId), eq(workshopDrafts.userId, userId)));
 }
 
 /**

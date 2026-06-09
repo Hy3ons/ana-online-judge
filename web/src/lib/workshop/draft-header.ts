@@ -20,6 +20,10 @@ export async function getDraftByUser(
 }
 
 export async function getDraftById(draftId: number): Promise<WorkshopDraft | null> {
-	const [row] = await db.select().from(workshopDrafts).where(eq(workshopDrafts.id, draftId)).limit(1);
+	const [row] = await db
+		.select()
+		.from(workshopDrafts)
+		.where(eq(workshopDrafts.id, draftId))
+		.limit(1);
 	return row ?? null;
 }

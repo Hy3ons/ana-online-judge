@@ -4,7 +4,6 @@ import {
 	type WorkshopDraft,
 	workshopDrafts,
 	workshopProblemMembers,
-	workshopProblems,
 	workshopResources,
 } from "@/db/schema";
 import { uploadFile } from "@/lib/storage/operations";
@@ -71,17 +70,17 @@ async function seedBundledResources(
 
 /**
  * Seed `icpc_diff.cpp` into the draft's checker slot if and only if
- * `workshopProblems.checkerPath` is currently null. Safe to call on every
+ * `workshopDrafts.checkerPath` is currently null. Safe to call on every
  * draft-ensure roundtrip — short-circuits when already seeded.
  */
 async function ensureDefaultCheckerSeeded(problemId: number, userId: number): Promise<void> {
 	const [row] = await db
 		.select({
-			checkerPath: workshopProblems.checkerPath,
-			checkerLanguage: workshopProblems.checkerLanguage,
+			checkerPath: workshopDrafts.checkerPath,
+			checkerLanguage: workshopDrafts.checkerLanguage,
 		})
-		.from(workshopProblems)
-		.where(eq(workshopProblems.id, problemId))
+		.from(workshopDrafts)
+		.where(and(eq(workshopDrafts.workshopProblemId, problemId), eq(workshopDrafts.userId, userId)))
 		.limit(1);
 	if (!row) return;
 	if (row.checkerPath) return;
@@ -90,9 +89,9 @@ async function ensureDefaultCheckerSeeded(problemId: number, userId: number): Pr
 	const path = workshopDraftCheckerPath(problemId, userId, "cpp");
 	await uploadFile(path, content, "text/x-c++src");
 	await db
-		.update(workshopProblems)
+		.update(workshopDrafts)
 		.set({ checkerPath: path, checkerLanguage: "cpp", updatedAt: new Date() })
-		.where(eq(workshopProblems.id, problemId));
+		.where(and(eq(workshopDrafts.workshopProblemId, problemId), eq(workshopDrafts.userId, userId)));
 }
 
 /**
