@@ -330,12 +330,12 @@ async function loadResourcesForJudge(draftId: number): Promise<ResourceForJudge[
 	return rows.map((r) => ({ name: r.name, storage_path: r.path }));
 }
 
-export async function getScript(problemId: number): Promise<string> {
-	const { workshopProblems } = await import("@/db/schema");
+export async function getScript(problemId: number, userId: number): Promise<string> {
+	const { workshopDrafts } = await import("@/db/schema");
 	const [row] = await db
-		.select({ s: workshopProblems.generatorScript })
-		.from(workshopProblems)
-		.where(eq(workshopProblems.id, problemId))
+		.select({ s: workshopDrafts.generatorScript })
+		.from(workshopDrafts)
+		.where(and(eq(workshopDrafts.workshopProblemId, problemId), eq(workshopDrafts.userId, userId)))
 		.limit(1);
 	return row?.s ?? "";
 }

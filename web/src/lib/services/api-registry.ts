@@ -2492,9 +2492,13 @@ export const endpoints: Endpoint[] = [
 		method: "GET",
 		path: "workshop/problems/:id/script",
 		description: "Get the saved generator script",
-		handler: async ({ pathParams }) => ({
-			script: await workshopScriptSvc.getScript(parseInt(pathParams.id, 10)),
-		}),
+		query: z.object({ userId: z.coerce.number().int() }),
+		handler: async ({ pathParams, query }) => {
+			const q = query as { userId: number };
+			return {
+				script: await workshopScriptSvc.getScript(parseInt(pathParams.id, 10), q.userId),
+			};
+		},
 	},
 	{
 		type: "json",
