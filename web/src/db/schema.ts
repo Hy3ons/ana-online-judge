@@ -728,6 +728,18 @@ export const workshopDrafts = pgTable(
 			.references(() => users.id, { onDelete: "cascade" })
 			.notNull(),
 		baseSnapshotId: integer("base_snapshot_id"),
+		// --- Phase A: per-draft 격리 헤더 (workshopProblems에서 이전) ---
+		title: text("title").notNull().default(""),
+		description: text("description").notNull().default(""),
+		problemType: workshopProblemTypeEnum("problem_type").notNull().default("icpc"),
+		timeLimit: integer("time_limit").notNull().default(1000),
+		memoryLimit: integer("memory_limit").notNull().default(512),
+		seed: text("seed").notNull().default(""),
+		checkerLanguage: text("checker_language"),
+		checkerPath: text("checker_path"),
+		validatorLanguage: text("validator_language"),
+		validatorPath: text("validator_path"),
+		generatorScript: text("generator_script"),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at").defaultNow().notNull(),
 	},
