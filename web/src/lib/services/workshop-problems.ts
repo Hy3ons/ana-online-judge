@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
@@ -36,14 +35,14 @@ export type CreateWorkshopProblemInput = {
 };
 
 /**
- * Create a new workshop problem owned by userId. Generates a random seed and
- * inserts an owner row in workshopProblemMembers.
+ * Create a new workshop problem owned by userId. Inserts an owner row in
+ * workshopProblemMembers. Header fields (title/limits/seed) live on the
+ * per-user owner draft created via ensureWorkshopDraft.
  */
 export async function createWorkshopProblem(
 	input: CreateWorkshopProblemInput,
 	userId: number
 ): Promise<WorkshopProblem> {
-	const seed = randomBytes(8).toString("hex");
 	return db.transaction(async (tx) => {
 		await assertCanCreateWorkshop(userId, tx);
 
@@ -76,11 +75,6 @@ export async function createWorkshopProblem(
 		const [created] = await tx
 			.insert(workshopProblems)
 			.values({
-				title: input.title,
-				problemType: input.problemType,
-				timeLimit: input.timeLimit,
-				memoryLimit: input.memoryLimit,
-				seed,
 				createdBy: userId,
 				groupId: input.groupId ?? null,
 			})

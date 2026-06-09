@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { type WorkshopProblem, workshopTestcases } from "@/db/schema";
 import { getRedisClient } from "@/lib/redis";
 import { deleteFile } from "@/lib/storage/operations";
+import { getDraftById } from "@/lib/workshop/draft-header";
 import {
 	createRun,
 	type GenerateJobProgress,
@@ -52,9 +53,13 @@ export async function runScript(params: {
 		throw new Error("이미 진행 중인 스크립트 실행이 있습니다. 완료된 후 다시 시도하세요");
 	}
 
-	// 1) Load generators — needed for validation.
+	// 1) Load generators — needed for validation. The seed lives on the
+	//    per-user draft (Phase A) and is passed to each generate job.
 	const generatorRows = await listGeneratorsForDraft(draftId);
 	const generatorsByName = indexByName(generatorRows);
+	const draft = await getDraftById(draftId);
+	if (!draft) throw new Error("드래프트를 찾을 수 없습니다");
+	const seed = draft.seed;
 
 	// 2) Parse & validate. Throws WorkshopScriptParseError on user error.
 	const steps = parseGeneratorScript(params.script, new Set(generatorRows.map((g) => g.name)));
@@ -169,7 +174,7 @@ export async function runScript(params: {
 			language: gen.language,
 			source_path: gen.sourcePath,
 			args: step.args,
-			seed: problem.seed,
+			seed,
 			resources,
 			output_path: inputPath,
 			time_limit_ms: GENERATE_TIME_LIMIT_MS,
@@ -340,10 +345,10 @@ export async function getScript(problemId: number, userId: number): Promise<stri
 	return row?.s ?? "";
 }
 
-export async function saveScript(problemId: number, script: string): Promise<void> {
-	const { workshopProblems } = await import("@/db/schema");
+export async function saveScript(problemId: number, userId: number, script: string): Promise<void> {
+	const { workshopDrafts } = await import("@/db/schema");
 	await db
-		.update(workshopProblems)
+		.update(workshopDrafts)
 		.set({ generatorScript: script, updatedAt: new Date() })
-		.where(eq(workshopProblems.id, problemId));
+		.where(and(eq(workshopDrafts.workshopProblemId, problemId), eq(workshopDrafts.userId, userId)));
 }

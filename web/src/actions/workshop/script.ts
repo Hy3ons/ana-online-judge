@@ -19,7 +19,7 @@ export async function saveWorkshopScript(problemId: number, script: string) {
 	const { userId, isAdmin } = await requireWorkshopAccess();
 	const problem = await problemsSvc.getWorkshopProblemForUser(problemId, userId, isAdmin);
 	if (!problem) throw new Error("문제를 찾을 수 없거나 접근 권한이 없습니다");
-	await runner.saveScript(problemId, script);
+	await runner.saveScript(problemId, userId, script);
 	revalidatePath(`/workshop/${problemId}/testcases`);
 	return { success: true };
 }
@@ -34,7 +34,7 @@ export async function runWorkshopScript(problemId: number, script: string) {
 	// Persist the latest script content before running — the user likely
 	// just typed it and hasn't clicked 저장. Revalidate now too so the cached
 	// page reflects the saved script even if the run below fails.
-	await runner.saveScript(problemId, script);
+	await runner.saveScript(problemId, userId, script);
 	revalidatePath(`/workshop/${problemId}/testcases`);
 
 	try {

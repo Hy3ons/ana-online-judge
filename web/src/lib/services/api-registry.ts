@@ -2478,7 +2478,7 @@ export const endpoints: Endpoint[] = [
 			);
 			if (!problem) throw new NotFoundError("Workshop problem not found");
 			const draft = await getActiveDraftForUser(problemId, b.userId, true);
-			await workshopScriptSvc.saveScript(problemId, b.script);
+			await workshopScriptSvc.saveScript(problemId, b.userId, b.script);
 			return workshopScriptSvc.runScript({
 				problem,
 				userId: b.userId,
@@ -2505,10 +2505,10 @@ export const endpoints: Endpoint[] = [
 		method: "PUT",
 		path: "workshop/problems/:id/script",
 		description: "Save the generator script (no run)",
-		body: z.object({ script: z.string() }),
+		body: z.object({ userId: z.number().int(), script: z.string() }),
 		handler: async ({ pathParams, body }) => {
-			const b = body as { script: string };
-			await workshopScriptSvc.saveScript(parseInt(pathParams.id, 10), b.script);
+			const b = body as { userId: number; script: string };
+			await workshopScriptSvc.saveScript(parseInt(pathParams.id, 10), b.userId, b.script);
 			return { ok: true };
 		},
 	},

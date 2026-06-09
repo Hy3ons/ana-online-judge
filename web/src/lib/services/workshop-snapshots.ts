@@ -2,8 +2,8 @@ import { and, desc, eq, notLike } from "drizzle-orm";
 import { db } from "@/db";
 import type {
 	Language,
+	WorkshopDraft,
 	WorkshopGenerator,
-	WorkshopProblem,
 	WorkshopSolution,
 	WorkshopTestcase,
 } from "@/db/schema";
@@ -43,7 +43,7 @@ export const SNAPSHOT_STATE_VERSION = 1 as const;
 export type SnapshotProblemHeader = {
 	title: string;
 	description: string;
-	problemType: WorkshopProblem["problemType"];
+	problemType: WorkshopDraft["problemType"];
 	timeLimit: number;
 	memoryLimit: number;
 	seed: string;

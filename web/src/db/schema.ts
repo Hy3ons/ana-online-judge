@@ -669,17 +669,6 @@ export const workshopProblems = pgTable(
 	"workshop_problems",
 	{
 		id: serial("id").primaryKey(),
-		title: text("title").notNull(),
-		description: text("description").notNull().default(""),
-		problemType: workshopProblemTypeEnum("problem_type").notNull().default("icpc"),
-		timeLimit: integer("time_limit").notNull().default(1000),
-		memoryLimit: integer("memory_limit").notNull().default(512),
-		seed: text("seed").notNull(),
-		checkerLanguage: text("checker_language"),
-		checkerPath: text("checker_path"),
-		validatorLanguage: text("validator_language"),
-		validatorPath: text("validator_path"),
-		generatorScript: text("generator_script"),
 		publishedProblemId: integer("published_problem_id").references(() => problems.id, {
 			onDelete: "set null",
 		}),
