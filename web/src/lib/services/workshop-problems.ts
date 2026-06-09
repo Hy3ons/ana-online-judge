@@ -226,6 +226,39 @@ export async function updateWorkshopProblemLimits(
 }
 
 /**
+ * Update the problem type (icpc ↔ special_judge) on the caller's draft.
+ * Any member can edit (Phase A: per-draft).
+ */
+export async function updateWorkshopProblemType(
+	problemId: number,
+	userId: number,
+	problemType: "icpc" | "special_judge",
+	isAdmin = false
+): Promise<void> {
+	if (problemType !== "icpc" && problemType !== "special_judge") {
+		throw new Error("올바르지 않은 문제 형식입니다");
+	}
+	if (!isAdmin) {
+		const [membership] = await db
+			.select({ role: workshopProblemMembers.role })
+			.from(workshopProblemMembers)
+			.where(
+				and(
+					eq(workshopProblemMembers.workshopProblemId, problemId),
+					eq(workshopProblemMembers.userId, userId)
+				)
+			)
+			.limit(1);
+		if (!membership) throw new Error("문제를 찾을 수 없거나 접근 권한이 없습니다");
+	}
+	await ensureWorkshopDraft(problemId, userId);
+	await db
+		.update(workshopDrafts)
+		.set({ problemType, updatedAt: new Date() })
+		.where(and(eq(workshopDrafts.workshopProblemId, problemId), eq(workshopDrafts.userId, userId)));
+}
+
+/**
  * Delete a workshop problem entirely. The previously published `problems` row
  * (if any) is preserved — `workshopProblems.publishedProblemId` was a FK with
  * `onDelete: "set null"` going FROM workshop TO problems, so deleting the

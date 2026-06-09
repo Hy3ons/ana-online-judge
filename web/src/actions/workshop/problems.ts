@@ -51,6 +51,15 @@ export async function updateWorkshopProblemLimits(
 	revalidatePath(`/workshop/${problemId}`);
 }
 
+export async function updateWorkshopProblemType(
+	problemId: number,
+	problemType: "icpc" | "special_judge"
+) {
+	const { userId, isAdmin } = await requireWorkshopAccess();
+	await svc.updateWorkshopProblemType(problemId, userId, problemType, isAdmin);
+	revalidatePath(`/workshop/${problemId}`);
+}
+
 export async function deleteWorkshopProblem(problemId: number) {
 	const { userId, isAdmin } = await requireWorkshopAccess();
 	await svc.deleteWorkshopProblem(problemId, userId, isAdmin);
