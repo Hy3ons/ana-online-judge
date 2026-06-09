@@ -324,6 +324,17 @@ export async function createSnapshot(params: {
 			.update(workshopDrafts)
 			.set({ baseSnapshotId: row.id })
 			.where(eq(workshopDrafts.id, draft.id));
+		// Bump the shared problem's activity timestamp on user-committed snapshots
+		// so list/admin/group views (ordered by workshopProblems.updatedAt) surface
+		// recently-committed problems. Private draft edits intentionally do NOT
+		// reorder the shared list (per-draft isolation); a commit is the canonical
+		// "activity" event. Skip `auto/` system snapshots (rollback/update backups).
+		if (!label.trim().startsWith("auto/")) {
+			await tx
+				.update(workshopProblems)
+				.set({ updatedAt: new Date() })
+				.where(eq(workshopProblems.id, problemId));
+		}
 		return row;
 	});
 }
