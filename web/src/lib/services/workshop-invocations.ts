@@ -4,6 +4,7 @@ import { db } from "@/db";
 import {
 	type WorkshopInvocation,
 	type WorkshopProblem,
+	workshopDrafts,
 	workshopInvocations,
 	workshopProblems,
 	workshopResources,
@@ -186,12 +187,35 @@ async function loadProblemContext(
 	problem: WorkshopProblem;
 	resources: WorkshopInvokeResource[];
 }> {
-	const [problem] = await db
+	const [base] = await db
 		.select()
 		.from(workshopProblems)
 		.where(eq(workshopProblems.id, problemId))
 		.limit(1);
-	if (!problem) throw new Error("문제를 찾을 수 없습니다");
+	if (!base) throw new Error("문제를 찾을 수 없습니다");
+	const [draft] = await db
+		.select()
+		.from(workshopDrafts)
+		.where(eq(workshopDrafts.id, draftId))
+		.limit(1);
+	if (!draft) throw new Error("드래프트를 찾을 수 없습니다");
+
+	// 헤더는 draft에서, 정체성은 problem에서. WorkshopProblem 형태로 병합해
+	// 하위 buildCheckerPayload/invocation 빌드가 그대로 동작하게 한다.
+	const problem: WorkshopProblem = {
+		...base,
+		title: draft.title,
+		description: draft.description,
+		problemType: draft.problemType,
+		timeLimit: draft.timeLimit,
+		memoryLimit: draft.memoryLimit,
+		seed: draft.seed,
+		checkerLanguage: draft.checkerLanguage,
+		checkerPath: draft.checkerPath,
+		validatorLanguage: draft.validatorLanguage,
+		validatorPath: draft.validatorPath,
+		generatorScript: draft.generatorScript,
+	};
 
 	const resRows = await db
 		.select({ name: workshopResources.name, path: workshopResources.path })
@@ -201,7 +225,6 @@ async function loadProblemContext(
 		name: r.name,
 		storage_path: r.path,
 	}));
-
 	return { problem, resources };
 }
 
