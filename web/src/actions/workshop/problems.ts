@@ -16,7 +16,12 @@ export async function createWorkshopProblem(
 		await requireGroupAccess(input.groupId);
 	}
 	const problem = await svc.createWorkshopProblem(input, userId);
-	await ensureWorkshopDraft(problem.id, userId);
+	await ensureWorkshopDraft(problem.id, userId, {
+		title: input.title,
+		problemType: input.problemType,
+		timeLimit: input.timeLimit,
+		memoryLimit: input.memoryLimit,
+	});
 	revalidatePath("/workshop");
 	if (input.groupId !== undefined) {
 		revalidatePath(`/workshop/groups/${input.groupId}`);

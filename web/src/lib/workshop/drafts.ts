@@ -1,10 +1,13 @@
-import { and, eq } from "drizzle-orm";
+import { randomBytes } from "node:crypto";
+import { and, desc, eq, notLike } from "drizzle-orm";
 import { db } from "@/db";
 import {
 	type WorkshopDraft,
 	workshopDrafts,
 	workshopProblemMembers,
+	workshopProblems,
 	workshopResources,
+	workshopSnapshots,
 } from "@/db/schema";
 import { uploadFile } from "@/lib/storage/operations";
 import {
@@ -17,21 +20,157 @@ import { workshopDraftCheckerPath, workshopDraftResourcePath } from "./paths";
 const DEFAULT_CHECKER_PRESET = "icpc_diff" as const;
 
 /**
- * Ensure a draft exists for (problemId, userId). If not, create it and seed
- * testlib.h into its resources/ plus the default icpc_diff checker.
+ * Header values used to bootstrap a brand-new draft via {@link ensureWorkshopDraft}.
+ * Supplied by the create flow so the freshly-minted owner draft starts with the
+ * title/type/limits the user entered in the new-problem form.
+ */
+export type DraftBootstrap = {
+	title: string;
+	problemType: "icpc" | "special_judge";
+	timeLimit: number;
+	memoryLimit: number;
+};
+
+/** Editable header fields copied onto a new draft at creation time. */
+type DraftHeader = {
+	title: string;
+	description: string;
+	problemType: "icpc" | "special_judge";
+	timeLimit: number;
+	memoryLimit: number;
+	seed: string;
+};
+
+function freshSeed(): string {
+	return randomBytes(8).toString("hex");
+}
+
+/**
+ * Compute the header values for a newly-created draft, in priority order:
+ *   1. `bootstrap` (create flow) — title/type/limits from the form + fresh seed.
+ *   2. Latest user-committed snapshot's `stateJson.problem` for this problem.
+ *   3. The creator's draft header (the draft owned by `workshopProblems.createdBy`).
+ *   4. Hard defaults (empty title/description, icpc, 1000ms/512MB, fresh seed).
+ *
+ * Snapshot + creator-draft lookups use direct `db` queries here on purpose to
+ * avoid a circular import on the workshop-snapshots service.
+ */
+async function resolveNewDraftHeader(
+	problemId: number,
+	bootstrap?: DraftBootstrap
+): Promise<DraftHeader> {
+	// 1. Create flow: take the user-entered header verbatim + a fresh seed.
+	if (bootstrap) {
+		return {
+			title: bootstrap.title,
+			description: "",
+			problemType: bootstrap.problemType,
+			timeLimit: bootstrap.timeLimit,
+			memoryLimit: bootstrap.memoryLimit,
+			seed: freshSeed(),
+		};
+	}
+
+	// 2. Latest user-committed snapshot (exclude `auto/...` system snapshots).
+	const [latestSnapshot] = await db
+		.select({ stateJson: workshopSnapshots.stateJson })
+		.from(workshopSnapshots)
+		.where(
+			and(
+				eq(workshopSnapshots.workshopProblemId, problemId),
+				notLike(workshopSnapshots.label, "auto/%")
+			)
+		)
+		.orderBy(desc(workshopSnapshots.id))
+		.limit(1);
+	if (latestSnapshot) {
+		const state = latestSnapshot.stateJson as {
+			problem?: {
+				title: string;
+				description: string;
+				problemType: "icpc" | "special_judge";
+				timeLimit: number;
+				memoryLimit: number;
+				seed: string;
+			};
+		};
+		if (state.problem) {
+			return {
+				title: state.problem.title,
+				description: state.problem.description,
+				problemType: state.problem.problemType,
+				timeLimit: state.problem.timeLimit,
+				memoryLimit: state.problem.memoryLimit,
+				seed: state.problem.seed,
+			};
+		}
+	}
+
+	// 3. The creator's draft for this problem.
+	const [creatorDraft] = await db
+		.select({
+			title: workshopDrafts.title,
+			description: workshopDrafts.description,
+			problemType: workshopDrafts.problemType,
+			timeLimit: workshopDrafts.timeLimit,
+			memoryLimit: workshopDrafts.memoryLimit,
+			seed: workshopDrafts.seed,
+		})
+		.from(workshopDrafts)
+		.innerJoin(workshopProblems, eq(workshopProblems.id, workshopDrafts.workshopProblemId))
+		.where(
+			and(
+				eq(workshopDrafts.workshopProblemId, problemId),
+				eq(workshopDrafts.userId, workshopProblems.createdBy)
+			)
+		)
+		.limit(1);
+	if (creatorDraft) {
+		return {
+			title: creatorDraft.title,
+			description: creatorDraft.description,
+			problemType: creatorDraft.problemType,
+			timeLimit: creatorDraft.timeLimit,
+			memoryLimit: creatorDraft.memoryLimit,
+			seed: creatorDraft.seed,
+		};
+	}
+
+	// 4. Defaults.
+	return {
+		title: "",
+		description: "",
+		problemType: "icpc",
+		timeLimit: 1000,
+		memoryLimit: 512,
+		seed: freshSeed(),
+	};
+}
+
+/**
+ * Ensure a draft exists for (problemId, userId). If not, create it with a
+ * populated header (see {@link resolveNewDraftHeader}) and seed testlib.h into
+ * its resources/ plus the default icpc_diff checker. Pass `bootstrap` from the
+ * create flow to seed the header from the new-problem form.
  * Idempotent — if the row exists and the checker slot is already populated,
- * returns without changes. If the row exists but checkerPath is null
- * (e.g. problem pre-dates Phase 5), seeds the default checker into the draft.
+ * returns without changes (header is never overwritten on an existing row).
+ * If the row exists but checkerPath is null (e.g. problem pre-dates Phase 5),
+ * seeds the default checker into the draft.
  */
 export async function ensureWorkshopDraft(
 	problemId: number,
-	userId: number
+	userId: number,
+	bootstrap?: DraftBootstrap
 ): Promise<WorkshopDraft> {
+	// Compute the header values for the (possible) new row before inserting.
+	// If the row already exists this is discarded by ON CONFLICT DO NOTHING.
+	const header = await resolveNewDraftHeader(problemId, bootstrap);
+
 	// Attempt upsert-style: INSERT ... ON CONFLICT DO NOTHING.
 	// If the row already exists, `returning()` yields an empty array.
 	const inserted = await db
 		.insert(workshopDrafts)
-		.values({ workshopProblemId: problemId, userId })
+		.values({ workshopProblemId: problemId, userId, ...header })
 		.onConflictDoNothing()
 		.returning();
 
