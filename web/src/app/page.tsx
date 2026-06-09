@@ -1,4 +1,4 @@
-import { ArrowRight, Clock, Terminal, Trophy } from "lucide-react";
+import { ArrowRight, Clock, Code2, Lightbulb, Terminal, Trophy } from "lucide-react";
 import Link from "next/link";
 import { getActiveContestsForHome, getHomeStats, getUpcomingContestsForHome } from "@/actions/home";
 import { auth } from "@/auth";
@@ -41,11 +41,13 @@ export default async function HomePage() {
 							<span className="text-[#EA4C5A]">A</span>
 							<span className="text-primary">{` Online Judge`}</span>
 						</h1>
-						<p className="text-lg text-muted-foreground max-w-xl">교내 프로그래밍 대회 플랫폼</p>
+						<p className="text-lg text-muted-foreground max-w-xl">
+							프로그래밍 문제를 풀거나 만들어보세요
+						</p>
 						<div className="flex items-center gap-3 flex-wrap">
 							<Link href="/problems">
 								<Button size="lg">
-									문제 풀기
+									문제 목록
 									<ArrowRight className="ml-2 h-4 w-4" />
 								</Button>
 							</Link>
@@ -119,9 +121,7 @@ export default async function HomePage() {
 									<div className="font-semibold group-hover:text-primary transition-colors">
 										문제
 									</div>
-									<div className="text-sm text-muted-foreground mt-1">
-										{stats.problems}개의 문제를 풀어보세요
-									</div>
+									<div className="text-sm text-muted-foreground mt-1">다양한 문제를 풀어보세요</div>
 								</div>
 							</Link>
 							<Link
@@ -141,20 +141,34 @@ export default async function HomePage() {
 								</div>
 							</Link>
 							<Link
-								href="/anigma"
-								className="group flex items-start gap-4 rounded-lg border border-accent/30 p-5 transition-colors hover:border-accent/60 sm:col-span-2"
+								href="/playground"
+								className="group flex items-start gap-4 rounded-lg border p-5 transition-colors hover:border-primary/50"
 							>
-								<div className="rounded-md bg-accent/10 p-2">
-									<span className="text-accent text-lg font-bold leading-none block w-5 h-5 text-center">
-										?
-									</span>
+								<div className="rounded-md bg-primary/10 p-2">
+									<Code2 className="h-5 w-5 text-primary" />
 								</div>
 								<div>
-									<div className="font-semibold group-hover:text-accent transition-colors">
-										ANIGMA
+									<div className="font-semibold group-hover:text-primary transition-colors">
+										플레이그라운드
 									</div>
 									<div className="text-sm text-muted-foreground mt-1">
-										차별화된 입력을 찾고, 코드를 분석하는 새로운 유형의 문제
+										코드를 작성하고 실행해보세요
+									</div>
+								</div>
+							</Link>
+							<Link
+								href="/workshop"
+								className="group flex items-start gap-4 rounded-lg border p-5 transition-colors hover:border-primary/50"
+							>
+								<div className="rounded-md bg-primary/10 p-2">
+									<Lightbulb className="h-5 w-5 text-primary" />
+								</div>
+								<div>
+									<div className="font-semibold group-hover:text-primary transition-colors">
+										창작마당
+									</div>
+									<div className="text-sm text-muted-foreground mt-1">
+										문제를 직접 만들고 업로드하세요
 									</div>
 								</div>
 							</Link>

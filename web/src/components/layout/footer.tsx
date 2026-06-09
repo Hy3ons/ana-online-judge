@@ -45,7 +45,16 @@ export function Footer() {
 						</Link>
 					</div>
 					<p className="text-sm text-muted-foreground">
-						© {new Date().getFullYear()} ANA Online Judge
+						© {new Date().getFullYear()} ANA Online Judge · 충남대학교 알고리즘 동아리{" "}
+						<Link
+							href="https://anacnu.kr"
+							target="_blank"
+							rel="noopener noreferrer"
+							className="hover:text-foreground transition-colors underline underline-offset-2"
+						>
+							ANA
+						</Link>{" "}
+						운영
 					</p>
 					<p className="text-xs text-muted-foreground">마지막 업데이트: {buildTimeString}</p>
 					<p className="text-xs text-muted-foreground">
