@@ -10,8 +10,22 @@ import {
 	workshopProblems,
 } from "@/db/schema";
 import { assertCanCreateWorkshop } from "@/lib/services/quota";
+import { resolveDisplayHeaders } from "@/lib/services/workshop-display";
 import { deleteAllWithPrefix } from "@/lib/storage/operations";
 import { ensureWorkshopDraft } from "@/lib/workshop/drafts";
+
+export type WorkshopProblemListItem = {
+	id: number;
+	groupId: number | null;
+	createdBy: number;
+	publishedProblemId: number | null;
+	createdAt: Date;
+	updatedAt: Date;
+	title: string;
+	problemType: "icpc" | "special_judge";
+	timeLimit: number;
+	memoryLimit: number;
+};
 
 export type CreateWorkshopProblemInput = {
 	title: string;
@@ -100,21 +114,54 @@ export async function createWorkshopProblem(
 export async function listMyWorkshopProblems(
 	userId: number,
 	isAdmin = false
-): Promise<WorkshopProblem[]> {
+): Promise<WorkshopProblemListItem[]> {
+	const identityColumns = {
+		id: workshopProblems.id,
+		groupId: workshopProblems.groupId,
+		createdBy: workshopProblems.createdBy,
+		publishedProblemId: workshopProblems.publishedProblemId,
+		createdAt: workshopProblems.createdAt,
+		updatedAt: workshopProblems.updatedAt,
+	};
+
+	let rows: {
+		id: number;
+		groupId: number | null;
+		createdBy: number;
+		publishedProblemId: number | null;
+		createdAt: Date;
+		updatedAt: Date;
+	}[];
 	if (isAdmin) {
-		return db.select().from(workshopProblems).orderBy(desc(workshopProblems.updatedAt));
+		rows = await db
+			.select(identityColumns)
+			.from(workshopProblems)
+			.orderBy(desc(workshopProblems.updatedAt));
+	} else {
+		const memberRows = await db
+			.select({ problemId: workshopProblemMembers.workshopProblemId })
+			.from(workshopProblemMembers)
+			.where(eq(workshopProblemMembers.userId, userId));
+		const ids = memberRows.map((r) => r.problemId);
+		if (ids.length === 0) return [];
+		rows = await db
+			.select(identityColumns)
+			.from(workshopProblems)
+			.where(inArray(workshopProblems.id, ids))
+			.orderBy(desc(workshopProblems.updatedAt));
 	}
-	const memberRows = await db
-		.select({ problemId: workshopProblemMembers.workshopProblemId })
-		.from(workshopProblemMembers)
-		.where(eq(workshopProblemMembers.userId, userId));
-	const ids = memberRows.map((r) => r.problemId);
-	if (ids.length === 0) return [];
-	return db
-		.select()
-		.from(workshopProblems)
-		.where(inArray(workshopProblems.id, ids))
-		.orderBy(desc(workshopProblems.updatedAt));
+
+	const headers = await resolveDisplayHeaders(rows.map((r) => r.id));
+	return rows.map((r) => {
+		const h = headers.get(r.id);
+		return {
+			...r,
+			title: h?.title ?? "",
+			problemType: h?.problemType ?? "icpc",
+			timeLimit: h?.timeLimit ?? 1000,
+			memoryLimit: h?.memoryLimit ?? 512,
+		};
+	});
 }
 
 /**
