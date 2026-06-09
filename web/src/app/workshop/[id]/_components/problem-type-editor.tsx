@@ -62,8 +62,8 @@ export function WorkshopProblemTypeEditor({
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
-						<SelectItem value="icpc">ICPC (표준 입출력 비교)</SelectItem>
-						<SelectItem value="special_judge">스페셜 저지 (커스텀 체커)</SelectItem>
+						<SelectItem value="icpc">ICPC (stdout 비교)</SelectItem>
+						<SelectItem value="special_judge">Special Judge (커스텀 체커)</SelectItem>
 					</SelectContent>
 				</Select>
 			</div>
