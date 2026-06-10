@@ -6,6 +6,7 @@ import { getWorkshopProblemAdminDetail, getWorkshopReadiness } from "@/actions/a
 import { PageBreadcrumb } from "@/components/layout/page-breadcrumb";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CasGcPanel } from "./cas-gc-panel";
 import { PublishPanel } from "./publish-panel";
 
 export const metadata: Metadata = {
@@ -143,6 +144,15 @@ export default async function AdminWorkshopDetailPage({
 						readiness={readiness}
 						publishedProblemId={meta.publishedProblemId}
 					/>
+				</CardContent>
+			</Card>
+
+			<Card>
+				<CardHeader>
+					<CardTitle>CAS 가비지 컬렉션</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<CasGcPanel workshopProblemId={workshopProblemId} />
 				</CardContent>
 			</Card>
 		</div>

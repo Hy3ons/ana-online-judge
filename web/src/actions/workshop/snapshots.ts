@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import * as diffSvc from "@/lib/services/workshop-snapshot-diff";
 import * as svc from "@/lib/services/workshop-snapshots";
 import { requireWorkshopAccess } from "@/lib/workshop/auth";
 import { getActiveDraftForUser } from "@/lib/workshop/drafts";
@@ -57,6 +58,12 @@ export async function rollbackWorkshopSnapshot(problemId: number, snapshotId: nu
 	revalidatePath(`/workshop/${problemId}/validator`);
 	revalidatePath(`/workshop/${problemId}/statement`);
 	return result;
+}
+
+export async function getWorkshopSnapshotDiff(problemId: number, fromId: number, toId: number) {
+	const { userId, isAdmin } = await requireWorkshopAccess();
+	await getActiveDraftForUser(problemId, userId, isAdmin);
+	return diffSvc.diffSnapshots(problemId, fromId, toId);
 }
 
 export async function getStaleDraftInfo(problemId: number) {

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-utils";
 import * as adminSvc from "@/lib/services/workshop-admin";
+import { gcWorkshopObjects } from "@/lib/services/workshop-cas-gc";
 import * as publishSvc from "@/lib/services/workshop-publish";
 import * as readinessSvc from "@/lib/services/workshop-publish-readiness";
 
@@ -47,7 +48,13 @@ export async function republishWorkshopProblem(workshopProblemId: number) {
 	return result;
 }
 
+export async function runWorkshopCasGc(workshopProblemId: number, dryRun: boolean) {
+	await requireAdmin();
+	return gcWorkshopObjects(workshopProblemId, { dryRun });
+}
+
 export type AdminWorkshopListReturn = Awaited<ReturnType<typeof listAllWorkshopProblems>>;
 export type AdminWorkshopDetailReturn = Awaited<ReturnType<typeof getWorkshopProblemAdminDetail>>;
 export type WorkshopReadinessReturn = Awaited<ReturnType<typeof getWorkshopReadiness>>;
 export type PublishReturn = Awaited<ReturnType<typeof publishWorkshopProblem>>;
+export type CasGcReturn = Awaited<ReturnType<typeof runWorkshopCasGc>>;

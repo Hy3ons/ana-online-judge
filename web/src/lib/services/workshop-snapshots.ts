@@ -19,8 +19,8 @@ import {
 	workshopTestcases,
 } from "@/db/schema";
 import { getFileExtension } from "@/lib/languages";
-import { deleteAllWithPrefix } from "@/lib/storage/operations";
-import { restoreObject, storeAsObjectByKey } from "@/lib/workshop/objects";
+import { deleteAllWithPrefix, downloadFile } from "@/lib/storage/operations";
+import { restoreObject, storeAsObject, storeAsObjectByKey } from "@/lib/workshop/objects";
 import {
 	workshopDraftBase,
 	workshopDraftCheckerPath,
@@ -30,15 +30,17 @@ import {
 	workshopDraftTestcasePath,
 	workshopDraftValidatorPath,
 } from "@/lib/workshop/paths";
+import { extractWorkshopImageKeys } from "@/lib/workshop/snapshot-images";
 
 /**
  * Shape persisted to `workshopSnapshots.stateJson`. Every MinIO-backed file is
  * referenced by sha256 hex — never inline. Restoring a snapshot re-materializes
  * the draft by copying from `objects/{sha256}` to the draft's paths.
  *
- * `version` is reserved for future schema migrations; for Phase 7 it is always 1.
+ * `version` gates schema migrations. v2 (current) adds `testcases[].validationStatus`
+ * and `images`. v1 snapshots remain rollback-compatible (missing fields default).
  */
-export const SNAPSHOT_STATE_VERSION = 1 as const;
+export const SNAPSHOT_STATE_VERSION = 2 as const;
 
 export type SnapshotProblemHeader = {
 	title: string;
@@ -63,6 +65,8 @@ export type SnapshotTestcase = {
 	score: number;
 	inputHash: string;
 	outputHash: string | null;
+	/** v2+. v1 스냅샷에는 없음 → 복원 시 "pending" 폴백. */
+	validationStatus?: WorkshopTestcase["validationStatus"];
 };
 
 export type SnapshotGenerator = {
@@ -85,6 +89,12 @@ export type SnapshotResource = {
 	hash: string;
 };
 
+export type SnapshotImage = {
+	/** 스토리지 키: images/workshopProblems/{id}/{file} */
+	key: string;
+	hash: string;
+};
+
 export type SnapshotState = {
 	version: typeof SNAPSHOT_STATE_VERSION;
 	problem: SnapshotProblemHeader;
@@ -92,6 +102,8 @@ export type SnapshotState = {
 	generators: SnapshotGenerator[];
 	solutions: SnapshotSolution[];
 	resources: SnapshotResource[];
+	/** v2+. 지문 이미지 동결. v1 스냅샷에는 없음. */
+	images?: SnapshotImage[];
 };
 
 // ---------------------------------------------------------------------------
@@ -240,6 +252,19 @@ export async function createSnapshot(params: {
 
 	await Promise.all(hashJobs);
 
+	// 지문 이미지 동결: description의 워크샵 이미지를 CAS로.
+	const imageKeys = extractWorkshopImageKeys(draft.description, problemId);
+	const images: SnapshotImage[] = [];
+	for (const key of imageKeys) {
+		try {
+			const bytes = await downloadFile(key);
+			const hash = await storeAsObject(problemId, bytes);
+			images.push({ key, hash });
+		} catch (err) {
+			console.warn(`[workshop-snapshots] image freeze failed for ${key}:`, err);
+		}
+	}
+
 	// --- Phase 7b: assemble the stateJson ------------------------------------
 	const tcHashByIndex = new Map(tcHashes.map((h) => [h.index, h]));
 	const genHashById = new Map(genHashes.map((h) => [h.id, h]));
@@ -274,6 +299,7 @@ export async function createSnapshot(params: {
 				score: t.score,
 				inputHash: h.inputHash,
 				outputHash: h.outputHash,
+				validationStatus: t.validationStatus,
 			};
 		}),
 		generators: generators.map((g) => {
@@ -302,6 +328,7 @@ export async function createSnapshot(params: {
 			if (!h) throw new Error(`resource ${r.name} 의 해시 계산 누락`);
 			return { name: r.name, hash: h.hash };
 		}),
+		images,
 	};
 
 	// --- Phase 7c: insert the snapshot row inside a DB transaction ----------
@@ -399,23 +426,19 @@ export async function getSnapshot(
 /**
  * Restore `snapshotId` into the active draft for `(problemId, userId)`.
  *
- * Steps (see plan §Task 7 for atomicity rationale):
+ * Steps (DB-first ordering for atomicity):
  *   1. Auto-snapshot the current draft (label = `auto/롤백 전 — ${target.label}`).
  *      This is **mandatory** — if it fails, the rollback aborts.
- *   1b. Wipe pre-existing draft MinIO files so we don't leave orphans (I13).
- *   2. Parallel CopyObject from `objects/{sha256}` back to draft paths.
- *   3. Wipe & re-insert draft rows + update problem header, in one tx.
- *   4. Set `workshopDrafts.baseSnapshotId = target.id`.
+ *   2. Wipe & re-insert draft rows + update header + set `baseSnapshotId`, in one tx.
+ *   3. Wipe pre-existing draft MinIO files so we don't leave orphans.
+ *   4. Parallel CopyObject from `objects/{sha256}` back to draft paths (incl. images).
  *
- * Known limitation (I12 — DB-failure-after-MinIO-restore, deferred):
- *   If MinIO restore (step 2) succeeds but the DB transaction (step 3) fails,
- *   the draft is left with restored files on MinIO but the OLD DB rows still
- *   referencing the previous (now overwritten) paths. The mandatory auto-
- *   snapshot from step 1 provides the recovery path: the user can re-rollback
- *   to that auto-snapshot, which will re-restore both MinIO and DB to the
- *   pre-rollback state. A truly atomic fix would require staging restored
- *   files to side paths and renaming on tx commit, which is non-trivial on
- *   S3-style storage. Tracked as a follow-up.
+ * Atomicity (I12 resolved): the DB transaction runs BEFORE any MinIO mutation.
+ * All draft file paths are computed deterministically (problemId/userId/name/index),
+ * not read from disk, so files are re-materialized after the tx commits. If the tx
+ * fails, no MinIO file is wiped or restored → the draft is fully preserved (clean
+ * failure). If a later file restore fails post-commit, the mandatory auto-snapshot
+ * (step 1) still provides a re-rollback recovery path.
  *
  * Returns the re-hydrated draft row.
  */
@@ -434,7 +457,12 @@ export async function rollbackToSnapshot(params: {
 	const target = await getSnapshot(problemId, snapshotId);
 	if (!target) throw new Error("스냅샷을 찾을 수 없습니다");
 	const state = target.stateJson as SnapshotState;
-	if (!state || state.version !== SNAPSHOT_STATE_VERSION) {
+	if (
+		!state ||
+		typeof state.version !== "number" ||
+		state.version < 1 ||
+		state.version > SNAPSHOT_STATE_VERSION
+	) {
 		throw new Error(`스냅샷 포맷 버전이 호환되지 않습니다 (version=${state?.version})`);
 	}
 
@@ -454,82 +482,12 @@ export async function rollbackToSnapshot(params: {
 		message: `rollback to snapshot #${target.id} (${target.label})`,
 	});
 
-	// 1b. Wipe existing draft MinIO files so rollback doesn't leave orphans.
-	//     Files in the prior draft state that aren't in the target snapshot
-	//     (e.g. solutions added since the snapshot was taken) become unrecoverable —
-	//     this is the desired behavior per spec (rollback = "go back to that state").
-	//     The mandatory auto-snapshot above (step 1) preserves recovery on user error.
-	await deleteAllWithPrefix(`${workshopDraftBase(problemId, userId)}/`);
-
-	// 2. Parallel object restores to draft paths.
-	const copyJobs: Promise<unknown>[] = [];
-
-	// 2a. Checker / validator — paths are derived from language → file extension.
-	if (state.problem.checkerHash && state.problem.checkerLanguage) {
-		const ext = getFileExtension(state.problem.checkerLanguage as Language);
-		const dest = workshopDraftCheckerPath(problemId, userId, ext);
-		copyJobs.push(restoreObject(problemId, state.problem.checkerHash, dest));
-	}
-	if (state.problem.validatorHash && state.problem.validatorLanguage) {
-		const ext = getFileExtension(state.problem.validatorLanguage as Language);
-		const dest = workshopDraftValidatorPath(problemId, userId, ext);
-		copyJobs.push(restoreObject(problemId, state.problem.validatorHash, dest));
-	}
-
-	// 2b. Testcases (input + optional output).
-	for (const t of state.testcases) {
-		copyJobs.push(
-			restoreObject(
-				problemId,
-				t.inputHash,
-				workshopDraftTestcasePath(problemId, userId, t.index, "input")
-			)
-		);
-		if (t.outputHash) {
-			copyJobs.push(
-				restoreObject(
-					problemId,
-					t.outputHash,
-					workshopDraftTestcasePath(problemId, userId, t.index, "output")
-				)
-			);
-		}
-	}
-
-	// 2c. Generators — source only (compiled binary is regenerated on next run).
-	for (const g of state.generators) {
-		const ext = getFileExtension(g.language);
-		copyJobs.push(
-			restoreObject(
-				problemId,
-				g.sourceHash,
-				workshopDraftGeneratorSourcePath(problemId, userId, g.name, ext)
-			)
-		);
-	}
-
-	// 2d. Solutions.
-	for (const s of state.solutions) {
-		const ext = getFileExtension(s.language);
-		copyJobs.push(
-			restoreObject(
-				problemId,
-				s.sourceHash,
-				workshopDraftSolutionPath(problemId, userId, s.name, ext)
-			)
-		);
-	}
-
-	// 2e. Resources.
-	for (const r of state.resources) {
-		copyJobs.push(
-			restoreObject(problemId, r.hash, workshopDraftResourcePath(problemId, userId, r.name))
-		);
-	}
-
-	await Promise.all(copyJobs);
-
-	// 3. Replace DB state in one transaction.
+	// Run the DB transaction FIRST. All draft file paths below are derived
+	// deterministically (problemId/userId/name/index), not read from disk, so we can
+	// re-materialize the files afterward. If the tx fails, we abort before touching
+	// any MinIO file → the draft's files are fully preserved (clean failure). (I12)
+	//
+	// 2. Replace DB state in one transaction.
 	await db.transaction(async (tx) => {
 		// Wipe draft-scoped rows (cascades already set draftId FKs to cascade
 		// delete from workshopDrafts, but we're keeping the draft row itself).
@@ -594,7 +552,7 @@ export async function rollbackToSnapshot(params: {
 				outputPath,
 				subtaskGroup: t.subtaskGroup,
 				score: t.score,
-				validationStatus: "pending",
+				validationStatus: t.validationStatus ?? "pending",
 			});
 		}
 
@@ -633,12 +591,96 @@ export async function rollbackToSnapshot(params: {
 			})
 			.where(eq(workshopDrafts.id, draft.id));
 
-		// 4. Set draft's base snapshot and bump updatedAt.
+		// 2b. Set draft's base snapshot and bump updatedAt.
 		await tx
 			.update(workshopDrafts)
 			.set({ baseSnapshotId: target.id, updatedAt: new Date() })
 			.where(eq(workshopDrafts.id, draft.id));
 	});
+
+	// 3. Wipe existing draft MinIO files so rollback doesn't leave orphans.
+	//     Files in the prior draft state that aren't in the target snapshot
+	//     (e.g. solutions added since the snapshot was taken) become unrecoverable —
+	//     this is the desired behavior per spec (rollback = "go back to that state").
+	//     The mandatory auto-snapshot above (step 1) preserves recovery on user error.
+	await deleteAllWithPrefix(`${workshopDraftBase(problemId, userId)}/`);
+
+	// 4. Parallel object restores to draft paths.
+	const copyJobs: Promise<unknown>[] = [];
+
+	// 4a. Checker / validator — paths are derived from language → file extension.
+	if (state.problem.checkerHash && state.problem.checkerLanguage) {
+		const ext = getFileExtension(state.problem.checkerLanguage as Language);
+		const dest = workshopDraftCheckerPath(problemId, userId, ext);
+		copyJobs.push(restoreObject(problemId, state.problem.checkerHash, dest));
+	}
+	if (state.problem.validatorHash && state.problem.validatorLanguage) {
+		const ext = getFileExtension(state.problem.validatorLanguage as Language);
+		const dest = workshopDraftValidatorPath(problemId, userId, ext);
+		copyJobs.push(restoreObject(problemId, state.problem.validatorHash, dest));
+	}
+
+	// 4b. Testcases (input + optional output).
+	for (const t of state.testcases) {
+		copyJobs.push(
+			restoreObject(
+				problemId,
+				t.inputHash,
+				workshopDraftTestcasePath(problemId, userId, t.index, "input")
+			)
+		);
+		if (t.outputHash) {
+			copyJobs.push(
+				restoreObject(
+					problemId,
+					t.outputHash,
+					workshopDraftTestcasePath(problemId, userId, t.index, "output")
+				)
+			);
+		}
+	}
+
+	// 4c. Generators — source only (compiled binary is regenerated on next run).
+	for (const g of state.generators) {
+		const ext = getFileExtension(g.language);
+		copyJobs.push(
+			restoreObject(
+				problemId,
+				g.sourceHash,
+				workshopDraftGeneratorSourcePath(problemId, userId, g.name, ext)
+			)
+		);
+	}
+
+	// 4d. Solutions.
+	for (const s of state.solutions) {
+		const ext = getFileExtension(s.language);
+		copyJobs.push(
+			restoreObject(
+				problemId,
+				s.sourceHash,
+				workshopDraftSolutionPath(problemId, userId, s.name, ext)
+			)
+		);
+	}
+
+	// 4e. Resources.
+	for (const r of state.resources) {
+		copyJobs.push(
+			restoreObject(problemId, r.hash, workshopDraftResourcePath(problemId, userId, r.name))
+		);
+	}
+
+	await Promise.all(copyJobs);
+
+	// 4f. 지문 이미지 복원: 삭제됐더라도 동결된 객체에서 원래 키로 되살린다.
+	for (const img of state.images ?? []) {
+		try {
+			await restoreObject(problemId, img.hash, img.key);
+		} catch (err) {
+			console.warn(`[workshop-snapshots] image restore failed for ${img.key}:`, err);
+		}
+	}
 
 	return { autoSnapshot, restored: target };
 }
