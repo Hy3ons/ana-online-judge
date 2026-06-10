@@ -36,6 +36,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { SnapshotDiffDialog } from "./_components/snapshot-diff-dialog";
 
 type SnapshotRow = {
 	id: number;
@@ -109,52 +110,62 @@ export function SnapshotsClient({
 							{baseSnapshotId !== null && ` · 현재 드래프트 기반 스냅샷 #${baseSnapshotId}`}
 						</p>
 					</div>
-					<Dialog open={commitOpen} onOpenChange={setCommitOpen}>
-						<DialogTrigger asChild>
-							<Button disabled={isPending}>커밋</Button>
-						</DialogTrigger>
-						<DialogContent>
-							<DialogHeader>
-								<DialogTitle>스냅샷 커밋</DialogTitle>
-								<DialogDescription>
-									현재 드래프트 상태를 새 스냅샷으로 저장합니다. 동일한 내용의 파일은 자동으로 중복
-									제거됩니다.
-								</DialogDescription>
-							</DialogHeader>
-							<div className="space-y-3">
-								<div>
-									<Label htmlFor="snapshot-label">라벨 *</Label>
-									<Input
-										id="snapshot-label"
-										value={label}
-										onChange={(e) => setLabel(e.target.value)}
-										placeholder="예: v1 제출용"
-										disabled={isPending}
-									/>
+					<div className="flex items-center gap-2">
+						<SnapshotDiffDialog
+							problemId={problemId}
+							snapshots={initialSnapshots.map((s) => ({ id: s.id, label: s.label }))}
+						/>
+						<Dialog open={commitOpen} onOpenChange={setCommitOpen}>
+							<DialogTrigger asChild>
+								<Button disabled={isPending}>커밋</Button>
+							</DialogTrigger>
+							<DialogContent>
+								<DialogHeader>
+									<DialogTitle>스냅샷 커밋</DialogTitle>
+									<DialogDescription>
+										현재 드래프트 상태를 새 스냅샷으로 저장합니다. 동일한 내용의 파일은 자동으로
+										중복 제거됩니다.
+									</DialogDescription>
+								</DialogHeader>
+								<div className="space-y-3">
+									<div>
+										<Label htmlFor="snapshot-label">라벨 *</Label>
+										<Input
+											id="snapshot-label"
+											value={label}
+											onChange={(e) => setLabel(e.target.value)}
+											placeholder="예: v1 제출용"
+											disabled={isPending}
+										/>
+									</div>
+									<div>
+										<Label htmlFor="snapshot-message">메시지 (선택)</Label>
+										<Textarea
+											id="snapshot-message"
+											value={message}
+											onChange={(e) => setMessage(e.target.value)}
+											placeholder="테스트 10개 추가 + 솔루션 리팩터링"
+											rows={3}
+											disabled={isPending}
+										/>
+									</div>
+									{error && <p className="text-sm text-destructive">{error}</p>}
 								</div>
-								<div>
-									<Label htmlFor="snapshot-message">메시지 (선택)</Label>
-									<Textarea
-										id="snapshot-message"
-										value={message}
-										onChange={(e) => setMessage(e.target.value)}
-										placeholder="테스트 10개 추가 + 솔루션 리팩터링"
-										rows={3}
+								<DialogFooter>
+									<Button
+										variant="outline"
+										onClick={() => setCommitOpen(false)}
 										disabled={isPending}
-									/>
-								</div>
-								{error && <p className="text-sm text-destructive">{error}</p>}
-							</div>
-							<DialogFooter>
-								<Button variant="outline" onClick={() => setCommitOpen(false)} disabled={isPending}>
-									취소
-								</Button>
-								<Button onClick={handleCommit} disabled={isPending || !label.trim()}>
-									{isPending ? "커밋 중…" : "커밋"}
-								</Button>
-							</DialogFooter>
-						</DialogContent>
-					</Dialog>
+									>
+										취소
+									</Button>
+									<Button onClick={handleCommit} disabled={isPending || !label.trim()}>
+										{isPending ? "커밋 중…" : "커밋"}
+									</Button>
+								</DialogFooter>
+							</DialogContent>
+						</Dialog>
+					</div>
 				</CardHeader>
 				<CardContent>
 					{initialSnapshots.length === 0 ? (
