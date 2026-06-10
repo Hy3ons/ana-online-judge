@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { workshopSnapshots } from "@/db/schema";
 import type { SnapshotState } from "@/lib/services/workshop-snapshots";
-import { deleteFile, listObjects } from "@/lib/storage/operations";
+import { deleteFile, listObjectsWithDetails } from "@/lib/storage/operations";
 
 export type CasGcResult = {
 	referenced: number;
@@ -11,12 +11,21 @@ export type CasGcResult = {
 	deleted: number;
 };
 
+/**
+ * 갓 쓰인 객체는 GC 대상에서 제외하는 유예 기간(ms). createSnapshot은 객체를
+ * 먼저 CAS에 쓰고 그 뒤 스냅샷 행을 INSERT하므로, 그 사이(보통 1초 미만)에 GC가
+ * 돌면 아직 어떤 스냅샷도 참조하지 않는 "진행 중" 객체를 고아로 오인할 수 있다.
+ * 넉넉한 유예로 그 경합을 차단한다.
+ */
+const GC_GRACE_MS = 10 * 60 * 1000;
+
 /** 한 문제의 미참조 CAS 객체를 찾는다. dryRun=true(기본)면 삭제하지 않고 목록만 반환. */
 export async function gcWorkshopObjects(
 	problemId: number,
-	opts: { dryRun?: boolean } = {}
+	opts: { dryRun?: boolean; now?: number } = {}
 ): Promise<CasGcResult> {
 	const dryRun = opts.dryRun ?? true;
+	const now = opts.now ?? Date.now();
 	const snaps = await db
 		.select({ stateJson: workshopSnapshots.stateJson })
 		.from(workshopSnapshots)
@@ -39,11 +48,14 @@ export async function gcWorkshopObjects(
 		for (const im of st.images ?? []) referenced.add(im.hash);
 	}
 	const prefix = `workshop/${problemId}/objects/`;
-	const keys = await listObjects(prefix);
+	const objects = await listObjectsWithDetails(prefix);
 	const orphans: string[] = [];
-	for (const key of keys) {
-		const sha = key.slice(prefix.length);
-		if (!referenced.has(sha)) orphans.push(key);
+	for (const obj of objects) {
+		const sha = obj.key.slice(prefix.length);
+		if (referenced.has(sha)) continue;
+		// 유예 기간 내에 쓰인 객체는 진행 중인 스냅샷의 것일 수 있어 건너뛴다.
+		if (now - obj.lastModified.getTime() < GC_GRACE_MS) continue;
+		orphans.push(obj.key);
 	}
 	let deleted = 0;
 	if (!dryRun) {
@@ -52,5 +64,5 @@ export async function gcWorkshopObjects(
 			deleted++;
 		}
 	}
-	return { referenced: referenced.size, total: keys.length, orphans, deleted };
+	return { referenced: referenced.size, total: objects.length, orphans, deleted };
 }

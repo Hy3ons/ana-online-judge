@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { workshopSnapshots } from "@/db/schema";
 import type { SnapshotState } from "@/lib/services/workshop-snapshots";
@@ -59,7 +59,12 @@ export async function diffSnapshots(
 	const rows = await db
 		.select()
 		.from(workshopSnapshots)
-		.where(eq(workshopSnapshots.workshopProblemId, problemId));
+		.where(
+			and(
+				eq(workshopSnapshots.workshopProblemId, problemId),
+				inArray(workshopSnapshots.id, [fromId, toId])
+			)
+		);
 	const from = rows.find((r) => r.id === fromId);
 	const to = rows.find((r) => r.id === toId);
 	if (!from || !to) throw new Error("스냅샷을 찾을 수 없습니다");
