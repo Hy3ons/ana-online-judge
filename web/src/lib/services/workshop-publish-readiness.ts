@@ -1,12 +1,6 @@
-import { and, desc, eq, notLike } from "drizzle-orm";
+import { and, desc, eq, gte, notLike } from "drizzle-orm";
 import { db } from "@/db";
-import {
-	workshopDrafts,
-	workshopInvocations,
-	workshopProblems,
-	workshopSnapshots,
-	workshopTestcases,
-} from "@/db/schema";
+import { workshopInvocations, workshopProblems, workshopSnapshots } from "@/db/schema";
 import type { InvocationSolutionSnapshot } from "@/lib/services/workshop-invocations";
 import type { InvocationResultCell } from "@/lib/workshop/invocation-subscriber";
 import type { WorkshopSnapshotStateJson } from "@/lib/workshop/snapshot-contract";
@@ -19,6 +13,7 @@ export interface ReadinessIssue {
 		| "no_main_solution"
 		| "no_checker"
 		| "main_not_all_ac"
+		| "main_not_verified"
 		| "problem_missing";
 	message: string;
 }
@@ -112,33 +107,18 @@ export async function computePublishReadiness(workshopProblemId: number): Promis
 		});
 	}
 
-	// 4. Check live testcase validation status (draft rows, not snapshot).
-	const [draft] = await db
-		.select({ id: workshopDrafts.id })
-		.from(workshopDrafts)
-		.where(eq(workshopDrafts.workshopProblemId, workshopProblemId))
-		.limit(1);
-	if (draft) {
-		const invalidTestcases = await db
-			.select({ id: workshopTestcases.id, index: workshopTestcases.index })
-			.from(workshopTestcases)
-			.where(
-				and(
-					eq(workshopTestcases.draftId, draft.id),
-					eq(workshopTestcases.validationStatus, "invalid")
-				)
-			);
-		if (invalidTestcases.length > 0) {
-			issues.push({
-				code: "testcase_invalid",
-				message: `밸리데이션 실패 테스트케이스가 ${invalidTestcases.length}개 있습니다 (index: ${invalidTestcases
-					.map((t) => t.index)
-					.join(", ")}).`,
-			});
-		}
+	// 4. 테스트케이스 검증 상태 — 스냅샷에 동결된 값 기준.
+	const invalidInSnapshot = state.testcases.filter((t) => t.validationStatus === "invalid");
+	if (invalidInSnapshot.length > 0) {
+		issues.push({
+			code: "testcase_invalid",
+			message: `밸리데이션 실패 테스트케이스가 ${invalidInSnapshot.length}개 있습니다 (index: ${invalidInSnapshot
+				.map((t) => t.index)
+				.join(", ")}).`,
+		});
 	}
 
-	// 5. Check that the main solution passed all testcases in the latest invocation.
+	// 5. 메인 솔루션이 이 스냅샷 이후의 인보케이션에서 전부 AC인지 확인.
 	if (main) {
 		const [latestInv] = await db
 			.select()
@@ -146,15 +126,20 @@ export async function computePublishReadiness(workshopProblemId: number): Promis
 			.where(
 				and(
 					eq(workshopInvocations.workshopProblemId, workshopProblemId),
-					eq(workshopInvocations.status, "completed")
+					eq(workshopInvocations.status, "completed"),
+					gte(workshopInvocations.createdAt, snap.createdAt)
 				)
 			)
 			.orderBy(desc(workshopInvocations.createdAt))
 			.limit(1);
-		if (latestInv) {
+		if (!latestInv) {
+			issues.push({
+				code: "main_not_verified",
+				message:
+					"이 스냅샷 이후 완료된 인보케이션이 없습니다. 메인 솔루션을 다시 실행해 검증하세요.",
+			});
+		} else {
 			const solutions = latestInv.selectedSolutionsJson as InvocationSolutionSnapshot[];
-			// InvocationSolutionSnapshot does not include isMain; match by name only.
-			// Name uniqueness within a draft is enforced by workshopSolutions schema.
 			const mainSol = solutions.find((s) => s.name === main.name);
 			if (mainSol) {
 				const results = latestInv.resultsJson as InvocationResultCell[];
@@ -166,6 +151,11 @@ export async function computePublishReadiness(workshopProblemId: number): Promis
 						message: `메인 솔루션이 ${failedCells.length}개 테스트에서 AC가 아닙니다 (verdict: ${[...new Set(failedCells.map((c) => c.verdict))].join(", ")}).`,
 					});
 				}
+			} else {
+				issues.push({
+					code: "main_not_verified",
+					message: "이 스냅샷 이후 인보케이션에 메인 솔루션이 포함되지 않았습니다.",
+				});
 			}
 		}
 	}
