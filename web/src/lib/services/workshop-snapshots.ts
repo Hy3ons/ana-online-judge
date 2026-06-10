@@ -19,8 +19,8 @@ import {
 	workshopTestcases,
 } from "@/db/schema";
 import { getFileExtension } from "@/lib/languages";
-import { deleteAllWithPrefix } from "@/lib/storage/operations";
-import { restoreObject, storeAsObjectByKey } from "@/lib/workshop/objects";
+import { deleteAllWithPrefix, downloadFile } from "@/lib/storage/operations";
+import { restoreObject, storeAsObject, storeAsObjectByKey } from "@/lib/workshop/objects";
 import {
 	workshopDraftBase,
 	workshopDraftCheckerPath,
@@ -30,6 +30,7 @@ import {
 	workshopDraftTestcasePath,
 	workshopDraftValidatorPath,
 } from "@/lib/workshop/paths";
+import { extractWorkshopImageKeys } from "@/lib/workshop/snapshot-images";
 
 /**
  * Shape persisted to `workshopSnapshots.stateJson`. Every MinIO-backed file is
@@ -87,6 +88,12 @@ export type SnapshotResource = {
 	hash: string;
 };
 
+export type SnapshotImage = {
+	/** 스토리지 키: images/workshopProblems/{id}/{file} */
+	key: string;
+	hash: string;
+};
+
 export type SnapshotState = {
 	version: typeof SNAPSHOT_STATE_VERSION;
 	problem: SnapshotProblemHeader;
@@ -94,6 +101,8 @@ export type SnapshotState = {
 	generators: SnapshotGenerator[];
 	solutions: SnapshotSolution[];
 	resources: SnapshotResource[];
+	/** v2+. 지문 이미지 동결. v1 스냅샷에는 없음. */
+	images?: SnapshotImage[];
 };
 
 // ---------------------------------------------------------------------------
@@ -242,6 +251,19 @@ export async function createSnapshot(params: {
 
 	await Promise.all(hashJobs);
 
+	// 지문 이미지 동결: description의 워크샵 이미지를 CAS로.
+	const imageKeys = extractWorkshopImageKeys(draft.description, problemId);
+	const images: SnapshotImage[] = [];
+	for (const key of imageKeys) {
+		try {
+			const bytes = await downloadFile(key);
+			const hash = await storeAsObject(problemId, bytes);
+			images.push({ key, hash });
+		} catch (err) {
+			console.warn(`[workshop-snapshots] image freeze failed for ${key}:`, err);
+		}
+	}
+
 	// --- Phase 7b: assemble the stateJson ------------------------------------
 	const tcHashByIndex = new Map(tcHashes.map((h) => [h.index, h]));
 	const genHashById = new Map(genHashes.map((h) => [h.id, h]));
@@ -305,6 +327,7 @@ export async function createSnapshot(params: {
 			if (!h) throw new Error(`resource ${r.name} 의 해시 계산 누락`);
 			return { name: r.name, hash: h.hash };
 		}),
+		images,
 	};
 
 	// --- Phase 7c: insert the snapshot row inside a DB transaction ----------
@@ -536,6 +559,15 @@ export async function rollbackToSnapshot(params: {
 	}
 
 	await Promise.all(copyJobs);
+
+	// 2f. 지문 이미지 복원: 삭제됐더라도 동결된 객체에서 원래 키로 되살린다.
+	for (const img of state.images ?? []) {
+		try {
+			await restoreObject(problemId, img.hash, img.key);
+		} catch (err) {
+			console.warn(`[workshop-snapshots] image restore failed for ${img.key}:`, err);
+		}
+	}
 
 	// 3. Replace DB state in one transaction.
 	await db.transaction(async (tx) => {
