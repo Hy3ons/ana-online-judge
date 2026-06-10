@@ -10,6 +10,9 @@ export async function createWorkshopSnapshot(
 	input: { label: string; message?: string | null }
 ) {
 	const { userId, isAdmin } = await requireWorkshopAccess();
+	if (input.label.trim().startsWith("auto/")) {
+		throw new Error("auto/ 접두사는 시스템 예약이라 사용할 수 없습니다");
+	}
 	// Ensure the draft exists before snapshotting — no-op if already present.
 	await getActiveDraftForUser(problemId, userId, isAdmin);
 	const snapshot = await svc.createSnapshot({

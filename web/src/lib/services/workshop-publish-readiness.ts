@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, notLike } from "drizzle-orm";
 import { db } from "@/db";
 import {
 	workshopDrafts,
@@ -57,8 +57,13 @@ export async function computePublishReadiness(workshopProblemId: number): Promis
 	const [snap] = await db
 		.select()
 		.from(workshopSnapshots)
-		.where(eq(workshopSnapshots.workshopProblemId, workshopProblemId))
-		.orderBy(desc(workshopSnapshots.createdAt))
+		.where(
+			and(
+				eq(workshopSnapshots.workshopProblemId, workshopProblemId),
+				notLike(workshopSnapshots.label, "auto/%")
+			)
+		)
+		.orderBy(desc(workshopSnapshots.id))
 		.limit(1);
 
 	if (!snap) {

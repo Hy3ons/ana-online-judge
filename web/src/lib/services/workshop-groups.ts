@@ -1,6 +1,5 @@
 import { and, asc, count, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
-import type { WorkshopProblem } from "@/db/schema";
 import {
 	users,
 	workshopGroupMembers,
@@ -9,6 +8,7 @@ import {
 	workshopProblems,
 	workshopSnapshots,
 } from "@/db/schema";
+import { resolveDisplayHeaders } from "@/lib/services/workshop-display";
 import { deleteAllWithPrefix, downloadFile } from "@/lib/storage/operations";
 import { workshopObjectPath } from "@/lib/workshop/paths";
 import type { WorkshopSnapshotStateJson } from "@/lib/workshop/snapshot-contract";
@@ -418,23 +418,27 @@ export async function deleteGroup(groupId: number): Promise<void> {
 	);
 }
 
-export async function listGroupProblems(
-	groupId: number
-): Promise<(WorkshopProblem & { creatorUsername: string; creatorName: string })[]> {
+export type GroupProblemListItem = {
+	id: number;
+	groupId: number | null;
+	createdBy: number;
+	publishedProblemId: number | null;
+	createdAt: Date;
+	updatedAt: Date;
+	creatorUsername: string;
+	creatorName: string;
+	// Display header resolved from latest snapshot → creator draft → fallback.
+	title: string;
+	description: string;
+	problemType: "icpc" | "special_judge";
+	timeLimit: number;
+	memoryLimit: number;
+};
+
+export async function listGroupProblems(groupId: number): Promise<GroupProblemListItem[]> {
 	const rows = await db
 		.select({
 			id: workshopProblems.id,
-			title: workshopProblems.title,
-			description: workshopProblems.description,
-			problemType: workshopProblems.problemType,
-			timeLimit: workshopProblems.timeLimit,
-			memoryLimit: workshopProblems.memoryLimit,
-			seed: workshopProblems.seed,
-			checkerLanguage: workshopProblems.checkerLanguage,
-			checkerPath: workshopProblems.checkerPath,
-			validatorLanguage: workshopProblems.validatorLanguage,
-			validatorPath: workshopProblems.validatorPath,
-			generatorScript: workshopProblems.generatorScript,
 			publishedProblemId: workshopProblems.publishedProblemId,
 			groupId: workshopProblems.groupId,
 			createdBy: workshopProblems.createdBy,
@@ -447,7 +451,19 @@ export async function listGroupProblems(
 		.innerJoin(users, eq(users.id, workshopProblems.createdBy))
 		.where(eq(workshopProblems.groupId, groupId))
 		.orderBy(desc(workshopProblems.updatedAt));
-	return rows;
+
+	const headers = await resolveDisplayHeaders(rows.map((r) => r.id));
+	return rows.map((r) => {
+		const h = headers.get(r.id);
+		return {
+			...r,
+			title: h?.title ?? "",
+			description: h?.description ?? "",
+			problemType: h?.problemType ?? "icpc",
+			timeLimit: h?.timeLimit ?? 1000,
+			memoryLimit: h?.memoryLimit ?? 512,
+		};
+	});
 }
 
 export type ReviewBundleItem = {
@@ -470,8 +486,8 @@ export type ReviewBundleItem = {
  *
  * Validator/checker source is fetched from MinIO via sha256 hex hashes stored
  * in the snapshot stateJson (CAS at `objects/{problemId}/{sha256}`).
- * Problems with no snapshot return hasSnapshot=false (their statement is
- * still readable from workshopProblems.description).
+ * Problems with no snapshot return hasSnapshot=false (their statement falls
+ * back to the resolved display description from listGroupProblems).
  */
 export async function listGroupProblemsWithReviewBundle(
 	groupId: number

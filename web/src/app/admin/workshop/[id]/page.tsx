@@ -43,7 +43,9 @@ export default async function AdminWorkshopDetailPage({
 		notFound();
 	}
 
-	const { problem, latestSnapshot } = detail;
+	// `detail.problem` carries identity columns + a display-resolved header
+	// (title/type/limits resolved from latest snapshot → creator draft → fallback).
+	const { problem: meta, latestSnapshot } = detail;
 
 	return (
 		<div className="space-y-6">
@@ -51,14 +53,14 @@ export default async function AdminWorkshopDetailPage({
 				items={[
 					{ label: "관리자", href: "/admin" },
 					{ label: "창작마당", href: "/admin/workshop" },
-					{ label: problem.title },
+					{ label: meta.title },
 				]}
 			/>
 
 			<div>
-				<h1 className="text-3xl font-bold">{problem.title}</h1>
+				<h1 className="text-3xl font-bold">{meta.title}</h1>
 				<p className="text-muted-foreground mt-2">
-					#{problem.id} · 생성자: {problem.ownerName} ({problem.ownerUsername})
+					#{meta.id} · 생성자: {meta.ownerName} ({meta.ownerUsername})
 				</p>
 			</div>
 
@@ -69,28 +71,28 @@ export default async function AdminWorkshopDetailPage({
 					</CardHeader>
 					<CardContent className="space-y-2 text-sm">
 						<div>
-							<span className="text-muted-foreground">타입:</span> {problem.problemType}
+							<span className="text-muted-foreground">타입:</span> {meta.problemType}
 						</div>
 						<div>
-							<span className="text-muted-foreground">시간제한:</span> {problem.timeLimit}ms
+							<span className="text-muted-foreground">시간제한:</span> {meta.timeLimit}ms
 						</div>
 						<div>
-							<span className="text-muted-foreground">메모리제한:</span> {problem.memoryLimit}
+							<span className="text-muted-foreground">메모리제한:</span> {meta.memoryLimit}
 							MB
 						</div>
 						<div>
-							<span className="text-muted-foreground">생성일:</span> {formatDate(problem.createdAt)}
+							<span className="text-muted-foreground">생성일:</span> {formatDate(meta.createdAt)}
 						</div>
 						<div>
-							<span className="text-muted-foreground">수정일:</span> {formatDate(problem.updatedAt)}
+							<span className="text-muted-foreground">수정일:</span> {formatDate(meta.updatedAt)}
 						</div>
 						<div className="pt-2">
-							{problem.publishedProblemId ? (
+							{meta.publishedProblemId ? (
 								<Link
-									href={`/admin/problems/${problem.publishedProblemId}`}
+									href={`/admin/problems/${meta.publishedProblemId}`}
 									className="inline-flex items-center gap-1 underline"
 								>
-									<Badge variant="default">problem #{problem.publishedProblemId}로 출판됨</Badge>
+									<Badge variant="default">problem #{meta.publishedProblemId}로 출판됨</Badge>
 									<ExternalLink className="h-3 w-3" />
 								</Link>
 							) : (
@@ -139,7 +141,7 @@ export default async function AdminWorkshopDetailPage({
 					<PublishPanel
 						workshopProblemId={workshopProblemId}
 						readiness={readiness}
-						publishedProblemId={problem.publishedProblemId}
+						publishedProblemId={meta.publishedProblemId}
 					/>
 				</CardContent>
 			</Card>

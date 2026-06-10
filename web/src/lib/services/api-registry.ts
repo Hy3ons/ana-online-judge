@@ -28,6 +28,7 @@ import * as adminTestcases from "./testcases";
 import * as adminUsers from "./users";
 import * as workshopAdminSvc from "./workshop-admin";
 import * as workshopCheckerSvc from "./workshop-checker";
+import * as workshopDisplaySvc from "./workshop-display";
 import * as workshopGeneratorsSvc from "./workshop-generators";
 import * as workshopGroupsSvc from "./workshop-groups";
 import * as workshopInvocationsSvc from "./workshop-invocations";
@@ -1555,7 +1556,12 @@ export const endpoints: Endpoint[] = [
 				},
 				b.userId
 			);
-			await ensureWorkshopDraft(problem.id, b.userId);
+			await ensureWorkshopDraft(problem.id, b.userId, {
+				title: b.title,
+				problemType: b.problemType,
+				timeLimit: b.timeLimit,
+				memoryLimit: b.memoryLimit,
+			});
 			return problem;
 		},
 	},
@@ -1574,7 +1580,8 @@ export const endpoints: Endpoint[] = [
 				false
 			);
 			if (!problem) throw new NotFoundError("Workshop problem not found or user has no access");
-			return problem;
+			const header = await workshopDisplaySvc.resolveDisplayHeader(parseInt(pathParams.id, 10));
+			return { ...problem, ...header };
 		},
 	},
 	{
@@ -1618,14 +1625,17 @@ export const endpoints: Endpoint[] = [
 		path: "workshop/problems/:id/statement",
 		description: "Update workshop problem statement (title + markdown description)",
 		body: z.object({
+			userId: z.number().int(),
 			title: z.string().min(1).max(200),
 			description: z.string().max(200_000),
 		}),
-		handler: async ({ pathParams, body }) =>
-			workshopStatementSvc.updateStatement(
-				parseInt(pathParams.id, 10),
-				body as { title: string; description: string }
-			),
+		handler: async ({ pathParams, body }) => {
+			const b = body as { userId: number; title: string; description: string };
+			return workshopStatementSvc.updateStatement(parseInt(pathParams.id, 10), b.userId, {
+				title: b.title,
+				description: b.description,
+			});
+		},
 	},
 
 	// ---------- Members ----------
@@ -2125,8 +2135,11 @@ export const endpoints: Endpoint[] = [
 		method: "GET",
 		path: "workshop/problems/:id/validator",
 		description: "Get the current validator source (or null if unset)",
-		handler: async ({ pathParams }) =>
-			workshopValidatorSvc.getValidatorSource(parseInt(pathParams.id, 10)),
+		query: z.object({ userId: z.coerce.number().int() }),
+		handler: async ({ pathParams, query }) => {
+			const q = query as { userId: number };
+			return workshopValidatorSvc.getValidatorSource(parseInt(pathParams.id, 10), q.userId);
+		},
 	},
 	{
 		type: "json",
@@ -2157,8 +2170,11 @@ export const endpoints: Endpoint[] = [
 		method: "DELETE",
 		path: "workshop/problems/:id/validator",
 		description: "Delete the validator",
-		handler: async ({ pathParams }) =>
-			workshopValidatorSvc.deleteValidator(parseInt(pathParams.id, 10)),
+		body: z.object({ userId: z.number().int() }),
+		handler: async ({ pathParams, body }) => {
+			const b = body as { userId: number };
+			return workshopValidatorSvc.deleteValidator(parseInt(pathParams.id, 10), b.userId);
+		},
 	},
 
 	// ---------- Checker ----------
@@ -2167,8 +2183,11 @@ export const endpoints: Endpoint[] = [
 		method: "GET",
 		path: "workshop/problems/:id/checker",
 		description: "Get the current checker source",
-		handler: async ({ pathParams }) =>
-			workshopCheckerSvc.getCheckerSource(parseInt(pathParams.id, 10)),
+		query: z.object({ userId: z.coerce.number().int() }),
+		handler: async ({ pathParams, query }) => {
+			const q = query as { userId: number };
+			return workshopCheckerSvc.getCheckerSource(parseInt(pathParams.id, 10), q.userId);
+		},
 	},
 	{
 		type: "json",
@@ -2466,7 +2485,7 @@ export const endpoints: Endpoint[] = [
 			);
 			if (!problem) throw new NotFoundError("Workshop problem not found");
 			const draft = await getActiveDraftForUser(problemId, b.userId, true);
-			await workshopScriptSvc.saveScript(problemId, b.script);
+			await workshopScriptSvc.saveScript(problemId, b.userId, b.script);
 			return workshopScriptSvc.runScript({
 				problem,
 				userId: b.userId,
@@ -2480,19 +2499,23 @@ export const endpoints: Endpoint[] = [
 		method: "GET",
 		path: "workshop/problems/:id/script",
 		description: "Get the saved generator script",
-		handler: async ({ pathParams }) => ({
-			script: await workshopScriptSvc.getScript(parseInt(pathParams.id, 10)),
-		}),
+		query: z.object({ userId: z.coerce.number().int() }),
+		handler: async ({ pathParams, query }) => {
+			const q = query as { userId: number };
+			return {
+				script: await workshopScriptSvc.getScript(parseInt(pathParams.id, 10), q.userId),
+			};
+		},
 	},
 	{
 		type: "json",
 		method: "PUT",
 		path: "workshop/problems/:id/script",
 		description: "Save the generator script (no run)",
-		body: z.object({ script: z.string() }),
+		body: z.object({ userId: z.number().int(), script: z.string() }),
 		handler: async ({ pathParams, body }) => {
-			const b = body as { script: string };
-			await workshopScriptSvc.saveScript(parseInt(pathParams.id, 10), b.script);
+			const b = body as { userId: number; script: string };
+			await workshopScriptSvc.saveScript(parseInt(pathParams.id, 10), b.userId, b.script);
 			return { ok: true };
 		},
 	},

@@ -2,8 +2,8 @@ import { and, desc, eq, notLike } from "drizzle-orm";
 import { db } from "@/db";
 import type {
 	Language,
+	WorkshopDraft,
 	WorkshopGenerator,
-	WorkshopProblem,
 	WorkshopSolution,
 	WorkshopTestcase,
 } from "@/db/schema";
@@ -43,7 +43,7 @@ export const SNAPSHOT_STATE_VERSION = 1 as const;
 export type SnapshotProblemHeader = {
 	title: string;
 	description: string;
-	problemType: WorkshopProblem["problemType"];
+	problemType: WorkshopDraft["problemType"];
 	timeLimit: number;
 	memoryLimit: number;
 	seed: string;
@@ -220,8 +220,8 @@ export async function createSnapshot(params: {
 	}
 
 	let checkerHash: string | null = null;
-	if (problem.checkerPath) {
-		const cp = problem.checkerPath;
+	if (draft.checkerPath) {
+		const cp = draft.checkerPath;
 		hashJobs.push(
 			storeAsObjectByKey(problemId, cp).then((h) => {
 				checkerHash = h;
@@ -229,8 +229,8 @@ export async function createSnapshot(params: {
 		);
 	}
 	let validatorHash: string | null = null;
-	if (problem.validatorPath) {
-		const vp = problem.validatorPath;
+	if (draft.validatorPath) {
+		const vp = draft.validatorPath;
 		hashJobs.push(
 			storeAsObjectByKey(problemId, vp).then((h) => {
 				validatorHash = h;
@@ -249,17 +249,17 @@ export async function createSnapshot(params: {
 	const state: SnapshotState = {
 		version: SNAPSHOT_STATE_VERSION,
 		problem: {
-			title: problem.title,
-			description: problem.description,
-			problemType: problem.problemType,
-			timeLimit: problem.timeLimit,
-			memoryLimit: problem.memoryLimit,
-			seed: problem.seed,
-			checkerLanguage: problem.checkerLanguage,
+			title: draft.title,
+			description: draft.description,
+			problemType: draft.problemType,
+			timeLimit: draft.timeLimit,
+			memoryLimit: draft.memoryLimit,
+			seed: draft.seed,
+			checkerLanguage: draft.checkerLanguage,
 			checkerHash,
-			validatorLanguage: problem.validatorLanguage,
+			validatorLanguage: draft.validatorLanguage,
 			validatorHash,
-			generatorScript: problem.generatorScript,
+			generatorScript: draft.generatorScript,
 		},
 		testcases: testcases.map((t) => {
 			const h = tcHashByIndex.get(t.index);
@@ -324,6 +324,17 @@ export async function createSnapshot(params: {
 			.update(workshopDrafts)
 			.set({ baseSnapshotId: row.id })
 			.where(eq(workshopDrafts.id, draft.id));
+		// Bump the shared problem's activity timestamp on user-committed snapshots
+		// so list/admin/group views (ordered by workshopProblems.updatedAt) surface
+		// recently-committed problems. Private draft edits intentionally do NOT
+		// reorder the shared list (per-draft isolation); a commit is the canonical
+		// "activity" event. Skip `auto/` system snapshots (rollback/update backups).
+		if (!label.trim().startsWith("auto/")) {
+			await tx
+				.update(workshopProblems)
+				.set({ updatedAt: new Date() })
+				.where(eq(workshopProblems.id, problemId));
+		}
 		return row;
 	});
 }
@@ -605,7 +616,7 @@ export async function rollbackToSnapshot(params: {
 					)
 				: null;
 		await tx
-			.update(workshopProblems)
+			.update(workshopDrafts)
 			.set({
 				title: state.problem.title,
 				description: state.problem.description,
@@ -620,7 +631,7 @@ export async function rollbackToSnapshot(params: {
 				generatorScript: state.problem.generatorScript,
 				updatedAt: new Date(),
 			})
-			.where(eq(workshopProblems.id, problemId));
+			.where(eq(workshopDrafts.id, draft.id));
 
 		// 4. Set draft's base snapshot and bump updatedAt.
 		await tx

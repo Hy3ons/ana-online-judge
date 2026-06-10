@@ -1,15 +1,30 @@
-import { randomBytes } from "node:crypto";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
 	users,
 	type WorkshopProblem,
+	workshopDrafts,
 	workshopGroupMembers,
 	workshopProblemMembers,
 	workshopProblems,
 } from "@/db/schema";
 import { assertCanCreateWorkshop } from "@/lib/services/quota";
+import { resolveDisplayHeaders } from "@/lib/services/workshop-display";
 import { deleteAllWithPrefix } from "@/lib/storage/operations";
+import { ensureWorkshopDraft } from "@/lib/workshop/drafts";
+
+export type WorkshopProblemListItem = {
+	id: number;
+	groupId: number | null;
+	createdBy: number;
+	publishedProblemId: number | null;
+	createdAt: Date;
+	updatedAt: Date;
+	title: string;
+	problemType: "icpc" | "special_judge";
+	timeLimit: number;
+	memoryLimit: number;
+};
 
 export type CreateWorkshopProblemInput = {
 	title: string;
@@ -20,14 +35,14 @@ export type CreateWorkshopProblemInput = {
 };
 
 /**
- * Create a new workshop problem owned by userId. Generates a random seed and
- * inserts an owner row in workshopProblemMembers.
+ * Create a new workshop problem owned by userId. Inserts an owner row in
+ * workshopProblemMembers. Header fields (title/limits/seed) live on the
+ * per-user owner draft created via ensureWorkshopDraft.
  */
 export async function createWorkshopProblem(
 	input: CreateWorkshopProblemInput,
 	userId: number
 ): Promise<WorkshopProblem> {
-	const seed = randomBytes(8).toString("hex");
 	return db.transaction(async (tx) => {
 		await assertCanCreateWorkshop(userId, tx);
 
@@ -60,11 +75,6 @@ export async function createWorkshopProblem(
 		const [created] = await tx
 			.insert(workshopProblems)
 			.values({
-				title: input.title,
-				problemType: input.problemType,
-				timeLimit: input.timeLimit,
-				memoryLimit: input.memoryLimit,
-				seed,
 				createdBy: userId,
 				groupId: input.groupId ?? null,
 			})
@@ -98,21 +108,54 @@ export async function createWorkshopProblem(
 export async function listMyWorkshopProblems(
 	userId: number,
 	isAdmin = false
-): Promise<WorkshopProblem[]> {
+): Promise<WorkshopProblemListItem[]> {
+	const identityColumns = {
+		id: workshopProblems.id,
+		groupId: workshopProblems.groupId,
+		createdBy: workshopProblems.createdBy,
+		publishedProblemId: workshopProblems.publishedProblemId,
+		createdAt: workshopProblems.createdAt,
+		updatedAt: workshopProblems.updatedAt,
+	};
+
+	let rows: {
+		id: number;
+		groupId: number | null;
+		createdBy: number;
+		publishedProblemId: number | null;
+		createdAt: Date;
+		updatedAt: Date;
+	}[];
 	if (isAdmin) {
-		return db.select().from(workshopProblems).orderBy(desc(workshopProblems.updatedAt));
+		rows = await db
+			.select(identityColumns)
+			.from(workshopProblems)
+			.orderBy(desc(workshopProblems.updatedAt));
+	} else {
+		const memberRows = await db
+			.select({ problemId: workshopProblemMembers.workshopProblemId })
+			.from(workshopProblemMembers)
+			.where(eq(workshopProblemMembers.userId, userId));
+		const ids = memberRows.map((r) => r.problemId);
+		if (ids.length === 0) return [];
+		rows = await db
+			.select(identityColumns)
+			.from(workshopProblems)
+			.where(inArray(workshopProblems.id, ids))
+			.orderBy(desc(workshopProblems.updatedAt));
 	}
-	const memberRows = await db
-		.select({ problemId: workshopProblemMembers.workshopProblemId })
-		.from(workshopProblemMembers)
-		.where(eq(workshopProblemMembers.userId, userId));
-	const ids = memberRows.map((r) => r.problemId);
-	if (ids.length === 0) return [];
-	return db
-		.select()
-		.from(workshopProblems)
-		.where(inArray(workshopProblems.id, ids))
-		.orderBy(desc(workshopProblems.updatedAt));
+
+	const headers = await resolveDisplayHeaders(rows.map((r) => r.id));
+	return rows.map((r) => {
+		const h = headers.get(r.id);
+		return {
+			...r,
+			title: h?.title ?? "",
+			problemType: h?.problemType ?? "icpc",
+			timeLimit: h?.timeLimit ?? 1000,
+			memoryLimit: h?.memoryLimit ?? 512,
+		};
+	});
 }
 
 /**
@@ -175,10 +218,44 @@ export async function updateWorkshopProblemLimits(
 			.limit(1);
 		if (!membership) throw new Error("문제를 찾을 수 없거나 접근 권한이 없습니다");
 	}
+	await ensureWorkshopDraft(problemId, userId);
 	await db
-		.update(workshopProblems)
+		.update(workshopDrafts)
 		.set({ timeLimit, memoryLimit, updatedAt: new Date() })
-		.where(eq(workshopProblems.id, problemId));
+		.where(and(eq(workshopDrafts.workshopProblemId, problemId), eq(workshopDrafts.userId, userId)));
+}
+
+/**
+ * Update the problem type (icpc ↔ special_judge) on the caller's draft.
+ * Any member can edit (Phase A: per-draft).
+ */
+export async function updateWorkshopProblemType(
+	problemId: number,
+	userId: number,
+	problemType: "icpc" | "special_judge",
+	isAdmin = false
+): Promise<void> {
+	if (problemType !== "icpc" && problemType !== "special_judge") {
+		throw new Error("올바르지 않은 문제 형식입니다");
+	}
+	if (!isAdmin) {
+		const [membership] = await db
+			.select({ role: workshopProblemMembers.role })
+			.from(workshopProblemMembers)
+			.where(
+				and(
+					eq(workshopProblemMembers.workshopProblemId, problemId),
+					eq(workshopProblemMembers.userId, userId)
+				)
+			)
+			.limit(1);
+		if (!membership) throw new Error("문제를 찾을 수 없거나 접근 권한이 없습니다");
+	}
+	await ensureWorkshopDraft(problemId, userId);
+	await db
+		.update(workshopDrafts)
+		.set({ problemType, updatedAt: new Date() })
+		.where(and(eq(workshopDrafts.workshopProblemId, problemId), eq(workshopDrafts.userId, userId)));
 }
 
 /**

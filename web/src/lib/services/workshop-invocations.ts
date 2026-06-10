@@ -3,7 +3,7 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import {
 	type WorkshopInvocation,
-	type WorkshopProblem,
+	workshopDrafts,
 	workshopInvocations,
 	workshopProblems,
 	workshopResources,
@@ -175,23 +175,50 @@ export async function checkInvocationPrecondition(params: {
 }
 
 /**
- * Load the full context needed to build `workshop_invoke` payloads:
- * problem metadata, resource list, checker config, and -- for the caller's
- * use -- the current draft.
+ * Minimal problem context consumed by invocation building: identity (`id`) from
+ * the shared `workshopProblems` row, and the limit/checker header fields sourced
+ * from the per-user `workshopDrafts` row.
+ */
+type InvokeProblemContext = {
+	id: number;
+	checkerLanguage: string | null;
+	checkerPath: string | null;
+	timeLimit: number;
+	memoryLimit: number;
+};
+
+/**
+ * Load the context needed to build `workshop_invoke` payloads: problem identity,
+ * resource list, and the checker/limit header fields (from the draft).
  */
 async function loadProblemContext(
 	problemId: number,
 	draftId: number
 ): Promise<{
-	problem: WorkshopProblem;
+	problem: InvokeProblemContext;
 	resources: WorkshopInvokeResource[];
 }> {
-	const [problem] = await db
-		.select()
+	const [base] = await db
+		.select({ id: workshopProblems.id })
 		.from(workshopProblems)
 		.where(eq(workshopProblems.id, problemId))
 		.limit(1);
-	if (!problem) throw new Error("문제를 찾을 수 없습니다");
+	if (!base) throw new Error("문제를 찾을 수 없습니다");
+	const [draft] = await db
+		.select()
+		.from(workshopDrafts)
+		.where(eq(workshopDrafts.id, draftId))
+		.limit(1);
+	if (!draft) throw new Error("드래프트를 찾을 수 없습니다");
+
+	// 정체성은 problem에서, 헤더(체커/제한)는 draft에서 가져온다.
+	const problem: InvokeProblemContext = {
+		id: base.id,
+		checkerLanguage: draft.checkerLanguage,
+		checkerPath: draft.checkerPath,
+		timeLimit: draft.timeLimit,
+		memoryLimit: draft.memoryLimit,
+	};
 
 	const resRows = await db
 		.select({ name: workshopResources.name, path: workshopResources.path })
@@ -201,7 +228,6 @@ async function loadProblemContext(
 		name: r.name,
 		storage_path: r.path,
 	}));
-
 	return { problem, resources };
 }
 
@@ -211,7 +237,7 @@ async function loadProblemContext(
  * (judge falls back to ICPC compare) -- with a warning log, since validator
  * pages should have prevented this.
  */
-function buildCheckerPayload(problem: WorkshopProblem): WorkshopInvokeChecker | null {
+function buildCheckerPayload(problem: InvokeProblemContext): WorkshopInvokeChecker | null {
 	if (!problem.checkerPath) return null;
 	if (problem.checkerLanguage !== "cpp") {
 		console.warn(

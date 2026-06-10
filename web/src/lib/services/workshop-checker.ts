@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { type WorkshopProblem, workshopProblems } from "@/db/schema";
+import { type WorkshopDraft, workshopDrafts } from "@/db/schema";
 import { deleteFile, downloadFile, uploadFile } from "@/lib/storage/operations";
 import { readBundledCheckerSource, type WorkshopCheckerPreset } from "@/lib/workshop/bundled";
 import { workshopDraftCheckerPath } from "@/lib/workshop/paths";
@@ -25,32 +25,26 @@ export type CheckerState = {
 };
 
 /**
- * Read the current checker source for a problem.
- * Requires `workshopProblems.checkerPath` to be set (auto-seeded during
+ * Read the current checker source for a user's draft.
+ * Requires `workshopDrafts.checkerPath` to be set (auto-seeded during
  * `ensureWorkshopDraft`). Throws otherwise.
  */
-export async function getCheckerSource(problemId: number): Promise<CheckerState> {
+export async function getCheckerSource(problemId: number, userId: number): Promise<CheckerState> {
 	const [row] = await db
 		.select({
-			id: workshopProblems.id,
-			checkerLanguage: workshopProblems.checkerLanguage,
-			checkerPath: workshopProblems.checkerPath,
+			checkerLanguage: workshopDrafts.checkerLanguage,
+			checkerPath: workshopDrafts.checkerPath,
 		})
-		.from(workshopProblems)
-		.where(eq(workshopProblems.id, problemId))
+		.from(workshopDrafts)
+		.where(and(eq(workshopDrafts.workshopProblemId, problemId), eq(workshopDrafts.userId, userId)))
 		.limit(1);
-	if (!row) throw new Error("문제를 찾을 수 없습니다");
+	if (!row) throw new Error("드래프트를 찾을 수 없습니다");
 	if (!row.checkerPath || !row.checkerLanguage) {
 		throw new Error("체커가 아직 초기화되지 않았습니다");
 	}
 	const language = (row.checkerLanguage === "python" ? "python" : "cpp") as CheckerLanguage;
 	const content = await downloadFile(row.checkerPath);
-	return {
-		problemId: row.id,
-		language,
-		path: row.checkerPath,
-		source: content.toString("utf-8"),
-	};
+	return { problemId, language, path: row.checkerPath, source: content.toString("utf-8") };
 }
 
 /**
@@ -63,7 +57,7 @@ export async function saveCheckerSource(params: {
 	userId: number;
 	language: CheckerLanguage;
 	source: string;
-}): Promise<WorkshopProblem> {
+}): Promise<WorkshopDraft> {
 	const { problemId, userId, language, source } = params;
 	const bytes = Buffer.byteLength(source, "utf-8");
 	if (bytes === 0) {
@@ -75,25 +69,21 @@ export async function saveCheckerSource(params: {
 
 	const [existing] = await db
 		.select({
-			checkerLanguage: workshopProblems.checkerLanguage,
-			checkerPath: workshopProblems.checkerPath,
+			checkerLanguage: workshopDrafts.checkerLanguage,
+			checkerPath: workshopDrafts.checkerPath,
 		})
-		.from(workshopProblems)
-		.where(eq(workshopProblems.id, problemId))
+		.from(workshopDrafts)
+		.where(and(eq(workshopDrafts.workshopProblemId, problemId), eq(workshopDrafts.userId, userId)))
 		.limit(1);
-	if (!existing) throw new Error("문제를 찾을 수 없습니다");
+	if (!existing) throw new Error("드래프트를 찾을 수 없습니다");
 
 	const newPath = workshopDraftCheckerPath(problemId, userId, extForLanguage(language));
 	await uploadFile(newPath, Buffer.from(source, "utf-8"), contentTypeForLanguage(language));
 
 	const [updated] = await db
-		.update(workshopProblems)
-		.set({
-			checkerPath: newPath,
-			checkerLanguage: language,
-			updatedAt: new Date(),
-		})
-		.where(eq(workshopProblems.id, problemId))
+		.update(workshopDrafts)
+		.set({ checkerPath: newPath, checkerLanguage: language, updatedAt: new Date() })
+		.where(and(eq(workshopDrafts.workshopProblemId, problemId), eq(workshopDrafts.userId, userId)))
 		.returning();
 
 	// Best-effort: delete old object AFTER DB update succeeds.
@@ -127,5 +117,5 @@ export async function resetCheckerToPreset(params: {
 		language: "cpp",
 		source: content.toString("utf-8"),
 	});
-	return getCheckerSource(params.problemId);
+	return getCheckerSource(params.problemId, params.userId);
 }

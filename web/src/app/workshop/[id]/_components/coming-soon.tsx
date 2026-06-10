@@ -25,7 +25,7 @@ export async function WorkshopComingSoon({
 	return (
 		<div className="container mx-auto p-6">
 			<div className="mb-4">
-				<h1 className="text-2xl font-bold">{problem.title}</h1>
+				<h1 className="text-2xl font-bold">{data.draft.title}</h1>
 				<p className="text-xs text-muted-foreground mt-1">{title}</p>
 			</div>
 			<WorkshopProblemNav problemId={problem.id} />

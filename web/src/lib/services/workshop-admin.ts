@@ -1,6 +1,7 @@
-import { and, desc, eq, inArray, or, type SQL, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, type SQL, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { users, workshopProblems, workshopSnapshots } from "@/db/schema";
+import { resolveDisplayHeader, resolveDisplayHeaders } from "@/lib/services/workshop-display";
 import type { WorkshopSnapshotStateJson } from "@/lib/workshop/snapshot-contract";
 
 export interface AdminWorkshopListItem {
@@ -25,15 +26,10 @@ export async function listAllWorkshopProblemsForAdmin(
 	q?: string,
 	options?: { published?: boolean }
 ): Promise<AdminWorkshopListItem[]> {
+	// Title is no longer a column on workshopProblems (it lives in the per-user
+	// draft / latest snapshot), so the title-substring filter is applied in JS
+	// after resolving display headers. Only the published filter is pushed to SQL.
 	const conditions: SQL[] = [];
-	if (q) {
-		const term = `%${q.toLowerCase()}%`;
-		const orClause = or(
-			sql`LOWER(${workshopProblems.title}) LIKE ${term}`,
-			sql`LOWER(${users.username}) LIKE ${term}`
-		);
-		if (orClause) conditions.push(orClause);
-	}
 	if (options?.published === true) {
 		conditions.push(sql`${workshopProblems.publishedProblemId} IS NOT NULL`);
 	} else if (options?.published === false) {
@@ -41,10 +37,9 @@ export async function listAllWorkshopProblemsForAdmin(
 	}
 	const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-	const rows = await db
+	const baseRows = await db
 		.select({
 			id: workshopProblems.id,
-			title: workshopProblems.title,
 			createdAt: workshopProblems.createdAt,
 			updatedAt: workshopProblems.updatedAt,
 			ownerUserId: workshopProblems.createdBy,
@@ -56,6 +51,21 @@ export async function listAllWorkshopProblemsForAdmin(
 		.innerJoin(users, eq(users.id, workshopProblems.createdBy))
 		.where(whereClause)
 		.orderBy(desc(workshopProblems.updatedAt));
+
+	// Resolve display headers (latest snapshot → creator draft → fallback) so the
+	// list shows the canonical title and so we can filter by it in JS.
+	const headerMap = await resolveDisplayHeaders(baseRows.map((r) => r.id));
+
+	// Apply the `q` filter (title OR owner username, case-insensitive substring).
+	const term = q?.toLowerCase().trim();
+	const rows = (
+		term
+			? baseRows.filter((r) => {
+					const title = headerMap.get(r.id)?.title ?? "";
+					return title.toLowerCase().includes(term) || r.ownerUsername.toLowerCase().includes(term);
+				})
+			: baseRows
+	).map((r) => ({ ...r, title: headerMap.get(r.id)?.title ?? "" }));
 
 	// Batch-fetch latest snapshot per problem using a single query (avoids N+1).
 	const problemIds = rows.map((r) => r.id);
@@ -114,10 +124,6 @@ export async function getAdminWorkshopProblemDetail(workshopProblemId: number) {
 	const [wp] = await db
 		.select({
 			id: workshopProblems.id,
-			title: workshopProblems.title,
-			problemType: workshopProblems.problemType,
-			timeLimit: workshopProblems.timeLimit,
-			memoryLimit: workshopProblems.memoryLimit,
 			publishedProblemId: workshopProblems.publishedProblemId,
 			createdBy: workshopProblems.createdBy,
 			createdAt: workshopProblems.createdAt,
@@ -132,6 +138,10 @@ export async function getAdminWorkshopProblemDetail(workshopProblemId: number) {
 
 	if (!wp) return null;
 
+	// Header (title/type/limits) resolves from the latest snapshot → creator draft
+	// → fallback, since these fields no longer live on workshopProblems.
+	const header = await resolveDisplayHeader(workshopProblemId);
+
 	const [snap] = await db
 		.select()
 		.from(workshopSnapshots)
@@ -140,7 +150,13 @@ export async function getAdminWorkshopProblemDetail(workshopProblemId: number) {
 		.limit(1);
 
 	return {
-		problem: wp,
+		problem: {
+			...wp,
+			title: header.title,
+			problemType: header.problemType,
+			timeLimit: header.timeLimit,
+			memoryLimit: header.memoryLimit,
+		},
 		latestSnapshot: snap ?? null,
 	};
 }

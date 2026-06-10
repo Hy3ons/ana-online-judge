@@ -22,7 +22,7 @@ export default async function WorkshopValidatorPage({
 		if (err instanceof Error && err.message.includes("로그인")) redirect("/login");
 		notFound();
 	}
-	const { problem } = data;
+	const { problem, draft } = data;
 
 	const [validator, { testcases }] = await Promise.all([
 		getWorkshopValidatorState(problem.id),
@@ -32,7 +32,7 @@ export default async function WorkshopValidatorPage({
 	return (
 		<div className="container mx-auto p-6">
 			<div className="mb-4">
-				<h1 className="text-2xl font-bold">{problem.title}</h1>
+				<h1 className="text-2xl font-bold">{draft.title}</h1>
 				<p className="text-xs text-muted-foreground mt-1">밸리데이터 설정</p>
 			</div>
 			<WorkshopProblemNav problemId={problem.id} />

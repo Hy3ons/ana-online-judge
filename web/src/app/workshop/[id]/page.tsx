@@ -17,6 +17,7 @@ import {
 	type WorkshopExpectedVerdict,
 } from "@/lib/workshop/expected-verdict";
 import { WorkshopLimitsEditor } from "./_components/limits-editor";
+import { WorkshopProblemTypeEditor } from "./_components/problem-type-editor";
 import { PublishedBanner } from "./_components/published-banner";
 import { StaleDraftWarning } from "./_components/stale-draft-warning";
 import { WorkshopProblemNav } from "./nav";
@@ -37,7 +38,7 @@ export default async function WorkshopProblemDashboardPage({
 		if (err instanceof Error && err.message.includes("로그인")) redirect("/login");
 		notFound();
 	}
-	const { problem } = data;
+	const { problem, draft } = data;
 
 	const [
 		{ testcases },
@@ -103,7 +104,7 @@ export default async function WorkshopProblemDashboardPage({
 			<div className="mb-4 space-y-3">
 				<div>
 					<div className="flex items-center gap-2 flex-wrap">
-						<h1 className="text-2xl font-bold">{problem.title}</h1>
+						<h1 className="text-2xl font-bold">{draft.title}</h1>
 						{problem.groupId !== null && (
 							<Link
 								href={`/workshop/groups/${problem.groupId}`}
@@ -114,13 +115,18 @@ export default async function WorkshopProblemDashboardPage({
 						)}
 					</div>
 					<p className="text-xs text-muted-foreground mt-1">
-						ID: {problem.id} · {problem.problemType} · seed: {problem.seed}
+						ID: {problem.id} · {draft.problemType} · seed: {draft.seed}
 					</p>
 				</div>
 				<WorkshopLimitsEditor
 					problemId={problem.id}
-					initialTimeLimit={problem.timeLimit}
-					initialMemoryLimit={problem.memoryLimit}
+					initialTimeLimit={draft.timeLimit}
+					initialMemoryLimit={draft.memoryLimit}
+				/>
+				<WorkshopProblemTypeEditor
+					problemId={problem.id}
+					problemType={draft.problemType}
+					hasChecker={draft.checkerPath != null}
 				/>
 			</div>
 			{problem.publishedProblemId !== null && (
@@ -137,8 +143,8 @@ export default async function WorkshopProblemDashboardPage({
 						</CardHeader>
 						<CardContent>
 							<p className="text-sm text-muted-foreground">
-								{problem.description
-									? `${problem.description.length.toLocaleString()}자 작성됨`
+								{draft.description
+									? `${draft.description.length.toLocaleString()}자 작성됨`
 									: "아직 작성되지 않음"}
 							</p>
 						</CardContent>
@@ -198,12 +204,12 @@ export default async function WorkshopProblemDashboardPage({
 					<Card className="hover:bg-accent/40 transition-colors">
 						<CardHeader>
 							<CardTitle>체커</CardTitle>
-							<CardDescription>{problem.checkerLanguage ?? "미설정"}</CardDescription>
+							<CardDescription>{draft.checkerLanguage ?? "미설정"}</CardDescription>
 						</CardHeader>
 						<CardContent>
-							<p className="text-sm">{problem.checkerPath ? "설정 완료" : "미설정"}</p>
+							<p className="text-sm">{draft.checkerPath ? "설정 완료" : "미설정"}</p>
 							<p className="text-xs text-muted-foreground mt-1 truncate">
-								{problem.checkerPath ?? "—"}
+								{draft.checkerPath ?? "—"}
 							</p>
 						</CardContent>
 					</Card>
