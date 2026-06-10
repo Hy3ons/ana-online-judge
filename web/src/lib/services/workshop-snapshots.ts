@@ -37,7 +37,8 @@ import { extractWorkshopImageKeys } from "@/lib/workshop/snapshot-images";
  * referenced by sha256 hex — never inline. Restoring a snapshot re-materializes
  * the draft by copying from `objects/{sha256}` to the draft's paths.
  *
- * `version` is reserved for future schema migrations; for Phase 7 it is always 1.
+ * `version` gates schema migrations. v2 (current) adds `testcases[].validationStatus`
+ * and `images`. v1 snapshots remain rollback-compatible (missing fields default).
  */
 export const SNAPSHOT_STATE_VERSION = 2 as const;
 
@@ -425,23 +426,19 @@ export async function getSnapshot(
 /**
  * Restore `snapshotId` into the active draft for `(problemId, userId)`.
  *
- * Steps (see plan §Task 7 for atomicity rationale):
+ * Steps (DB-first ordering for atomicity):
  *   1. Auto-snapshot the current draft (label = `auto/롤백 전 — ${target.label}`).
  *      This is **mandatory** — if it fails, the rollback aborts.
- *   1b. Wipe pre-existing draft MinIO files so we don't leave orphans (I13).
- *   2. Parallel CopyObject from `objects/{sha256}` back to draft paths.
- *   3. Wipe & re-insert draft rows + update problem header, in one tx.
- *   4. Set `workshopDrafts.baseSnapshotId = target.id`.
+ *   2. Wipe & re-insert draft rows + update header + set `baseSnapshotId`, in one tx.
+ *   3. Wipe pre-existing draft MinIO files so we don't leave orphans.
+ *   4. Parallel CopyObject from `objects/{sha256}` back to draft paths (incl. images).
  *
- * Known limitation (I12 — DB-failure-after-MinIO-restore, deferred):
- *   If MinIO restore (step 2) succeeds but the DB transaction (step 3) fails,
- *   the draft is left with restored files on MinIO but the OLD DB rows still
- *   referencing the previous (now overwritten) paths. The mandatory auto-
- *   snapshot from step 1 provides the recovery path: the user can re-rollback
- *   to that auto-snapshot, which will re-restore both MinIO and DB to the
- *   pre-rollback state. A truly atomic fix would require staging restored
- *   files to side paths and renaming on tx commit, which is non-trivial on
- *   S3-style storage. Tracked as a follow-up.
+ * Atomicity (I12 resolved): the DB transaction runs BEFORE any MinIO mutation.
+ * All draft file paths are computed deterministically (problemId/userId/name/index),
+ * not read from disk, so files are re-materialized after the tx commits. If the tx
+ * fails, no MinIO file is wiped or restored → the draft is fully preserved (clean
+ * failure). If a later file restore fails post-commit, the mandatory auto-snapshot
+ * (step 1) still provides a re-rollback recovery path.
  *
  * Returns the re-hydrated draft row.
  */
