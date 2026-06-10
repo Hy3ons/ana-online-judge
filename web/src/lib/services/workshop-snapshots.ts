@@ -485,91 +485,12 @@ export async function rollbackToSnapshot(params: {
 		message: `rollback to snapshot #${target.id} (${target.label})`,
 	});
 
-	// 1b. Wipe existing draft MinIO files so rollback doesn't leave orphans.
-	//     Files in the prior draft state that aren't in the target snapshot
-	//     (e.g. solutions added since the snapshot was taken) become unrecoverable —
-	//     this is the desired behavior per spec (rollback = "go back to that state").
-	//     The mandatory auto-snapshot above (step 1) preserves recovery on user error.
-	await deleteAllWithPrefix(`${workshopDraftBase(problemId, userId)}/`);
-
-	// 2. Parallel object restores to draft paths.
-	const copyJobs: Promise<unknown>[] = [];
-
-	// 2a. Checker / validator — paths are derived from language → file extension.
-	if (state.problem.checkerHash && state.problem.checkerLanguage) {
-		const ext = getFileExtension(state.problem.checkerLanguage as Language);
-		const dest = workshopDraftCheckerPath(problemId, userId, ext);
-		copyJobs.push(restoreObject(problemId, state.problem.checkerHash, dest));
-	}
-	if (state.problem.validatorHash && state.problem.validatorLanguage) {
-		const ext = getFileExtension(state.problem.validatorLanguage as Language);
-		const dest = workshopDraftValidatorPath(problemId, userId, ext);
-		copyJobs.push(restoreObject(problemId, state.problem.validatorHash, dest));
-	}
-
-	// 2b. Testcases (input + optional output).
-	for (const t of state.testcases) {
-		copyJobs.push(
-			restoreObject(
-				problemId,
-				t.inputHash,
-				workshopDraftTestcasePath(problemId, userId, t.index, "input")
-			)
-		);
-		if (t.outputHash) {
-			copyJobs.push(
-				restoreObject(
-					problemId,
-					t.outputHash,
-					workshopDraftTestcasePath(problemId, userId, t.index, "output")
-				)
-			);
-		}
-	}
-
-	// 2c. Generators — source only (compiled binary is regenerated on next run).
-	for (const g of state.generators) {
-		const ext = getFileExtension(g.language);
-		copyJobs.push(
-			restoreObject(
-				problemId,
-				g.sourceHash,
-				workshopDraftGeneratorSourcePath(problemId, userId, g.name, ext)
-			)
-		);
-	}
-
-	// 2d. Solutions.
-	for (const s of state.solutions) {
-		const ext = getFileExtension(s.language);
-		copyJobs.push(
-			restoreObject(
-				problemId,
-				s.sourceHash,
-				workshopDraftSolutionPath(problemId, userId, s.name, ext)
-			)
-		);
-	}
-
-	// 2e. Resources.
-	for (const r of state.resources) {
-		copyJobs.push(
-			restoreObject(problemId, r.hash, workshopDraftResourcePath(problemId, userId, r.name))
-		);
-	}
-
-	await Promise.all(copyJobs);
-
-	// 2f. 지문 이미지 복원: 삭제됐더라도 동결된 객체에서 원래 키로 되살린다.
-	for (const img of state.images ?? []) {
-		try {
-			await restoreObject(problemId, img.hash, img.key);
-		} catch (err) {
-			console.warn(`[workshop-snapshots] image restore failed for ${img.key}:`, err);
-		}
-	}
-
-	// 3. Replace DB state in one transaction.
+	// Run the DB transaction FIRST. All draft file paths below are derived
+	// deterministically (problemId/userId/name/index), not read from disk, so we can
+	// re-materialize the files afterward. If the tx fails, we abort before touching
+	// any MinIO file → the draft's files are fully preserved (clean failure). (I12)
+	//
+	// 2. Replace DB state in one transaction.
 	await db.transaction(async (tx) => {
 		// Wipe draft-scoped rows (cascades already set draftId FKs to cascade
 		// delete from workshopDrafts, but we're keeping the draft row itself).
@@ -673,12 +594,96 @@ export async function rollbackToSnapshot(params: {
 			})
 			.where(eq(workshopDrafts.id, draft.id));
 
-		// 4. Set draft's base snapshot and bump updatedAt.
+		// 2b. Set draft's base snapshot and bump updatedAt.
 		await tx
 			.update(workshopDrafts)
 			.set({ baseSnapshotId: target.id, updatedAt: new Date() })
 			.where(eq(workshopDrafts.id, draft.id));
 	});
+
+	// 3. Wipe existing draft MinIO files so rollback doesn't leave orphans.
+	//     Files in the prior draft state that aren't in the target snapshot
+	//     (e.g. solutions added since the snapshot was taken) become unrecoverable —
+	//     this is the desired behavior per spec (rollback = "go back to that state").
+	//     The mandatory auto-snapshot above (step 1) preserves recovery on user error.
+	await deleteAllWithPrefix(`${workshopDraftBase(problemId, userId)}/`);
+
+	// 4. Parallel object restores to draft paths.
+	const copyJobs: Promise<unknown>[] = [];
+
+	// 4a. Checker / validator — paths are derived from language → file extension.
+	if (state.problem.checkerHash && state.problem.checkerLanguage) {
+		const ext = getFileExtension(state.problem.checkerLanguage as Language);
+		const dest = workshopDraftCheckerPath(problemId, userId, ext);
+		copyJobs.push(restoreObject(problemId, state.problem.checkerHash, dest));
+	}
+	if (state.problem.validatorHash && state.problem.validatorLanguage) {
+		const ext = getFileExtension(state.problem.validatorLanguage as Language);
+		const dest = workshopDraftValidatorPath(problemId, userId, ext);
+		copyJobs.push(restoreObject(problemId, state.problem.validatorHash, dest));
+	}
+
+	// 4b. Testcases (input + optional output).
+	for (const t of state.testcases) {
+		copyJobs.push(
+			restoreObject(
+				problemId,
+				t.inputHash,
+				workshopDraftTestcasePath(problemId, userId, t.index, "input")
+			)
+		);
+		if (t.outputHash) {
+			copyJobs.push(
+				restoreObject(
+					problemId,
+					t.outputHash,
+					workshopDraftTestcasePath(problemId, userId, t.index, "output")
+				)
+			);
+		}
+	}
+
+	// 4c. Generators — source only (compiled binary is regenerated on next run).
+	for (const g of state.generators) {
+		const ext = getFileExtension(g.language);
+		copyJobs.push(
+			restoreObject(
+				problemId,
+				g.sourceHash,
+				workshopDraftGeneratorSourcePath(problemId, userId, g.name, ext)
+			)
+		);
+	}
+
+	// 4d. Solutions.
+	for (const s of state.solutions) {
+		const ext = getFileExtension(s.language);
+		copyJobs.push(
+			restoreObject(
+				problemId,
+				s.sourceHash,
+				workshopDraftSolutionPath(problemId, userId, s.name, ext)
+			)
+		);
+	}
+
+	// 4e. Resources.
+	for (const r of state.resources) {
+		copyJobs.push(
+			restoreObject(problemId, r.hash, workshopDraftResourcePath(problemId, userId, r.name))
+		);
+	}
+
+	await Promise.all(copyJobs);
+
+	// 4f. 지문 이미지 복원: 삭제됐더라도 동결된 객체에서 원래 키로 되살린다.
+	for (const img of state.images ?? []) {
+		try {
+			await restoreObject(problemId, img.hash, img.key);
+		} catch (err) {
+			console.warn(`[workshop-snapshots] image restore failed for ${img.key}:`, err);
+		}
+	}
 
 	return { autoSnapshot, restored: target };
 }
