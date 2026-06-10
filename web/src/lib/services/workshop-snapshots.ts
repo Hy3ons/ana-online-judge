@@ -38,7 +38,7 @@ import {
  *
  * `version` is reserved for future schema migrations; for Phase 7 it is always 1.
  */
-export const SNAPSHOT_STATE_VERSION = 1 as const;
+export const SNAPSHOT_STATE_VERSION = 2 as const;
 
 export type SnapshotProblemHeader = {
 	title: string;
@@ -63,6 +63,8 @@ export type SnapshotTestcase = {
 	score: number;
 	inputHash: string;
 	outputHash: string | null;
+	/** v2+. v1 스냅샷에는 없음 → 복원 시 "pending" 폴백. */
+	validationStatus?: WorkshopTestcase["validationStatus"];
 };
 
 export type SnapshotGenerator = {
@@ -274,6 +276,7 @@ export async function createSnapshot(params: {
 				score: t.score,
 				inputHash: h.inputHash,
 				outputHash: h.outputHash,
+				validationStatus: t.validationStatus,
 			};
 		}),
 		generators: generators.map((g) => {
@@ -434,7 +437,12 @@ export async function rollbackToSnapshot(params: {
 	const target = await getSnapshot(problemId, snapshotId);
 	if (!target) throw new Error("스냅샷을 찾을 수 없습니다");
 	const state = target.stateJson as SnapshotState;
-	if (!state || state.version !== SNAPSHOT_STATE_VERSION) {
+	if (
+		!state ||
+		typeof state.version !== "number" ||
+		state.version < 1 ||
+		state.version > SNAPSHOT_STATE_VERSION
+	) {
 		throw new Error(`스냅샷 포맷 버전이 호환되지 않습니다 (version=${state?.version})`);
 	}
 
@@ -594,7 +602,7 @@ export async function rollbackToSnapshot(params: {
 				outputPath,
 				subtaskGroup: t.subtaskGroup,
 				score: t.score,
-				validationStatus: "pending",
+				validationStatus: t.validationStatus ?? "pending",
 			});
 		}
 
