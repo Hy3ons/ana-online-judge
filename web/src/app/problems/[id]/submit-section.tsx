@@ -290,12 +290,7 @@ export function ProblemSubmitSection({
 					</CardContent>
 				</Card>
 
-				<TurnstileWidget
-					ref={captchaRef}
-					size="invisible"
-					appearance="interaction-only"
-					onVerify={onCaptchaVerify}
-				/>
+				<TurnstileWidget ref={captchaRef} onVerify={onCaptchaVerify} />
 			</div>
 		);
 	}
@@ -313,12 +308,7 @@ export function ProblemSubmitSection({
 				allowedLanguages={allowedLanguages}
 			/>
 
-			<TurnstileWidget
-				ref={captchaRef}
-				size="invisible"
-				appearance="interaction-only"
-				onVerify={onCaptchaVerify}
-			/>
+			<TurnstileWidget ref={captchaRef} onVerify={onCaptchaVerify} />
 		</div>
 	);
 }

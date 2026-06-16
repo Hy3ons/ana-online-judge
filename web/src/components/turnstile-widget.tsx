@@ -27,7 +27,7 @@ type Props = {
 	onVerify: (token: string) => void;
 	onExpire?: () => void;
 	onError?: () => void;
-	size?: "normal" | "compact" | "flexible" | "invisible";
+	size?: "normal" | "compact" | "flexible";
 	appearance?: "always" | "execute" | "interaction-only";
 	theme?: "light" | "dark" | "auto";
 	className?: string;
