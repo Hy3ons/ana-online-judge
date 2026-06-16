@@ -41,11 +41,7 @@ export async function listPublicSubmissions(input: {
 	const sort = input.sort ?? "createdAt";
 	const order = input.order ?? "desc";
 
-	const conditions: SQL[] = [
-		eq(submissions.visibility, "public"),
-		eq(problems.isPublic, true),
-		isNull(submissions.contestId),
-	];
+	const conditions: SQL[] = [eq(problems.isPublic, true), isNull(submissions.contestId)];
 	if (input.username) {
 		conditions.push(eq(users.username, input.username));
 	}
