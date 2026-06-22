@@ -22,7 +22,7 @@ export const publicEndpoints: Endpoint[] = [
 		description: "공개 문제 목록을 조회합니다.",
 		query: paginationQuery.extend({
 			search: z.string().optional(),
-			sort: z.enum(["id", "tier", "createdAt"]).default("id"),
+			sort: z.enum(["id", "tier", "createdAt", "random"]).default("id"),
 			order: z.enum(["asc", "desc"]).default("asc"),
 		}),
 		handler: async ({ query }) =>

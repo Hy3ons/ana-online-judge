@@ -353,7 +353,12 @@ export async function deleteProblem(id: number) {
 	return { success: true };
 }
 
-export const GET_PROBLEMS_SORT_KEYS = [...PROBLEM_TABLE_SORT_KEYS, "createdAt", "tier"] as const;
+export const GET_PROBLEMS_SORT_KEYS = [
+	...PROBLEM_TABLE_SORT_KEYS,
+	"createdAt",
+	"tier",
+	"random",
+] as const;
 export type GetProblemsSort = (typeof GET_PROBLEMS_SORT_KEYS)[number];
 
 export async function getProblems(
@@ -570,6 +575,9 @@ export async function getProblems(
 			break;
 		case "tier":
 			orderBy = order === "asc" ? asc(problems.tier) : desc(problems.tier);
+			break;
+		case "random":
+			orderBy = sql`RANDOM()`;
 			break;
 		default:
 			orderBy = order === "asc" ? asc(problems.id) : desc(problems.id);

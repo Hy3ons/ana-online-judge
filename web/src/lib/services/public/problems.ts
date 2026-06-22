@@ -23,7 +23,7 @@ export async function listPublicProblems(input: {
 	page?: number;
 	limit?: number;
 	search?: string;
-	sort?: "id" | "tier" | "createdAt";
+	sort?: "id" | "tier" | "createdAt" | "random";
 	order?: "asc" | "desc";
 }): Promise<PublicProblemListResult> {
 	const page = input.page ?? 1;
